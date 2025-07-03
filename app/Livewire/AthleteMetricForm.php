@@ -40,6 +40,8 @@ class AthleteMetricForm extends Component implements HasSchemas
 
     public ?string $type = 'daily';
 
+    public bool $canGetNextDay;
+
     public function mount(): void
     {
         $this->athlete = auth('athlete')->user();
@@ -48,6 +50,8 @@ class AthleteMetricForm extends Component implements HasSchemas
         $this->date = Carbon::parse($this->d) ?? now()->timezone('Europe/Zurich')->startOfDay();
         $this->prevDate = $this->date->copy()->subDay();
         $this->nextDate = $this->date->copy()->addDay();
+
+        $this->canGetNextDay = $this->nextDate < now()->endOfDay();
 
         $metrics = Metric::where('athlete_id', $this->athlete->id)
             ->whereDate('date', $this->date)
