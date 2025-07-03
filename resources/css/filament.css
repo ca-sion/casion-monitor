@@ -1,0 +1,10 @@
+@import '../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../app/Filament/**/*';
+@source '../../resources/views/filament/**/*';
+
+@media (max-width: 600px) {
+    .fi-fo-toggle-buttons.fi-btn-group .fi-btn.fi-size-md {
+        padding-inline: calc(var(--spacing)*2.5);
+    }
+}

@@ -1,0 +1,132 @@
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Carbon;
+use Vinkla\Hashids\Facades\Hashids;
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\Access\Authorizable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Contracts\Support\Arrayable;
+
+class Athlete extends Model implements AuthenticatableContract, AuthorizableContract
+{
+    use Authenticatable;
+
+    use Authorizable;
+    /** @use HasFactory<\Database\Factories\AthleteFactory> */
+    use HasFactory;
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = [];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        //
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['name'];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'birthday' => 'date',
+        ];
+    }
+
+    /**
+     * Get the athlete's name.
+     */
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => "{$this->first_name} {$this->last_name}",
+        );
+    }
+
+    /**
+     * Get the contact's birthday year.
+     */
+    protected function birthYear(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => isset($this->birthday) ? Carbon::parse($this->birthday)->year : null,
+        );
+    }
+
+    /**
+     * Get the contact's name with initials.
+     */
+    protected function initials(): Attribute
+    {
+        $f = $this->first_name ? (str($this->first_name)->substr(0, 1)->ucfirst().'.') : null;
+        $l = $this->last_name ? (str($this->last_name)->substr(0, 1)->ucfirst().'.') : null;
+
+        return Attribute::make(
+            get: fn () => $f.($l ?? null),
+        );
+    }
+
+    /**
+     * Get contact hash.
+     */
+    protected function hash(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => Hashids::connection('athlete_hash')->encode($this->id),
+        );
+    }
+
+    /**
+     * Get contact unique account url.
+     */
+    protected function accountLink(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => route('athletes.go', ['hash' => $this->hash]),
+        );
+    }
+
+    /**
+     * Get the metrics for the athlete.
+     */
+    public function metrics(): HasMany
+    {
+        return $this->hasMany(Metric::class);
+    }
+
+    /**
+     * Athlete's metrics by dates.
+     */
+    protected function metricsByDates(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->metrics->groupBy('date'),
+        );
+    }
+}
