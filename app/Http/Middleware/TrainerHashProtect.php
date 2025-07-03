@@ -41,7 +41,7 @@ class TrainerHashProtect
         // Update
         $trainer->last_connection = now();
         $trainer->save();
-        
+
         return $next($request);
     }
 }

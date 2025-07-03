@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Athletes\Pages;
 
-use App\Filament\Resources\Athletes\AthleteResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\Athletes\AthleteResource;
 
 class EditAthlete extends EditRecord
 {

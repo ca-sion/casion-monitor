@@ -41,7 +41,7 @@ class AthleteHashProtect
         // Update
         $athlete->last_connection = now();
         $athlete->save();
-        
+
         return $next($request);
     }
 }

@@ -1,9 +1,9 @@
 <?php
 
-use App\Livewire\Settings\Password;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+use App\Livewire\Settings\Password;
+use Illuminate\Support\Facades\Hash;
 
 test('password can be updated', function () {
     $user = User::factory()->create([

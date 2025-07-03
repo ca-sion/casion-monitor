@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use App\Models\Athlete;
 use App\Models\Metric;
+use App\Models\Athlete;
 use App\Models\Trainer;
 use Illuminate\Database\Seeder;
 
@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
             'first_name' => 'Genièvre',
             'last_name'  => 'Lindron',
             'email'      => 'athlete2@example.com',
-            'gender'      => 'w',
+            'gender'     => 'w',
         ]);
 
         $trainer = Trainer::factory()->create([

@@ -2,17 +2,17 @@
 
 namespace App\Filament\Resources\Trainers;
 
-use App\Filament\Resources\Trainers\Pages\CreateTrainer;
+use BackedEnum;
+use App\Models\Trainer;
+use Filament\Tables\Table;
+use Filament\Schemas\Schema;
+use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use App\Filament\Resources\Trainers\Pages\EditTrainer;
 use App\Filament\Resources\Trainers\Pages\ListTrainers;
+use App\Filament\Resources\Trainers\Pages\CreateTrainer;
 use App\Filament\Resources\Trainers\Schemas\TrainerForm;
 use App\Filament\Resources\Trainers\Tables\TrainersTable;
-use App\Models\Trainer;
-use BackedEnum;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Table;
 
 class TrainerResource extends Resource
 {
@@ -40,9 +40,9 @@ class TrainerResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListTrainers::route('/'),
+            'index'  => ListTrainers::route('/'),
             'create' => CreateTrainer::route('/create'),
-            'edit' => EditTrainer::route('/{record}/edit'),
+            'edit'   => EditTrainer::route('/{record}/edit'),
         ];
     }
 }

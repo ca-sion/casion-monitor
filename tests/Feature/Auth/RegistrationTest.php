@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\Auth\Register;
 use Livewire\Livewire;
+use App\Livewire\Auth\Register;
 
 test('registration screen can be rendered', function () {
     $response = $this->get('/register');

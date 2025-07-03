@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Trainers\Pages;
 
-use App\Filament\Resources\Trainers\TrainerResource;
 use Filament\Resources\Pages\CreateRecord;
+use App\Filament\Resources\Trainers\TrainerResource;
 
 class CreateTrainer extends CreateRecord
 {

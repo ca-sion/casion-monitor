@@ -1,8 +1,8 @@
 <?php
 
-use App\Livewire\Auth\ConfirmPassword;
 use App\Models\User;
 use Livewire\Livewire;
+use App\Livewire\Auth\ConfirmPassword;
 
 test('confirm password screen can be rendered', function () {
     $user = User::factory()->create();

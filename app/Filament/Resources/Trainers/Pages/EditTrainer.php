@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Trainers\Pages;
 
-use App\Filament\Resources\Trainers\TrainerResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\Trainers\TrainerResource;
 
 class EditTrainer extends EditRecord
 {

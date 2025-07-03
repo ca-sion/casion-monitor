@@ -2,17 +2,17 @@
 
 namespace App\Filament\Resources\Athletes;
 
-use App\Filament\Resources\Athletes\Pages\CreateAthlete;
+use BackedEnum;
+use App\Models\Athlete;
+use Filament\Tables\Table;
+use Filament\Schemas\Schema;
+use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use App\Filament\Resources\Athletes\Pages\EditAthlete;
 use App\Filament\Resources\Athletes\Pages\ListAthletes;
+use App\Filament\Resources\Athletes\Pages\CreateAthlete;
 use App\Filament\Resources\Athletes\Schemas\AthleteForm;
 use App\Filament\Resources\Athletes\Tables\AthletesTable;
-use App\Models\Athlete;
-use BackedEnum;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Table;
 
 class AthleteResource extends Resource
 {
@@ -40,9 +40,9 @@ class AthleteResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListAthletes::route('/'),
+            'index'  => ListAthletes::route('/'),
             'create' => CreateAthlete::route('/create'),
-            'edit' => EditAthlete::route('/{record}/edit'),
+            'edit'   => EditAthlete::route('/{record}/edit'),
         ];
     }
 }

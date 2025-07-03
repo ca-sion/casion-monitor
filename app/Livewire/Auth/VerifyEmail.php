@@ -2,11 +2,11 @@
 
 namespace App\Livewire\Auth;
 
+use Livewire\Component;
+use Livewire\Attributes\Layout;
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
-use Livewire\Attributes\Layout;
-use Livewire\Component;
 
 #[Layout('components.layouts.auth')]
 class VerifyEmail extends Component

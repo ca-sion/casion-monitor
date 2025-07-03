@@ -14,8 +14,6 @@ use Illuminate\Contracts\View\View;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
-use Filament\Forms\Components\RichEditor;
-use Filament\Forms\Components\Slider;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\TextEntry;

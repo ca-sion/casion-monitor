@@ -18,10 +18,10 @@ class TrainerFactory extends Factory
     {
         return [
             'first_name' => fake()->firstName(),
-            'last_name' => fake()->lastName(),
-            'email' => fake()->unique()->safeEmail(),
-            'birthdate' => fake()->date(),
-            'gender' => 'm',
+            'last_name'  => fake()->lastName(),
+            'email'      => fake()->unique()->safeEmail(),
+            'birthdate'  => fake()->date(),
+            'gender'     => 'm',
         ];
     }
 }

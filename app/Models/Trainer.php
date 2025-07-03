@@ -7,21 +7,18 @@ use Illuminate\Support\Carbon;
 use Vinkla\Hashids\Facades\Hashids;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
-use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Trainer extends Model implements AuthenticatableContract, AuthorizableContract
 {
     use Authenticatable;
-
     use Authorizable;
+
     /** @use HasFactory<\Database\Factories\TrainerFactory> */
     use HasFactory;
 
@@ -56,7 +53,7 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
     protected function casts(): array
     {
         return [
-            'birthday' => 'date',
+            'birthday'        => 'date',
             'last_connection' => 'date',
         ];
     }

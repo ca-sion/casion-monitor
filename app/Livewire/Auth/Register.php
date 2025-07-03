@@ -3,12 +3,12 @@
 namespace App\Livewire\Auth;
 
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
+use Livewire\Component;
+use Livewire\Attributes\Layout;
+use Illuminate\Validation\Rules;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
-use Livewire\Attributes\Layout;
-use Livewire\Component;
+use Illuminate\Auth\Events\Registered;
 
 #[Layout('components.layouts.auth')]
 class Register extends Component
@@ -27,8 +27,8 @@ class Register extends Component
     public function register(): void
     {
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 

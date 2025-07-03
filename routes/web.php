@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Settings\Profile;
+use App\Livewire\AthleteMetricForm;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Appearance;
 use Illuminate\Support\Facades\Route;
@@ -8,7 +9,6 @@ use App\Http\Controllers\AthleteController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
-use App\Livewire\AthleteMetricForm;
 
 Route::get('/', function () {
     return view('welcome');
