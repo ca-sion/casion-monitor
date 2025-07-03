@@ -6,8 +6,8 @@
 
     <a href="{{ route('athletes.go.metrics.form', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une métrique">
         <flux:card size="sm" class="my-4 hover:bg-zinc-50 dark:hover:bg-zinc-700 bg-lime-50! border-lime-400!" color="lime">
-            <flux:heading class="flex items-center gap-2">Ajouter une métrique <flux:icon name="arrow-up-right" class="ml-auto text-lime-600" variant="micro" /></flux:heading>
-            <flux:text class="mt-2">Vous pouvez ajouter une nouvelle métrique aujourd'hui. Ou alors sélectionner une autre date.</flux:text>
+            <flux:heading class="flex items-center gap-2">Ajouter une métrique <flux:icon name="plus" class="ml-auto text-lime-600" variant="micro" /></flux:heading>
+            <flux:text class="mt-2">Vous pouvez ajouter une nouvelle métrique pour aujourd'hui. Ou sélectionner un autre jour.</flux:text>
         </flux:card>
     </a>
 
