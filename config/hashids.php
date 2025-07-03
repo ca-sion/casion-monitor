@@ -46,6 +46,12 @@ return [
             'alphabet' => 'abcdefghijklmnopqrstuvwxyz1234567890'
         ],
 
+        'trainer_hash' => [
+            'salt' => 'trainer',
+            'length' => 32,
+            'alphabet' => 'abcdefghijklmnopqrstuvwxyz1234567890'
+        ],
+        
     ],
 
 ];

@@ -7,11 +7,11 @@ use Illuminate\Support\Facades\Auth;
 
 class AthleteController extends Controller
 {
-    public function go(): View
+    public function dashboard(): View
     {
         $athlete = Auth::guard('athlete')->user();
 
-        return view('athletes.go', [
+        return view('athletes.dashboard', [
             'athlete' => $athlete,
         ]);
     }

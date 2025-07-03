@@ -13,6 +13,7 @@ class Logout
     public function __invoke()
     {
         Auth::guard('web')->logout();
+        Auth::guard('trainer')->logout();
         Auth::guard('athlete')->logout();
 
         Session::invalidate();

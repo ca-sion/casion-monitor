@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-2xl">
 
     <flux:heading size="xl" level="1">{{ $athlete->name }}</flux:heading>
-    <flux:text class="mb-6 mt-2 text-base">Rentrer les métriques pour le jour donné.</flux:text>
+    <flux:text class="mb-6 mt-2 text-base">Rentrer les métriques pour le jour choisi.</flux:text>
 
     <div class="mb-4 flex items-center justify-center">
         <!-- Previous Button -->

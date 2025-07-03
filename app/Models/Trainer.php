@@ -7,20 +7,22 @@ use Illuminate\Support\Carbon;
 use Vinkla\Hashids\Facades\Hashids;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Athlete extends Model implements AuthenticatableContract, AuthorizableContract
+class Trainer extends Model implements AuthenticatableContract, AuthorizableContract
 {
     use Authenticatable;
-    use Authorizable;
 
-    /** @use HasFactory<\Database\Factories\AthleteFactory> */
+    use Authorizable;
+    /** @use HasFactory<\Database\Factories\TrainerFactory> */
     use HasFactory;
 
     /**
@@ -54,29 +56,13 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     protected function casts(): array
     {
         return [
-            'birthday'        => 'date',
+            'birthday' => 'date',
             'last_connection' => 'date',
         ];
     }
 
     /**
-     * Get the metrics for the athlete.
-     */
-    public function metrics(): HasMany
-    {
-        return $this->hasMany(Metric::class);
-    }
-
-    /**
-     * The trainers that belong to the athlete.
-     */
-    public function trainers(): BelongsToMany
-    {
-        return $this->belongsToMany(Trainer::class);
-    }
-
-    /**
-     * Get the athlete's name.
+     * Get the trainer's name.
      */
     protected function name(): Attribute
     {
@@ -86,7 +72,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
-     * Get the athlete's birthday year.
+     * Get the trainer's birthday year.
      */
     protected function birthYear(): Attribute
     {
@@ -96,7 +82,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
-     * Get the athlete's name with initials.
+     * Get the trainer's name with initials.
      */
     protected function initials(): Attribute
     {
@@ -109,52 +95,30 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
-     * Get athlete hash.
+     * Get trainer hash.
      */
     protected function hash(): Attribute
     {
         return Attribute::make(
-            get: fn () => Hashids::connection('athlete_hash')->encode($this->id),
+            get: fn () => Hashids::connection('trainer_hash')->encode($this->id),
         );
     }
 
     /**
-     * Get athlete unique account url.
+     * Get trainer unique account url.
      */
     protected function accountLink(): Attribute
     {
         return Attribute::make(
-            get: fn () => route('athletes.dashboard', ['hash' => $this->hash]),
+            get: fn () => route('trainers.dashboard', ['hash' => $this->hash]),
         );
     }
 
     /**
-     * Athlete's metrics by dates.
+     * The athletes that belong to the trainer.
      */
-    protected function metricsByDates(): Attribute
+    public function athletes(): BelongsToMany
     {
-        return Attribute::make(
-            get: fn () => $this->metrics->take(500)->sortByDesc('date')->groupBy('date'),
-        );
-    }
-
-    /**
-     * Athlete's last metrics.
-     */
-    protected function lastMetrics(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->metricsByDates->take(1),
-        );
-    }
-
-    /**
-     * Athlete's metrics for chart.
-     */
-    protected function metricsForChart(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->metrics->take(500)->sortBy('date')->groupBy('metric_type'),
-        );
+        return $this->belongsToMany(Athlete::class);
     }
 }

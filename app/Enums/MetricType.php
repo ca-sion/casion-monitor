@@ -30,7 +30,7 @@ enum MetricType: string implements HasLabel
     {
         return match ($this) {
             self::MORNING_BODY_WEIGHT_KG => "Poids corporel le matin",
-            self::MORNING_HRV => "Variabilité de la fréquence cardiaque (HRV)",
+            self::MORNING_HRV => "Variabilité de la fréquence cardiaque (VFC/HRV)",
             self::MORNING_SLEEP_QUALITY => "Qualité du sommeil",
             self::MORNING_GENERAL_FATIGUE => "Fatigue générale",
             self::MORNING_PAIN => "Douleurs musculaires/articulaires",
