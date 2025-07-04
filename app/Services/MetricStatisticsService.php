@@ -2,20 +2,20 @@
 
 namespace App\Services;
 
-use App\Models\Athlete;
-use App\Models\Metric;
-use App\Enums\MetricType; // Import de l'énumération
 use Carbon\Carbon;
+use App\Models\Metric;
+use App\Models\Athlete; // Import de l'énumération
+use App\Enums\MetricType;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB; // Pour les agrégations
+
+// Pour les agrégations
 
 class MetricStatisticsService
 {
     /**
      * Récupère les données de métriques pour un athlète donné, avec des filtres.
      *
-     * @param Athlete $athlete
-     * @param array $filters (metric_type, period)
+     * @param  array  $filters  (metric_type, period)
      * @return Collection<Metric>
      */
     public function getAthleteMetrics(Athlete $athlete, array $filters = []): Collection
@@ -39,9 +39,8 @@ class MetricStatisticsService
     /**
      * Applique le filtre de période à la requête.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $period (e.g., 'last_7_days', 'last_30_days', 'last_6_months', 'last_year', 'all_time', 'custom:start_date,end_date')
-     * @return void
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $period  (e.g., 'last_7_days', 'last_30_days', 'last_6_months', 'last_year', 'all_time', 'custom:start_date,end_date')
      */
     protected function applyPeriodFilter($query, string $period): void
     {
@@ -80,8 +79,8 @@ class MetricStatisticsService
     /**
      * Prépare les données d'une seule métrique pour l'affichage sur un graphique Flux UI.
      *
-     * @param Collection<Metric> $metrics
-     * @param MetricType $metricType L'énumération MetricType pour obtenir les détails du champ de valeur.
+     * @param  Collection<Metric>  $metrics
+     * @param  MetricType  $metricType  L'énumération MetricType pour obtenir les détails du champ de valeur.
      * @return array ['labels' => [], 'data' => [], 'unit' => string|null]
      */
     public function prepareChartDataForSingleMetric(Collection $metrics, MetricType $metricType): array
@@ -101,9 +100,9 @@ class MetricStatisticsService
 
         return [
             'labels' => $labels,
-            'data' => $data,
-            'unit' => $unit,
-            'label' => $metricType->getLabel(),
+            'data'   => $data,
+            'unit'   => $unit,
+            'label'  => $metricType->getLabel(),
         ];
     }
 
@@ -111,8 +110,8 @@ class MetricStatisticsService
      * Prépare les données de plusieurs métriques pour l'affichage sur un graphique Flux UI.
      * Utile pour comparer différentes métriques sur un même axe ou des axes multiples.
      *
-     * @param Collection<Metric> $metrics La collection complète de métriques (peut contenir plusieurs types).
-     * @param array<MetricType> $metricTypes Les énumérations MetricType à inclure dans le graphique.
+     * @param  Collection<Metric>  $metrics  La collection complète de métriques (peut contenir plusieurs types).
+     * @param  array<MetricType>  $metricTypes  Les énumérations MetricType à inclure dans le graphique.
      * @return array ['labels' => [], 'datasets' => []]
      */
     public function prepareChartDataForMultipleMetrics(Collection $metrics, array $metricTypes): array
@@ -127,7 +126,7 @@ class MetricStatisticsService
 
             // Grouper les métriques par date pour ce type de métrique
             $groupedMetrics = $metrics->filter(fn ($m) => $m->metric_type === $metricType)
-                                      ->groupBy(fn ($m) => $m->date->format('Y-m-d'));
+                ->groupBy(fn ($m) => $m->date->format('Y-m-d'));
 
             $data = [];
             foreach ($allLabels as $dateLabel) {
@@ -136,24 +135,20 @@ class MetricStatisticsService
             }
 
             $datasets[] = [
-                'label' => $label . ($unit ? ' (' . $unit . ')' : ''),
-                'data' => $data,
+                'label' => $label.($unit ? ' ('.$unit.')' : ''),
+                'data'  => $data,
                 // Ajoutez d'autres options spécifiques à Flux UI si nécessaire, ex: 'type' => 'line'
             ];
         }
 
         return [
-            'labels' => $allLabels,
+            'labels'   => $allLabels,
             'datasets' => $datasets,
         ];
     }
 
     /**
      * Calcule la moyenne des métriques sur différentes périodes.
-     *
-     * @param Athlete $athlete
-     * @param MetricType $metricType
-     * @return array
      */
     public function getMetricTrends(Athlete $athlete, MetricType $metricType): array
     {
@@ -171,23 +166,23 @@ class MetricStatisticsService
         foreach ($periods as $label => $days) {
             $startDate = Carbon::now()->subDays($days)->startOfDay();
             $average = $athlete->metrics()
-                               ->where('metric_type', $metricType->value)
-                               ->where('date', '>=', $startDate)
-                               ->average($valueColumn);
+                ->where('metric_type', $metricType->value)
+                ->where('date', '>=', $startDate)
+                ->average($valueColumn);
 
             $trends[$label] = $average;
         }
 
         // Calculer la moyenne globale (all time)
         $allTimeAverage = $athlete->metrics()
-                                  ->where('metric_type', $metricType->value)
-                                  ->average($valueColumn);
+            ->where('metric_type', $metricType->value)
+            ->average($valueColumn);
         $trends['Total'] = $allTimeAverage;
 
         return [
             'metric_label' => $metricType->getLabel(),
-            'unit' => $metricType->getUnit(),
-            'averages' => $trends,
+            'unit'         => $metricType->getUnit(),
+            'averages'     => $trends,
         ];
     }
 }

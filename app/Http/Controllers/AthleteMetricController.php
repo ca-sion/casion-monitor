@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Athlete;
 use App\Enums\MetricType; // Import de l'énumération
-use App\Services\MetricStatisticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use App\Services\MetricStatisticsService;
 
 class AthleteMetricController extends Controller
 {
@@ -21,16 +21,14 @@ class AthleteMetricController extends Controller
      * Affiche les statistiques d'une métrique spécifique pour un athlète.
      * Utilisation pour un graphique d'une seule série (un seul type de métrique).
      *
-     * @param Request $request
-     * @param Athlete $athlete
-     * @param string $metricTypeValue Le nom de l'énumération MetricType (ex: 'morning_body_weight_kg')
+     * @param  string  $metricTypeValue  Le nom de l'énumération MetricType (ex: 'morning_body_weight_kg')
      * @return \Illuminate\Http\JsonResponse
      */
     public function showSingleMetricStatistics(Request $request, Athlete $athlete, string $metricTypeValue)
     {
         $metricType = MetricType::tryFrom($metricTypeValue);
 
-        if (!$metricType) {
+        if (! $metricType) {
             return response()->json(['error' => 'Type de métrique non valide.'], 404);
         }
 
@@ -43,17 +41,17 @@ class AthleteMetricController extends Controller
         $trends = $this->metricStatisticsService->getMetricTrends($athlete, $metricType);
 
         return response()->json([
-            'athlete' => $athlete->only('id', 'name'),
+            'athlete'          => $athlete->only('id', 'name'),
             'metric_type_info' => [
-                'value' => $metricType->value,
-                'label' => $metricType->getLabel(),
-                'unit' => $metricType->getUnit(),
-                'scale' => $metricType->getScale(),
-                'scale_hint' => $metricType->getScaleHint(),
+                'value'        => $metricType->value,
+                'label'        => $metricType->getLabel(),
+                'unit'         => $metricType->getUnit(),
+                'scale'        => $metricType->getScale(),
+                'scale_hint'   => $metricType->getScaleHint(),
                 'value_column' => $metricType->getValueColumn(),
             ],
-            'chart_data' => $chartData,
-            'trends' => $trends,
+            'chart_data'      => $chartData,
+            'trends'          => $trends,
             'filters_applied' => $filters,
         ]);
     }
@@ -62,8 +60,6 @@ class AthleteMetricController extends Controller
      * Affiche les statistiques de plusieurs métriques pour un athlète sur un même graphique.
      * Permet de comparer plusieurs types de métriques.
      *
-     * @param Request $request
-     * @param Athlete $athlete
      * @return \Illuminate\Http\JsonResponse
      */
     public function showMultipleMetricStatistics(Request $request, Athlete $athlete)
@@ -92,29 +88,29 @@ class AthleteMetricController extends Controller
         $chartData = $this->metricStatisticsService->prepareChartDataForMultipleMetrics($filteredMetrics, $metricTypes);
 
         return response()->json([
-            'athlete' => $athlete->only('id', 'name'),
-            'chart_data' => $chartData,
+            'athlete'         => $athlete->only('id', 'name'),
+            'chart_data'      => $chartData,
             'filters_applied' => [
                 'metric_types' => array_map(fn ($mt) => $mt->value, $metricTypes),
-                'period' => $period,
+                'period'       => $period,
             ],
         ]);
     }
 
-
     /**
      * Retourne la liste de tous les MetricTypes disponibles pour les filtres.
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function getAvailableMetricTypes()
     {
         $metricTypes = collect(MetricType::cases())->map(fn ($enum) => [
-            'value' => $enum->value,
-            'label' => $enum->getLabel(),
-            'description' => $enum->getDescription(),
-            'unit' => $enum->getUnit(),
-            'scale' => $enum->getScale(),
-            'scale_hint' => $enum->getScaleHint(),
+            'value'        => $enum->value,
+            'label'        => $enum->getLabel(),
+            'description'  => $enum->getDescription(),
+            'unit'         => $enum->getUnit(),
+            'scale'        => $enum->getScale(),
+            'scale_hint'   => $enum->getScaleHint(),
             'value_column' => $enum->getValueColumn(),
         ])->toArray();
 
