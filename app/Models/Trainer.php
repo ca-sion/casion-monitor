@@ -83,8 +83,8 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
      */
     protected function initials(): Attribute
     {
-        $f = $this->first_name ? (str($this->first_name)->substr(0, 1)->ucfirst().'.') : null;
-        $l = $this->last_name ? (str($this->last_name)->substr(0, 1)->ucfirst().'.') : null;
+        $f = $this->first_name ? (str($this->first_name)->substr(0, 1)->ucfirst()) : null;
+        $l = $this->last_name ? (str($this->last_name)->substr(0, 1)->ucfirst()) : null;
 
         return Attribute::make(
             get: fn () => $f.($l ?? null),

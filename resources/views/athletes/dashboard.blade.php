@@ -1,6 +1,6 @@
 <x-layouts.athlete :title="$athlete->name">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-        <flux:heading size="xl" level="1" class="mb-4 sm:mb-0">Bonjour, {{ $athlete->first_name }}</flux:heading>
+        <flux:heading size="xl" level="1" class="mb-4 sm:mb-0">Bonjour {{ $athlete->first_name }}</flux:heading>
 
         {{-- Sélecteur de période pour l'athlète --}}
         <form action="{{ route('athletes.dashboard', ['hash' => $athlete->hash]) }}" method="GET" class="flex items-center space-x-2">

@@ -1,5 +1,5 @@
 <x-layouts.trainer :title="$trainer->name">
-    <flux:heading size="xl" level="1">Bonjour, {{ $trainer->first_name }}</flux:heading>
+    <flux:heading size="xl" level="1">Bonjour {{ $trainer->first_name }}</flux:heading>
 
     <flux:text class="mb-6 mt-2 text-base">
         Ce tableau de bord présente les métriques de vos athlètes.
