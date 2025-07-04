@@ -22,40 +22,33 @@ class TrainerController extends Controller
     {
         $trainer = Auth::guard('trainer')->user();
 
-        // Si le formateur n'est pas trouvé, rediriger ou retourner une erreur
         if (! $trainer) {
-            // Gérer le cas où le formateur n'est pas authentifié
-            // Par exemple, rediriger vers la page de connexion ou afficher une erreur
-            abort(403, 'Accès non autorisé'); // Ou return redirect()->route('login');
+            abort(403, 'Accès non autorisé');
         }
 
-        $athletes = $trainer->athletes; // Récupère tous les athlètes associés à cet entraîneur
+        $athletes = $trainer->athletes;
 
-        // Définir les types de métriques à afficher sur le tableau de bord
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
-            // MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::MORNING_BODY_WEIGHT_KG,
-            // MetricType::MORNING_PAIN, // Exemple de métrique 'note' que l'on peut ajouter, mais qui affichera 'N/A' pour les tendances
         ];
 
-        // Convertir les enums en valeurs de chaîne pour le service
-        $dashboardMetricTypeValues = array_map(fn ($mt) => $mt->value, $dashboardMetricTypes);
-
-        // Définir la période pour l'aperçu des tendances (ex: 'last_30_days', 'last_7_days', 'all_time')
-        // Vous pourriez rendre cela configurable via la requête si vous voulez des filtres dynamiques.
         $period = request()->input('period', 'last_30_days');
 
-        $athletesOverviewData = $this->metricStatisticsService->getOverviewMetricsForAthletes(
-            $athletes, // Utiliser la collection d'athlètes récupérée
-            $dashboardMetricTypeValues,
-            $period
-        );
+        $athletesOverviewData = $athletes->map(function ($athlete) use ($dashboardMetricTypes, $period) {
+            $metricsDataForDashboard = [];
+            foreach ($dashboardMetricTypes as $metricType) {
+                // Utilise le même service pour les données de résumé de chaque athlète
+                $metricsDataForDashboard[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
+            }
+            // Attache les données agrégées directement à l'objet Athlete pour un accès facile dans la vue
+            $athlete->metricsDataForDashboard = $metricsDataForDashboard;
+            return $athlete;
+        });
 
-        // Définir les options de période pour le sélecteur dans la vue
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
             'last_14_days'  => '14 derniers jours',
@@ -65,20 +58,15 @@ class TrainerController extends Controller
             'last_6_months' => '6 derniers mois',
             'last_year'     => 'Dernière année',
             'all_time'      => 'Depuis le début',
-            // Vous pourriez ajouter d'autres périodes personnalisées ici, comme 'custom:2024-01-01,2024-03-31'
         ];
+        // Vous pourriez ajouter d'autres périodes personnalisées ici, comme 'custom:2024-01-01,2024-03-31'
 
         $data = [
-            'trainer' => $trainer,
-            // Renommer 'athletes' en 'athletes_overview_data' pour correspondre à la vue
+            'trainer'                => $trainer,
             'athletes_overview_data' => $athletesOverviewData,
-            'dashboard_metric_types' => $dashboardMetricTypes, // Passer les objets Enum MetricType à la vue
-            'period_label'           => $period, // Pour afficher la période dans la vue
-            'period_options'         => $periodOptions, // Les options pour le sélecteur
-            // Les deux lignes ci-dessous sont pour un tableau de bord plus avancé avec filtres dynamiques,
-            // mais ne sont pas strictement nécessaires pour la version actuelle de la vue si vous ne les utilisez pas.
-            // 'available_metric_types' => collect(MetricType::cases())->map(fn ($enum) => ['value' => $enum->value, 'label' => $enum->getLabel()]),
-            // 'filters_applied'        => ['metric_types' => $selectedMetricTypeValues, 'period' => $period],
+            'dashboard_metric_types' => $dashboardMetricTypes,
+            'period_label'           => $period,
+            'period_options'         => $periodOptions,
         ];
 
         if (request()->expectsJson()) {
@@ -92,9 +80,50 @@ class TrainerController extends Controller
     {
         $trainer = Auth::guard('trainer')->user();
 
+        // Verify trainer has access to this athlete
+        if (! $trainer->athletes->contains($athlete)) {
+            abort(403, 'Accès non autorisé à cet athlète.');
+        }
+
+        // Get daily metrics history for the specific athlete
+        $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, 50);
+
+        // Define the specific metric types to display in the trainer's athlete view table
+        $displayTableMetricTypes = [
+            MetricType::MORNING_HRV,
+            MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            // Ajoutez d'autres types de métriques si nécessaire pour les colonnes du tableau
+        ];
+
+        // Process daily metrics history to prepare for the table
+        $processedDailyMetrics = $dailyMetricsHistory->map(function ($metricDates, $date) use ($displayTableMetricTypes) {
+            $rowData = [
+                'date_formatted' => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'),
+                'day_of_week'    => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('dddd'),
+                'metrics'        => [],
+                'edit_link'      => null,
+            ];
+
+            foreach ($displayTableMetricTypes as $metricType) {
+                $metric = $metricDates->where('metric_type', $metricType->value)->first();
+                // Utilisation de l'accessor 'data' avec 'formatted_value'
+                $rowData['metrics'][$metricType->value] = $metric ? $metric->data->formatted_value : 'N/A';
+            }
+            
+            if ($metricDates->first()) {
+                $rowData['edit_link'] = $metricDates->first()->data->edit_link;
+            }
+
+            return $rowData;
+        });
+
+
         return view('trainers.athlete', [
-            'trainer' => $trainer,
-            'athlete' => $athlete,
+            'trainer'                 => $trainer,
+            'athlete'                 => $athlete,
+            'daily_metrics_history'   => $processedDailyMetrics,
+            'display_table_metric_types' => $displayTableMetricTypes,
         ]);
     }
 }

@@ -21,94 +21,85 @@
 
     <flux:separator variant="subtle" />
 
-    <flux:table class="my-4 w-full">
+    <flux:table class="my-4">
         <flux:table.columns>
             <flux:table.column class="sticky left-0 bg-white dark:bg-zinc-900 z-10 w-48">Athlète</flux:table.column>
-            <flux:table.column class="w-36">Dern. Connexion</flux:table.column>
             @foreach ($dashboard_metric_types as $metricType)
-                <flux:table.column class="text-left w-48">{{ $metricType->getLabelShort() }}</flux:table.column>
-                <flux:table.column class="text-center w-28">Moy. 7j</flux:table.column>
-                <flux:table.column class="text-center w-28">Tendance</flux:table.column>
-                <flux:table.column class="text-center w-48">Évolution</flux:table.column>
+                <flux:table.column class="text-center w-fit">
+                    {{ $metricType->getLabelShort() }}
+                    <flux:tooltip content="{{ $metricType->getDescription() }}">
+                        <flux:icon size="sm" class="inline size-4 ms-2" icon="information-circle"></flux:icon>
+                    </flux:tooltip>
+                </flux:table.column>
             @endforeach
             <flux:table.column class="text-center w-36">Actions</flux:table.column>
         </flux:table.columns>
 
         <flux:table.rows>
-            @foreach ($trainer->athletes as $athlete)
-                @php
-                    $athleteData = $athletes_overview_data[$athlete->id] ?? null;
-                @endphp
+            @foreach ($athletes_overview_data as $athlete)
                 <flux:table.row>
-                    <flux:table.cell class="sticky left-0 bg-white dark:bg-zinc-900 z-10">
-                        {{ $athlete->name }}
-                    </flux:table.cell>
-                    <flux:table.cell>
-                        {{ $athlete->last_connection?->locale('fr_CH')->isoFormat('L') ?? 'N/A' }}
+                    <flux:table.cell class="sticky left-0 bg-white dark:bg-zinc-900 z-48">
+                        <div class="flex items-center gap-2">
+                            <flux:avatar src="https://unavatar.io/{{ $athlete->id }}?fallback=https://api.dicebear.com/7.x/pixel-art/svg?seed={{ $athlete->id }}" class="size-6" />
+                            <span>{{ $athlete->name }}</span>
+                        </div>
+                        <div class="text-xs mt-1 ms-8">
+                            <flux:tooltip content="Dernière connexion">
+                                <flux:icon.clock size="sm" class="inline size-4" />
+                            </flux:tooltip>
+                            {{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->diffForHumans() : 'Jamais' }}
+                        </div>
                     </flux:table.cell>
 
                     @foreach ($dashboard_metric_types as $metricType)
                         @php
-                            $chartData = $athleteData['chart_data'][$metricType->value] ?? null;
-                            $trends = $athleteData['trends'][$metricType->value] ?? null;
-                            $evolutionTrend = $athleteData['evolution_trends'][$metricType->value] ?? null;
-
-                            $lastValue = null;
-                            if ($chartData && !empty($chartData['data'])) {
-                                // Récupérer la dernière valeur numérique non-null
-                                $filteredData = array_values(array_filter($chartData['data'], fn($val) => $val !== null));
-                                if (!empty($filteredData)) {
-                                    $lastValue = end($filteredData);
-                                }
-                            }
-
-                            $average7Days = $trends['averages']['Derniers 7 jours'] ?? null;
+                            $metricData = $athlete->metricsDataForDashboard[$metricType->value];
+                            $chartData = $metricData['chart_data'];
                         @endphp
                         <flux:table.cell>
-                            @if ($lastValue !== null)
-                                {{ number_format($lastValue, 2) }}{{ $metricType->getUnit() ? ' '.$metricType->getUnit() : '' }}
-                            @else
-                                <span class="text-zinc-500">N/A</span>
-                            @endif
-                        </flux:table.cell>
-                        <flux:table.cell class="text-center">
-                            @if ($average7Days !== null)
-                                {{ number_format($average7Days, 2) }}{{ $metricType->getUnit() ? ' '.$metricType->getUnit() : '' }}
-                            @else
-                                <span class="text-zinc-500">N/A</span>
-                            @endif
-                        </flux:table.cell>
-                        <flux:table.cell class="text-center text-lg">
-                            @if ($evolutionTrend['trend'] === 'not_applicable')
-                                <span title="{{ $evolutionTrend['reason'] ?? 'Métrique non numérique' }}" class="text-zinc-400">―</span>
-                            @elseif ($evolutionTrend['trend'] === 'not_enough_data')
-                                <span title="Pas assez de données pour la tendance" class="text-zinc-400">...</span>
-                            @else
-                                @switch($evolutionTrend['trend'])
-                                    @case('increasing')
-                                        <span class="text-green-500" title="Tendance à la hausse">▲</span>
-                                        @break
-                                    @case('decreasing')
-                                        <span class="text-red-500" title="Tendance à la baisse">▼</span>
-                                        @break
-                                    @case('stable')
-                                        <span class="text-blue-500" title="Tendance stable">━</span>
-                                        @break
-                                    @default
-                                        <span class="text-zinc-400" title="Tendance inconnue">?</span>
-                                @endswitch
-                            @endif
-                        </flux:table.cell>
-                        <flux:table.cell class="text-center">
-                            @if ($chartData && !empty($chartData['data']) && count(array_filter($chartData['data'], fn($val) => $val !== null)) >= 2)
-                                <flux:chart class="aspect-[3/1] w-full" :value="collect($chartData['data'])->filter(fn($val) => $val !== null)->take(14)">
-                                    <flux:chart.svg gutter="0">
-                                        <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
-                                    </flux:chart.svg>
-                                </flux:chart>
-                            @else
-                                <span class="text-zinc-500 text-sm">Pas de données graphiques</span>
-                            @endif
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center justify-between">
+                                    <flux:tooltip content="Dernière valeur enregistrée pour cette métrique sur la période sélectionnée.">
+                                        <flux:text class="text-xs font-semibold uppercase text-zinc-500 underline decoration-dotted decoration-zinc-500/30">Valeur:</flux:text>
+                                    </flux:tooltip>
+                                    <flux:text class="font-bold ms-1">{{ $metricData['formatted_last_value'] }}</flux:text>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
+                                    <flux:text class="font-medium ms-1">{{ $metricData['formatted_average_7_days'] }}</flux:text>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
+                                    <flux:text class="font-medium ms-1">{{ $metricData['formatted_average_30_days'] }}</flux:text>
+                                </div>
+                                @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
+                                    <div class="flex items-center justify-between mt-1">
+                                        <flux:tooltip content="La tendance compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours.">
+                                            <flux:badge size="sm" inset="top bottom" color="{{ $metricData['trend_color'] }}">
+                                            <div class="flex items-center gap-1">
+                                                <flux:icon name="{{ $metricData['trend_icon'] }}" variant="micro" class="-mr-0.5" />
+                                                <span>{{ $metricData['trend_percentage'] }}</span>
+                                            </div>
+                                        </flux:badge>
+                                        </flux:tooltip>
+                                    </div>
+                                @else
+                                    <flux:text class="text-xs font-semibold uppercase text-zinc-500 mt-1">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">N/A</span></flux:text>
+                                @endif
+                            </div>
+                            <div class="mt-2">
+                                @if ($chartData && !empty($chartData['data']) && count(array_filter($chartData['data'], fn($val) => $val !== null)) >= 2)
+                                    <flux:chart class="aspect-[3/1] w-full h-10" :value="collect($chartData['data'])->filter(fn($val) => $val !== null)->take(14)">
+                                        <flux:chart.svg gutter="0">
+                                            <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
+                                        </flux:chart.svg>
+                                    </flux:chart>
+                                @else
+                                <flux:card class="border-dashed border-2 h-10 flex items-center">
+                                    <flux:text class="text-zinc-500 text-sm text-center"> </flux:text>
+                                </flux:card>
+                                @endif
+                            </div>
                         </flux:table.cell>
                     @endforeach
                     <flux:table.cell class="text-center">

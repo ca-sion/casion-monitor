@@ -187,4 +187,15 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_TECHNICAL_FEEDBACK => null,
         };
     }
+
+    /**
+     * Retourne le nombre de décimales pour l'affichage de la métrique.
+     */
+    public function getPrecision(): int
+    {
+        return match ($this) {
+            self::MORNING_BODY_WEIGHT_KG => 2, // Poids en kg, souvent avec décimales
+            default                      => 0, // La plupart des autres métriques sont des entiers ou des scores
+        };
+    }
 }

@@ -39,151 +39,110 @@
 
     {{-- Section des cartes de métriques individuelles --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-4">
-        @foreach ($dashboard_metric_types as $metricType)
-            @php
-                $metricData = $metrics_data ?? null;
-
-                $chartData = $metricData['chart_data'][$metricType->value] ?? null;
-                $trends = $metricData['trends'][$metricType->value] ?? null;
-                $evolutionTrend = $metricData['evolution_trends'][$metricType->value] ?? null;
-
-                $lastValue = null;
-                if (isset($chartData['data']) && !empty($chartData['data'])) {
-                    $filteredData = array_values(array_filter($chartData['data'], fn($val) => $val !== null));
-                    if (!empty($filteredData)) {
-                        $lastValue = end($filteredData);
-                    }
-                }
-
-                $average7Days = $trends['averages']['Derniers 7 jours'] ?? null;
-                $average30Days = $trends['averages']['Derniers 30 jours'] ?? null;
-                
-                $trend7DaysValue = $average7Days;
-
-                $evolutionTrendIcon = null;
-                $evolutionTrendColor = 'zinc';
-
-                if ($average7Days !== null && $average7Days !== 0 && $evolutionTrend) {
-                    switch ($evolutionTrend['trend']) {
-                        case 'increasing':
-                            $evolutionTrendIcon = 'arrow-trending-up';
-                            $evolutionTrendColor = 'lime';
-                            break;
-                        case 'decreasing':
-                            $evolutionTrendIcon = 'arrow-trending-down';
-                            $evolutionTrendColor = 'rose';
-                            break;
-                        case 'stable':
-                            $evolutionTrendIcon = 'minus';
-                            $evolutionTrendColor = 'zinc';
-                            break;
-                        default:
-                        $evolutionTrendIcon = 'ellipsis-horizontal';
-                        $evolutionTrendColor = 'zinc';
-                            break;
-                    }
-                }
-                $trendPercentage = $trend7DaysValue !== null ? number_format(abs($trend7DaysValue), 1).'%' : 'N/A';
-            @endphp
-
+        @foreach ($dashboard_metrics_data as $metricTypeKey => $metricData)
             <flux:card class="p-4" size="sm">
-                <flux:heading size="sm" class="mb-2 flex items-center justify-between">
-                    {{ $metricType->getLabel() }}
-                    @if ($metricType->getUnit())
-                        <flux:badge size="xs" color="zinc">{{ $metricType->getUnit() }}</flux:badge>
+                <div class="flex items-center justify-between mb-2">
+                    <flux:tooltip content="{{ $metricData['description'] }}" icon="information-circle">
+                        <flux:text class="text-xs font-semibold uppercase text-zinc-500">{{ $metricData['short_label'] }}</flux:text>
+                    </flux:tooltip>
+                    @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
+                        <flux:tooltip content="La tendance compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours." icon="information-circle">
+                            <flux:badge size="xs" color="{{ $metricData['trend_color'] }}">
+                                <div class="flex items-center gap-1">
+                                    <flux:icon name="{{ $metricData['trend_icon'] }}" variant="mini" class="-mr-0.5" />
+                                    <span>{{ $metricData['trend_percentage'] }}</span>
+                                </div>
+                            </flux:badge>
+                        </flux:tooltip>
                     @endif
-                    @if ($metricType->getScale())
-                        <flux:badge size="xs" color="zinc">sur {{ $metricType->getScale() }}</flux:badge>
+                </div>
+                <flux:tooltip content="Ceci est la dernière valeur enregistrée pour cette métrique sur la période sélectionnée." icon="information-circle">
+                    <flux:heading size="lg" level="2" class="mb-4">
+                        {{ $metricData['formatted_last_value'] }}
+                    </flux:heading>
+                </flux:tooltip>
+
+                <div class="mb-4">
+                    {{-- Utilisation du composant Flux UI pour le graphique - MISE À JOUR AVEC VOTRE SOLUTION --}}
+                    @if (!empty($metricData['chart_data']['labels']) && !empty($metricData['chart_data']['data']))
+                        <flux:chart class="aspect-[3/1] w-full mb-2" :value="$metricData['chart_data']['data']">
+                            <flux:chart.svg gutter="0">
+                                <flux:chart.line class="text-blue-500 dark:text-blue-400" />
+                            </flux:chart.svg>
+                        </flux:chart>
+                    @else
+                        <flux:text class="text-center text-zinc-500">Pas assez de données pour afficher le graphique.</flux:text>
                     @endif
-                </flux:heading>
-                <flux:text class="text-2xl font-bold">{{ $lastValue ?? 'N/A' }}</flux:text>
-                <flux:text class="text-sm text-zinc-500 mb-2">Dernière valeur</flux:text>
+                </div>
 
-                {{-- Graphique de la métrique --}}
-                <flux:chart class="aspect-[3/1] w-full mb-2" :value="$chartData['data'] ?? []">
-                    <flux:chart.svg gutter="0">
-                        <flux:chart.line class="text-blue-500 dark:text-blue-400" />
-                    </flux:chart.svg>
-                </flux:chart>
-
-                <div class="flex justify-between text-sm">
+                <div class="grid grid-cols-2 gap-2 text-sm text-zinc-600">
                     <div>
-                        <flux:text class="text-zinc-500">Moy. 7j</flux:text>
-                        <flux:text class="font-semibold">{{ number_format($average7Days, 1) ?? 'N/A' }}</flux:text>
+                        Moy. 7j:
+                        <flux:tooltip content="Moyenne des valeurs sur les 7 derniers jours." icon="information-circle">
+                            <span class="font-medium">{{ $metricData['formatted_average_7_days'] }}</span>
+                        </flux:tooltip>
                     </div>
                     <div>
-                        <flux:text class="text-zinc-500">Moy. 30j</flux:text>
-                        <flux:text class="font-semibold">{{ number_format($average30Days, 1) ?? 'N/A' }}</flux:text>
-                    </div>
-                    <div class="text-right">
-                        <flux:text class="text-zinc-500">Tendance 7j</flux:text>
-                        <flux:text class="font-semibold flex items-center justify-end">
-                            @if ($evolutionTrendIcon)
-                                <flux:icon :name="$evolutionTrendIcon" :color="$evolutionTrendColor" class="mr-1" />
-                            @endif
-                            {{ $trendPercentage }}
-                        </flux:text>
+                        Moy. 30j:
+                        <flux:tooltip content="Moyenne des valeurs sur les 30 derniers jours." icon="information-circle">
+                            <span class="font-medium">{{ $metricData['formatted_average_30_days'] }}</span>
+                        </flux:tooltip>
                     </div>
                 </div>
             </flux:card>
         @endforeach
     </div>
 
-    <flux:text class="mb-4 mt-8 text-lg font-semibold">Ton historique des métriques:</flux:text>
+    <flux:separator variant="subtle" class="my-8" />
+
+    <flux:text class="mb-4 mt-8 text-lg font-semibold">Ton historique des métriques quotidiennes:</flux:text>
+
     <flux:table class="my-4">
         <flux:table.columns>
             <flux:table.column>Date</flux:table.column>
-            <flux:table.column>Jour</flux:table.column>
-            <flux:table.column class="text-center">Métriques enregistrées</flux:table.column>
-            <flux:table.column>Aperçu des valeurs clés</flux:table.column>
-            <flux:table.column class="text-center">Action</flux:table.column>
+            @foreach ($dashboard_metric_types as $metricType)
+                <flux:table.column>
+                    <flux:tooltip content="{{ $metricType->getDescription() }}" icon="information-circle">
+                        {{ $metricType->getLabelShort() }}
+                    </flux:tooltip>
+                </flux:table.column>
+            @endforeach
+            <flux:table.column class="text-center">Actions</flux:table.column>
         </flux:table.columns>
 
         <flux:table.rows>
             @forelse ($daily_metrics_history as $date => $metricDates)
                 <flux:table.row>
-                    <flux:table.cell>{{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L') }}</flux:table.cell>
-                    <flux:table.cell>{{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('dddd') }}</flux:table.cell>
-                    <flux:table.cell class="text-center">
-                        <flux:badge size="sm" color="info">{{ count($metricDates) }}</flux:badge>
+                    <flux:table.cell>
+                        {{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L') }}
+                        ({{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('dddd') }})
                     </flux:table.cell>
-                    <flux:table.cell class="flex flex-wrap gap-2">
-                        @php
-                            // Filtrer les métriques spécifiques que nous voulons afficher en aperçu
-                            $displayMetrics = [
-                                \App\Enums\MetricType::MORNING_HRV->value => 'HRV',
-                                \App\Enums\MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value => 'Fatigue Post-Sess.',
-                                \App\Enums\MetricType::POST_SESSION_SESSION_LOAD->value => 'Charge Sess.',
-                                \App\Enums\MetricType::MORNING_GENERAL_FATIGUE->value => 'Fatigue Gén.',
-                            ];
-                        @endphp
-                        @foreach ($displayMetrics as $metricTypeValue => $metricLabel)
+                    @foreach ($dashboard_metric_types as $metricType)
+                        <flux:table.cell>
                             @php
-                                $metric = $metricDates->firstWhere('metric_type', $metricTypeValue);
+                                $displayMetric = $metricDates->where('metric_type', $metricType->value)->first();
                             @endphp
-                            @if ($metric && $metric->value !== null)
-                                <flux:badge size="xs" color="zinc" class="flex items-center gap-1">
-                                    <span class="font-medium">{{ $metricLabel }}:</span>
-                                    {{ number_format($metric->value, 0) }}{{ $metric->unit ? ' '.$metric->unit : '' }}
+                            @if ($displayMetric)
+                                <flux:badge size="xs" color="zinc">
+                                    <span class="font-medium">{{ $displayMetric->metric_type->getLabelShort() }}:</span>
+                                    {{ $displayMetric->data->formatted_value }}
                                 </flux:badge>
+                            @else
+                                N/A
                             @endif
-                        @endforeach
-                        {{-- Calculer les "autres" métriques restantes --}}
-                        @if (count($metricDates->whereNotIn('metric_type.value', array_keys($displayMetrics))) > 0)
-                            <flux:badge size="xs" color="zinc">+{{ count($metricDates->whereNotIn('metric_type.value', array_keys($displayMetrics))) }} autres</flux:badge>
-                        @endif
-                    </flux:table.cell>
+                        </flux:table.cell>
+                    @endforeach
                     <flux:table.cell class="text-center">
                         @if ($metricDates->first())
                             <flux:link href="{{ $metricDates->first()->data->edit_link }}">Modifier</flux:link>
                         @else
                             N/A
                         @endif
-                    </flux:table.cell>
+                    </flux:table.table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="5" class="text-center text-zinc-500 py-4">
+                    <flux:table.cell colspan="{{ count($dashboard_metric_types) + 2 }}" class="text-center text-zinc-500 py-4">
                         Aucune entrée de métrique trouvée pour cette période.
                     </flux:table.cell>
                 </flux:table.row>

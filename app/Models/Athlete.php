@@ -55,7 +55,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     {
         return [
             'birthday'        => 'date',
-            'last_connection' => 'date',
+            'last_connection' => 'datetime',
         ];
     }
 

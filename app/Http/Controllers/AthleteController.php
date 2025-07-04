@@ -8,7 +8,7 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Services\MetricStatisticsService; // Assurez-vous d'importer le service
+use App\Services\MetricStatisticsService;
 
 class AthleteController extends Controller
 {
@@ -23,12 +23,10 @@ class AthleteController extends Controller
     {
         $athlete = Auth::guard('athlete')->user();
 
-        // Si l'athlète n'est pas trouvé, rediriger ou retourner une erreur
         if (! $athlete) {
             abort(403, 'Accès non autorisé');
         }
 
-        // Définir les types de métriques clés à afficher sur le tableau de bord de l'athlète
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
@@ -38,45 +36,32 @@ class AthleteController extends Controller
             // MetricType::POST_SESSION_SESSION_LOAD,
         ];
 
-        // Convertir les enums en valeurs de chaîne pour le service
-        $dashboardMetricTypeValues = array_map(fn ($mt) => $mt->value, $dashboardMetricTypes);
-
-        // Récupérer la période depuis la requête ou utiliser 'last_30_days' par défaut
         $period = $request->input('period', 'last_30_days');
 
-        // Récupérer les données agrégées pour cet athlète
-        // Nous passons l'athlète dans une collection pour utiliser le même service que le contrôleur du coach
-        $overviewDataCollection = $this->metricStatisticsService->getOverviewMetricsForAthletes(
-            collect([$athlete]), // Wrap the single athlete in a collection
-            $dashboardMetricTypeValues,
-            $period
-        );
+        $metricsDataForDashboard = [];
+        foreach ($dashboardMetricTypes as $metricType) {
+            $metricsDataForDashboard[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
+        }
 
-        // Extraire les données spécifiques à l'athlète actuel
-        $athleteMetricsData = $overviewDataCollection[$athlete->id] ?? [];
+        $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, 50);
 
-        // Récupérer les métriques quotidiennes groupées pour la section "Ton historique des métriques"
-        // Nous allons limiter à un certain nombre de jours pour cette table, par exemple 30 jours
-        $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, 50); // Limite arbitraire de 50 métriques brutes pour l'historique
-
-        // Définir les options de période pour le sélecteur dans la vue
         $periodOptions = [
-            'last_7_days'   => '7 derniers jours',
+            'last_7_days'    => '7 derniers jours',
             'last_14_days'   => '14 derniers jours',
-            'last_30_days'  => '30 derniers jours',
-            'last_90_days'  => '90 derniers jours',
-            'last_6_months' => '6 derniers mois',
-            'last_year'     => 'Dernière année',
-            'all_time'      => 'Depuis le début',
+            'last_30_days'   => '30 derniers jours',
+            'last_90_days'   => '90 derniers jours',
+            'last_6_months'  => '6 derniers mois',
+            'last_year'      => 'Dernière année',
+            'all_time'       => 'Depuis le début',
         ];
 
         $data = [
             'athlete'                => $athlete,
-            'metrics_data'           => $athleteMetricsData, // Données agrégées pour l'athlète
-            'dashboard_metric_types' => $dashboardMetricTypes, // Les objets Enum MetricType
-            'period_label'           => $period, // La valeur de la période sélectionnée
-            'period_options'         => $periodOptions, // Les options pour le sélecteur
-            'daily_metrics_history'  => $dailyMetricsHistory, // Les données pour l'historique quotidien
+            'dashboard_metrics_data' => $metricsDataForDashboard, // Données agrégées pour le tableau de bord
+            'period_label'           => $period,
+            'period_options'         => $periodOptions,
+            'daily_metrics_history'  => $dailyMetricsHistory,
+            'dashboard_metric_types' => $dashboardMetricTypes, // Garder pour les entêtes de tableau
         ];
 
         if ($request->expectsJson()) {

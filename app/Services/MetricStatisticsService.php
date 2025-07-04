@@ -45,25 +45,25 @@ class MetricStatisticsService
 
         switch ($period) {
             case 'last_7_days':
-                $query->where('date', '>=', $now->subDays(7)->startOfDay());
+                $query->where('date', '>=', $now->copy()->subDays(7)->startOfDay());
                 break;
             case 'last_14_days':
-                $query->where('date', '>=', $now->subDays(14)->startOfDay());
+                $query->where('date', '>=', $now->copy()->subDays(14)->startOfDay());
                 break;
             case 'last_30_days':
-                $query->where('date', '>=', $now->subDays(30)->startOfDay());
+                $query->where('date', '>=', $now->copy()->subDays(30)->startOfDay());
                 break;
             case 'last_60_days':
-                $query->where('date', '>=', $now->subDays(60)->startOfDay());
+                $query->where('date', '>=', $now->copy()->subDays(60)->startOfDay());
                 break;
             case 'last_90_days':
-                $query->where('date', '>=', $now->subDays(90)->startOfDay());
+                $query->where('date', '>=', $now->copy()->subDays(90)->startOfDay());
                 break;
             case 'last_6_months':
-                $query->where('date', '>=', $now->subMonths(6)->startOfDay());
+                $query->where('date', '>=', $now->copy()->subMonths(6)->startOfDay());
                 break;
             case 'last_year':
-                $query->where('date', '>=', $now->subYear()->startOfDay());
+                $query->where('date', '>=', $now->copy()->subYear()->startOfDay());
                 break;
             case 'all_time':
                 // Pas de filtre de date spécifique
@@ -95,7 +95,10 @@ class MetricStatisticsService
         $valueColumn = $metricType->getValueColumn();
         $unit = $metricType->getUnit();
 
-        foreach ($metrics as $metric) {
+        // Ensure metrics are sorted by date for chronological chart display
+        $sortedMetrics = $metrics->sortBy('date');
+
+        foreach ($sortedMetrics as $metric) {
             if ($metric->metric_type === $metricType) {
                 $labels[] = $metric->date->format('Y-m-d');
                 $value = $metric->{$valueColumn};
@@ -192,16 +195,14 @@ class MetricStatisticsService
 
         $trends = [];
         $valueColumn = $metricType->getValueColumn();
-
         $periods = [
             'Derniers 7 jours'  => 7,
-            'Derniers 14 jours'  => 14,
+            'Derniers 14 jours' => 14,
             'Derniers 30 jours' => 30,
             'Derniers 90 jours' => 90,
             'Derniers 6 mois'   => 180,
             'Derniers 1 an'     => 365,
         ];
-
         $now = Carbon::now();
 
         foreach ($periods as $label => $days) {
@@ -224,215 +225,74 @@ class MetricStatisticsService
      * Calcule la tendance d'évolution (accroissement/décroissement) pour une métrique sur une période.
      * Compare la valeur moyenne au début et à la fin de la période ou la première/dernière valeur.
      *
-     * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months')
-     * @param  int  $comparisonDays  Nombre de jours pour calculer la moyenne au début/fin (ex: 7 pour la moyenne sur 7 jours)
-     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'not_enough_data'|'not_applicable', 'change' => float|null, 'unit' => string|null, 'start_value' => float|null, 'end_value' => float|null, 'label' => string, 'period' => string, 'reason' => string|null]
+     * @param Collection<Metric> $metrics Collection de métriques déjà filtrée par type.
+     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
      */
-    public function getMetricEvolutionTrend(Athlete $athlete, MetricType $metricType, string $period, int $comparisonDays = 7): array
+    public function getEvolutionTrendForCollection(Collection $metrics, MetricType $metricType): array
     {
         if ($metricType->getValueColumn() === 'note') {
-            return [
-                'trend'       => 'not_applicable',
-                'change'      => null,
-                'start_value' => null,
-                'end_value'   => null,
-                'unit'        => $metricType->getUnit(),
-                'label'       => $metricType->getLabel(),
-                'period'      => $period,
-                'reason'      => 'La métrique n\'est pas numérique et ne peut pas être analysée pour une tendance d\'évolution.',
-            ];
-        }
-
-        $query = $athlete->metrics()
-            ->where('metric_type', $metricType->value)
-            ->orderBy('date', 'asc');
-
-        $this->applyPeriodFilter($query, $period);
-
-        $metrics = $query->get();
-
-        return $this->getMetricEvolutionTrendForCollection($metrics, $metricType, $period, $comparisonDays);
-    }
-
-    /**
-     * Version de getMetricEvolutionTrend qui prend une collection déjà filtrée.
-     *
-     * @param  Collection<Metric>  $metrics
-     */
-    public function getMetricEvolutionTrendForCollection(Collection $metrics, MetricType $metricType, string $period, int $comparisonDays = 7): array
-    {
-        if ($metricType->getValueColumn() === 'note') {
-            return [
-                'trend'       => 'not_applicable',
-                'change'      => null,
-                'start_value' => null,
-                'end_value'   => null,
-                'unit'        => $metricType->getUnit(),
-                'label'       => $metricType->getLabel(),
-                'period'      => $period,
-                'reason'      => 'La métrique n\'est pas numérique et ne peut pas être analysée pour une tendance d\'évolution.',
-            ];
+            return ['trend' => 'N/A', 'change' => null, 'reason' => 'La métrique n\'est pas numérique.'];
         }
 
         $valueColumn = $metricType->getValueColumn();
-        $unit = $metricType->getUnit();
+        $numericMetrics = $metrics->filter(fn($m) => is_numeric($m->{$valueColumn}))->sortBy('date');
 
-        // Assurez-vous que la collection est triée par date pour un découpage précis.
-        $metrics = $metrics->sortBy('date');
-
-        if ($metrics->count() < 2) {
-            return [
-                'trend'       => 'not_enough_data',
-                'change'      => null,
-                'start_value' => null,
-                'end_value'   => null,
-                'unit'        => $unit,
-                'label'       => $metricType->getLabel(),
-                'period'      => $period,
-            ];
+        if ($numericMetrics->count() < 2) {
+            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
         }
 
-        // Calcule la moyenne des $comparisonDays premières entrées numériques
-        $startMetrics = $metrics->filter(fn ($m) => is_numeric($m->{$valueColumn}))->take($comparisonDays);
-        $startValue = $startMetrics->avg($valueColumn);
+        // Calculate average of the first third and last third of the data points for a smoother trend
+        $totalCount = $numericMetrics->count();
+        $segmentSize = floor($totalCount / 3);
 
-        // Calcule la moyenne des $comparisonDays dernières entrées numériques
-        $endMetrics = $metrics->filter(fn ($m) => is_numeric($m->{$valueColumn}))->slice($metrics->count() - $comparisonDays);
-        $endValue = $endMetrics->avg($valueColumn);
+        if ($segmentSize === 0) { // If less than 3 data points, compare first and last
+            $firstValue = $numericMetrics->first()->{$valueColumn};
+            $lastValue = $numericMetrics->last()->{$valueColumn};
+        } else {
+            $firstSegment = $numericMetrics->take($segmentSize);
+            $lastSegment = $numericMetrics->slice($totalCount - $segmentSize);
 
-        // Fallback vers les première et dernière valeurs numériques si les moyennes sont nulles ou non numériques.
-        if ($startValue === null || $endValue === null || ! is_numeric($startValue) || ! is_numeric($endValue)) {
-            $firstNumericMetric = $metrics->first(fn ($m) => is_numeric($m->{$valueColumn}));
-            $lastNumericMetric = $metrics->last(fn ($m) => is_numeric($m->{$valueColumn}));
-
-            if ($firstNumericMetric && $lastNumericMetric) {
-                $startValue = (float) $firstNumericMetric->{$valueColumn};
-                $endValue = (float) $lastNumericMetric->{$valueColumn};
-            } else {
-                return [
-                    'trend'       => 'not_enough_data',
-                    'change'      => null,
-                    'start_value' => null,
-                    'end_value'   => null,
-                    'unit'        => $unit,
-                    'label'       => $metricType->getLabel(),
-                    'period'      => $period,
-                    'reason'      => 'Aucune donnée numérique valide trouvée pour la tendance.',
-                ];
-            }
+            $firstValue = $firstSegment->avg($valueColumn);
+            $lastValue = $lastSegment->avg($valueColumn);
         }
 
-        $change = $endValue - $startValue;
+        if ($firstValue === null || $lastValue === null) {
+            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
+        }
+        
+        // Handle division by zero for percentage change
+        if ($firstValue == 0 && $lastValue != 0) {
+            $change = 100; // Represents a significant increase from zero
+        } elseif ($firstValue == 0 && $lastValue == 0) {
+            $change = 0; // No change if both are zero
+        } else {
+            $change = (($lastValue - $firstValue) / $firstValue) * 100;
+        }
+
         $trend = 'stable';
-
-        if ($change > 0.001) { // Utiliser un epsilon pour la comparaison des flottants
+        // Define a small threshold to consider it stable, avoiding micro-fluctuations
+        if ($change > 0.5) {
             $trend = 'increasing';
-        } elseif ($change < -0.001) {
+        } elseif ($change < -0.5) {
             $trend = 'decreasing';
         }
 
         return [
-            'trend'       => $trend,
-            'change'      => $change,
-            'start_value' => $startValue,
-            'end_value'   => $endValue,
-            'unit'        => $unit,
-            'label'       => $metricType->getLabel(),
-            'period'      => $period,
+            'trend'  => $trend,
+            'change' => $change,
         ];
     }
 
     /**
-     * Récupère et prépare les données de métriques pour plusieurs athlètes
-     * et plusieurs types de métriques pour une vue d'ensemble.
-     * Optimisé pour réduire le nombre de requêtes N+1.
+     * Récupère les métriques les plus récentes groupées par date.
      *
-     * @param  Collection<Athlete>  $athletes  La collection d'athlètes à analyser.
-     * @param  array  $metricTypeValues  Les valeurs des énumérations MetricType à inclure.
-     * @param  string  $period  La période à filtrer.
-     * @return array Tableau associatif où la clé est l'ID de l'athlète, contenant les données agrégées.
-     * Ex: ['athlete_id' => ['trends' => [], 'chart_data' => []]]
+     * @param Athlete $athlete
+     * @param int $limit Le nombre maximum de métriques brutes à récupérer.
+     * @return Collection<string, Collection<Metric>> Une collection de métriques groupées par date (format Y-m-d).
      */
-    public function getOverviewMetricsForAthletes(Collection $athletes, array $metricTypeValues, string $period): array
+    public function getLatestMetricsGroupedByDate(Athlete $athlete, int $limit = 50): Collection
     {
-        $athleteIds = $athletes->pluck('id')->toArray();
-        $metricTypes = collect($metricTypeValues)
-            ->map(fn ($value) => MetricType::tryFrom($value))
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
-
-        if (empty($athleteIds) || empty($metricTypes)) {
-            return [];
-        }
-
-        // 1. Charger toutes les métriques pertinentes en une seule requête pour tous les athlètes
-        $query = Metric::whereIn('athlete_id', $athleteIds)
-            ->whereIn('metric_type', array_map(fn ($mt) => $mt->value, $metricTypes))
-            ->orderBy('date', 'asc');
-
-        $this->applyPeriodFilter($query, $period);
-
-        $allMetrics = $query->get()->groupBy('athlete_id'); // Groupe par athlète_id
-
-        $results = [];
-
-        foreach ($athletes as $athlete) {
-            $athleteMetrics = $allMetrics->get($athlete->id, new Collection); // Obtenir les métriques pour cet athlète
-
-            $athleteData = [
-                'athlete'          => $athlete->only(['id', 'first_name', 'last_name', 'name']), // Informations basiques de l'athlète
-                'trends'           => [],
-                'evolution_trends' => [],
-                'chart_data'       => [],
-                'latest_metrics_by_type' => [],
-            ];
-
-            foreach ($metricTypes as $metricType) {
-                // Filtrer les métriques spécifiques à ce type de métrique pour l'athlète courant
-                $singleMetricMetrics = $athleteMetrics->filter(function ($m) use ($metricType) {
-                    return $m->metric_type === $metricType;
-                });
-
-                // Prépare les données du graphique pour ce type de métrique (pour un potentiel graphique individuel)
-                $athleteData['chart_data'][$metricType->value] = $this->prepareChartDataForSingleMetric($singleMetricMetrics, $metricType);
-
-                // Calcule les tendances moyennes
-                $athleteData['trends'][$metricType->value] = $this->getMetricTrendsForCollection($singleMetricMetrics, $metricType);
-
-                // Calcule la tendance d'évolution
-                $athleteData['evolution_trends'][$metricType->value] = $this->getMetricEvolutionTrendForCollection($singleMetricMetrics, $metricType, $period);
-
-                // Récupérer la dernière métrique pour chaque type, si elle existe
-                $latestMetric = $singleMetricMetrics->sortByDesc('date')->first();
-                if ($latestMetric) {
-                    $athleteData['latest_metrics_by_type'][$metricType->value] = [
-                        'value' => $latestMetric->{$metricType->getValueColumn()},
-                        'date' => $latestMetric->date,
-                        'unit' => $metricType->getUnit(),
-                    ];
-                } else {
-                    $athleteData['latest_metrics_by_type'][$metricType->value] = null;
-                }
-            }
-            $results[$athlete->id] = $athleteData;
-        }
-
-        return $results;
-    }
-
-    /**
-     * Récupère les dernières métriques pour un athlète, regroupées par date, jusqu'à un certain nombre.
-     * Cette méthode est une alternative plus performante à l'accesseur metricsByDates.
-     *
-     * @param Athlete $athlete L'athlète pour lequel récupérer les métriques.
-     * @param int $limit Le nombre maximum de jours de données à récupérer.
-     * @return Collection Collection des métriques, regroupées par date.
-     */
-    public function getLatestMetricsGroupedByDate(Athlete $athlete, int $limit = 500): Collection
-    {
-        // On récupère les métriques pour cet athlète, limitées par date distincte.
+        // On récupère toutes les métriques pour cet athlète, limitées par date distincte.
         // Puis on les groupe par date en PHP.
         // Le `limit` ici s'applique au nombre de métriques brutes, pas au nombre de jours.
         // Pour limiter par jour, il faut une approche légèrement différente, par exemple:
@@ -449,19 +309,113 @@ class MetricStatisticsService
     }
 
     /**
-     * Récupère la dernière valeur d'une métrique spécifique pour un athlète.
+     * Prépare toutes les données agrégées pour le tableau de bord d'une métrique spécifique.
      *
      * @param Athlete $athlete
      * @param MetricType $metricType
-     * @return mixed La dernière valeur ou null si non trouvée.
+     * @param string $period
+     * @return array
      */
-    public function getLatestMetricValue(Athlete $athlete, MetricType $metricType)
+    public function getDashboardMetricData(Athlete $athlete, MetricType $metricType, string $period): array
     {
-        $metric = $athlete->metrics()
-            ->where('metric_type', $metricType->value)
-            ->orderByDesc('date')
-            ->first();
+        $metricsForPeriod = $this->getAthleteMetrics($athlete, ['metric_type' => $metricType->value, 'period' => $period]);
 
-        return $metric ? $metric->{$metricType->getValueColumn()} : null;
+        $valueColumn = $metricType->getValueColumn();
+
+        $metricData = [
+            'label'           => $metricType->getLabel(),
+            'short_label'     => $metricType->getLabelShort(),
+            'description'     => $metricType->getDescription(),
+            'unit'            => $metricType->getUnit(),
+            'last_value'      => null,
+            'formatted_last_value' => 'N/A',
+            'average_7_days'  => null,
+            'formatted_average_7_days' => 'N/A',
+            'average_30_days' => null,
+            'formatted_average_30_days' => 'N/A',
+            'trend_icon'      => 'ellipsis-horizontal', // default
+            'trend_color'     => 'zinc', // default
+            'trend_percentage' => 'N/A',
+            'chart_data'      => [],
+            'is_numerical'    => ($valueColumn !== 'note'),
+        ];
+
+        // Prepare chart data
+        $metricData['chart_data'] = $this->prepareChartDataForSingleMetric($metricsForPeriod, $metricType);
+        
+        // Get last value
+        // Use the metrics from the current period for the last value, if available
+        $lastMetric = $metricsForPeriod->sortByDesc('date')->first();
+        if ($lastMetric) {
+            $metricValue = $lastMetric->{$valueColumn};
+            $metricData['last_value'] = $metricValue;
+            $metricData['formatted_last_value'] = $this->formatMetricValue($metricValue, $metricType);
+        }
+
+        // Only calculate trends and evolution for numerical metrics
+        if ($metricData['is_numerical']) {
+            $trends = $this->getMetricTrendsForCollection($metricsForPeriod, $metricType);
+            
+            $metricData['average_7_days'] = $trends['averages']['Derniers 7 jours'] ?? null;
+            $metricData['average_30_days'] = $trends['averages']['Derniers 30 jours'] ?? null;
+
+            $metricData['formatted_average_7_days'] = $this->formatMetricValue($metricData['average_7_days'], $metricType);
+            $metricData['formatted_average_30_days'] = $this->formatMetricValue($metricData['average_30_days'], $metricType);
+
+            $evolutionTrendData = $this->getEvolutionTrendForCollection($metricsForPeriod, $metricType);
+            
+            if ($metricData['average_7_days'] !== null && $evolutionTrendData && isset($evolutionTrendData['trend'])) {
+                switch ($evolutionTrendData['trend']) {
+                    case 'increasing':
+                        $metricData['trend_icon'] = 'arrow-trending-up';
+                        $metricData['trend_color'] = 'lime';
+                        break;
+                    case 'decreasing':
+                        $metricData['trend_icon'] = 'arrow-trending-down';
+                        $metricData['trend_color'] = 'rose';
+                        break;
+                    case 'stable':
+                        $metricData['trend_icon'] = 'minus';
+                        $metricData['trend_color'] = 'zinc';
+                        break;
+                    default:
+                        // default values already set
+                        break;
+                }
+            }
+            
+            // Trend percentage - calculate change from 30 days to 7 days if applicable
+            if ($metricData['average_7_days'] !== null && $metricData['average_30_days'] !== null && $metricData['average_30_days'] !== 0) {
+                $change = (($metricData['average_7_days'] - $metricData['average_30_days']) / $metricData['average_30_days']) * 100;
+                $metricData['trend_percentage'] = ($change > 0 ? '+' : '').number_format($change, 1).'%';
+            } elseif ($metricData['average_7_days'] !== null && $metricType->getValueColumn() !== 'note') {
+                 // If only 7-day average exists and it's numerical, format its value for percentage
+                 $metricData['trend_percentage'] = $this->formatMetricValue($metricData['average_7_days'], $metricType);
+            }
+        }
+
+        return $metricData;
+    }
+
+    /**
+     * Formate une valeur de métrique en fonction de son type et de sa précision.
+     *
+     * @param mixed $value
+     * @param MetricType $metricType
+     * @return string
+     */
+    protected function formatMetricValue(mixed $value, MetricType $metricType): string
+    {
+        if ($value === null) {
+            return 'N/A';
+        }
+        if ($metricType->getValueColumn() === 'note') {
+            return (string) $value;
+        }
+
+        $formattedValue = number_format($value, $metricType->getPrecision());
+        $unit = $metricType->getUnit();
+
+        return $formattedValue . ($unit ? ' ' . $unit : '');
     }
 }

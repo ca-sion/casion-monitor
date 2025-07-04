@@ -36,7 +36,7 @@ class Metric extends Model
      * @var array
      */
     protected $appends = [
-        //
+        'data',
     ];
 
     /**
@@ -70,10 +70,10 @@ class Metric extends Model
                 'date'            => $this->date,
                 'formatted_date'  => $this->date->locale('fr_CH')->isoFormat('L'),
                 'day'             => $this->date->locale('fr_CH')->isoFormat('dddd'),
-                'value'           => $value = $this->{$this->metric_type?->getValueColumn()} ?? 'value',
+                'value'           => $value = $this->{$this->metric_type?->getValueColumn()} ?? null,
                 'unit'            => $unit = $this->unit ?? $this->metric_type?->getunit(),
                 'scale'           => $scale = $this->metric_type?->getScale(),
-                'formatted_value' => $value.($unit ? ' '.$unit : ($scale ? '/'.$scale : null)),
+                'formatted_value' => $this->formatValue($value, $unit, $scale, $this->metric_type),
                 'label'           => $this->metric_type->getLabel(),
                 'description'     => $this->metric_type->getDescription(),
                 'value_column'    => $this->metric_type->getValueColumn(),
@@ -81,5 +81,22 @@ class Metric extends Model
                 'edit_link'       => route('athletes.metrics.daily.form', ['hash' => $this->athlete->hash, 'd' => $this->date->format('Y-m-d')]),
             ],
         );
+    }
+
+    /**
+     * Helper to format the metric value with its unit/scale.
+     * This can be moved to a helper or trait if used in many models/places.
+     */
+    protected function formatValue(mixed $value, ?string $unit, ?string $scale, MetricType $metricType): string
+    {
+        if ($value === null) {
+            return 'N/A';
+        }
+        if ($metricType->getValueColumn() === 'note') {
+            return (string) $value;
+        }
+
+        $formatted = number_format($value, $metricType->getPrecision());
+        return $formatted . ($unit ? ' ' . $unit : ($scale ? '/' . $scale : ''));
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Athlete;
 use Closure;
 use Illuminate\Http\Request;
 use Vinkla\Hashids\Facades\Hashids;
