@@ -10,12 +10,13 @@
 
     <flux:table class="my-4 w-full">
         <flux:table.columns>
-            <flux:table.column class="sticky left-0 bg-white dark:bg-zinc-900 z-10 w-48">Athlète</flux:table.table.column>
+            <flux:table.column class="sticky left-0 bg-white dark:bg-zinc-900 z-10 w-48">Athlète</flux:table.column>
             <flux:table.column class="w-36">Dern. Connexion</flux:table.column>
             @foreach ($dashboard_metric_types as $metricType)
                 <flux:table.column class="text-left w-48">{{ $metricType->getLabelShort() }}</flux:table.column>
                 <flux:table.column class="text-center w-28">Moy. 7j</flux:table.column>
                 <flux:table.column class="text-center w-28">Tendance</flux:table.column>
+                <flux:table.column class="text-center w-48">Évolution</flux:table.column>
             @endforeach
             <flux:table.column class="text-center w-36">Actions</flux:table.column>
         </flux:table.columns>
@@ -83,6 +84,17 @@
                                     @default
                                         <span class="text-zinc-400" title="Tendance inconnue">?</span>
                                 @endswitch
+                            @endif
+                        </flux:table.cell>
+                        <flux:table.cell class="text-center">
+                            @if ($chartData && !empty($chartData['data']) && count(array_filter($chartData['data'], fn($val) => $val !== null)) >= 2)
+                                <flux:chart class="aspect-[3/1] w-full" :value="collect($chartData['data'])->filter(fn($val) => $val !== null)->take(14)">
+                                    <flux:chart.svg gutter="0">
+                                        <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
+                                    </flux:chart.svg>
+                                </flux:chart>
+                            @else
+                                <span class="text-zinc-500 text-sm">Pas de données graphiques</span>
                             @endif
                         </flux:table.cell>
                     @endforeach
