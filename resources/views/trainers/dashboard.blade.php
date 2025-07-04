@@ -40,7 +40,7 @@
                 <flux:table.row>
                     <flux:table.cell class="sticky left-0 bg-white dark:bg-zinc-900 z-48">
                         <div class="flex items-center gap-2">
-                            <flux:avatar src="https://unavatar.io/{{ $athlete->email }}?fallback=https://api.dicebear.com/7.x/pixel-art/svg?seed={{ $athlete->id }}" class="size-6" />
+                            <flux:avatar src="https://unavatar.io/{{ $athlete->email }}?fallback=https://api.dicebear.com/9.x/lorelei/svg?seed={{ $athlete->first_name }}" class="size-6" />
                             <span>{{ $athlete->name }}</span>
                         </div>
                         <div class="text-xs mt-1 ms-8">
