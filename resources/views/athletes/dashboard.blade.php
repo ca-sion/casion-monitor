@@ -20,18 +20,6 @@
         <strong>{{ $period_options[$period_label] ?? 'données sélectionnées' }}</strong>.
     </flux:text>
 
-    {{-- Sélecteur de période pour l'athlète --}}
-    <form action="{{ route('athletes.dashboard', ['hash' => $athlete->hash]) }}" method="GET" class="flex items-center space-x-2">
-        <flux:text class="text-base whitespace-nowrap">Voir les données des:</flux:text>
-        <flux:select name="period" onchange="this.form.submit()">
-            @foreach ($period_options as $value => $label)
-                <option value="{{ $value }}" @selected($period_label === $value)>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </flux:select>
-    </form>
-
     <flux:separator variant="subtle" />
 
     <a href="{{ route('athletes.metrics.daily.form', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une métrique">
@@ -141,8 +129,7 @@
         @endforeach
     </div>
 
-    {{-- Section pour les métriques quotidiennes améliorée --}}
-    <flux:text class="mb-4 mt-8 text-lg font-semibold">Ton historique des entrées:</flux:text>
+    <flux:text class="mb-4 mt-8 text-lg font-semibold">Ton historique des métriques:</flux:text>
     <flux:table class="my-4">
         <flux:table.columns>
             <flux:table.column>Date</flux:table.column>
@@ -153,7 +140,7 @@
         </flux:table.columns>
 
         <flux:table.rows>
-            @forelse ($athlete->metricsByDates as $date => $metricDates)
+            @forelse ($daily_metrics_history as $date => $metricDates)
                 <flux:table.row>
                     <flux:table.cell>{{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L') }}</flux:table.cell>
                     <flux:table.cell>{{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('dddd') }}</flux:table.cell>
@@ -174,19 +161,19 @@
                             @php
                                 $metric = $metricDates->firstWhere('metric_type', $metricTypeValue);
                             @endphp
-                            @if ($metric && $metric->data->value !== null)
+                            @if ($metric && $metric->value !== null)
                                 <flux:badge size="xs" color="zinc" class="flex items-center gap-1">
                                     <span class="font-medium">{{ $metricLabel }}:</span>
-                                    {{ number_format($metric->data->value, 0) }}{{ $metric->metric_type->getUnit() ? ' '.$metric->metric_type->getUnit() : '' }}
+                                    {{ number_format($metric->value, 0) }}{{ $metric->unit ? ' '.$metric->unit : '' }}
                                 </flux:badge>
                             @endif
                         @endforeach
+                        {{-- Calculer les "autres" métriques restantes --}}
                         @if (count($metricDates->whereNotIn('metric_type.value', array_keys($displayMetrics))) > 0)
                             <flux:badge size="xs" color="zinc">+{{ count($metricDates->whereNotIn('metric_type.value', array_keys($displayMetrics))) }} autres</flux:badge>
                         @endif
                     </flux:table.cell>
                     <flux:table.cell class="text-center">
-                        {{-- Assurez-vous que $metricDates->first() existe avant d'accéder à data --}}
                         @if ($metricDates->first())
                             <flux:link href="{{ $metricDates->first()->data->edit_link }}">Modifier</flux:link>
                         @else

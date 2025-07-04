@@ -33,9 +33,9 @@ class AthleteController extends Controller
             MetricType::MORNING_HRV,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::MORNING_BODY_WEIGHT_KG,
             // MetricType::MORNING_SLEEP_QUALITY,
             // MetricType::POST_SESSION_SESSION_LOAD,
-            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
         // Convertir les enums en valeurs de chaîne pour le service
@@ -55,6 +55,10 @@ class AthleteController extends Controller
         // Extraire les données spécifiques à l'athlète actuel
         $athleteMetricsData = $overviewDataCollection[$athlete->id] ?? [];
 
+        // Récupérer les métriques quotidiennes groupées pour la section "Ton historique des métriques"
+        // Nous allons limiter à un certain nombre de jours pour cette table, par exemple 30 jours
+        $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, 50); // Limite arbitraire de 50 métriques brutes pour l'historique
+
         // Définir les options de période pour le sélecteur dans la vue
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
@@ -72,12 +76,13 @@ class AthleteController extends Controller
             'dashboard_metric_types' => $dashboardMetricTypes, // Les objets Enum MetricType
             'period_label'           => $period, // La valeur de la période sélectionnée
             'period_options'         => $periodOptions, // Les options pour le sélecteur
+            'daily_metrics_history'  => $dailyMetricsHistory, // Les données pour l'historique quotidien
         ];
 
         if ($request->expectsJson()) {
             return response()->json($data);
         }
         
-        return view('athletes.dashboard', $data); //
+        return view('athletes.dashboard', $data);
     }
 }

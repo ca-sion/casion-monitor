@@ -195,6 +195,7 @@ class MetricStatisticsService
 
         $periods = [
             'Derniers 7 jours'  => 7,
+            'Derniers 14 jours'  => 14,
             'Derniers 30 jours' => 30,
             'Derniers 90 jours' => 90,
             'Derniers 6 mois'   => 180,
@@ -350,7 +351,7 @@ class MetricStatisticsService
      * @param  array  $metricTypeValues  Les valeurs des énumérations MetricType à inclure.
      * @param  string  $period  La période à filtrer.
      * @return array Tableau associatif où la clé est l'ID de l'athlète, contenant les données agrégées.
-     *               Ex: ['athlete_id' => ['trends' => [], 'chart_data' => []]]
+     * Ex: ['athlete_id' => ['trends' => [], 'chart_data' => []]]
      */
     public function getOverviewMetricsForAthletes(Collection $athletes, array $metricTypeValues, string $period): array
     {
@@ -385,6 +386,7 @@ class MetricStatisticsService
                 'trends'           => [],
                 'evolution_trends' => [],
                 'chart_data'       => [],
+                'latest_metrics_by_type' => [],
             ];
 
             foreach ($metricTypes as $metricType) {
@@ -401,10 +403,65 @@ class MetricStatisticsService
 
                 // Calcule la tendance d'évolution
                 $athleteData['evolution_trends'][$metricType->value] = $this->getMetricEvolutionTrendForCollection($singleMetricMetrics, $metricType, $period);
+
+                // Récupérer la dernière métrique pour chaque type, si elle existe
+                $latestMetric = $singleMetricMetrics->sortByDesc('date')->first();
+                if ($latestMetric) {
+                    $athleteData['latest_metrics_by_type'][$metricType->value] = [
+                        'value' => $latestMetric->{$metricType->getValueColumn()},
+                        'date' => $latestMetric->date,
+                        'unit' => $metricType->getUnit(),
+                    ];
+                } else {
+                    $athleteData['latest_metrics_by_type'][$metricType->value] = null;
+                }
             }
             $results[$athlete->id] = $athleteData;
         }
 
         return $results;
+    }
+
+    /**
+     * Récupère les dernières métriques pour un athlète, regroupées par date, jusqu'à un certain nombre.
+     * Cette méthode est une alternative plus performante à l'accesseur metricsByDates.
+     *
+     * @param Athlete $athlete L'athlète pour lequel récupérer les métriques.
+     * @param int $limit Le nombre maximum de jours de données à récupérer.
+     * @return Collection Collection des métriques, regroupées par date.
+     */
+    public function getLatestMetricsGroupedByDate(Athlete $athlete, int $limit = 500): Collection
+    {
+        // On récupère les métriques pour cet athlète, limitées par date distincte.
+        // Puis on les groupe par date en PHP.
+        // Le `limit` ici s'applique au nombre de métriques brutes, pas au nombre de jours.
+        // Pour limiter par jour, il faut une approche légèrement différente, par exemple:
+        // Sélectionner les métriques des 50 derniers jours uniques.
+        $metrics = $athlete->metrics()
+            ->whereNotNull('date') // S'assurer que la date n'est pas nulle
+            ->orderByDesc('date')
+            ->limit($limit * count(MetricType::cases())) // Multiplier la limite pour être sûr d'avoir des données pour plusieurs types sur plusieurs jours
+            ->get();
+
+        // Regrouper par date et s'assurer que les dates sont triées de la plus récente à la plus ancienne
+        return $metrics->groupBy(fn ($metric) => $metric->date->format('Y-m-d'))
+                       ->sortByDesc(fn ($metrics, $date) => $date);
+    }
+
+    /**
+     * Récupère la dernière valeur d'une métrique spécifique pour un athlète.
+     *
+     * @param Athlete $athlete
+     * @param MetricType $metricType
+     * @return mixed La dernière valeur ou null si non trouvée.
+     */
+    public function getLatestMetricValue(Athlete $athlete, MetricType $metricType)
+    {
+        $metric = $athlete->metrics()
+            ->where('metric_type', $metricType->value)
+            ->orderByDesc('date')
+            ->first();
+
+        return $metric ? $metric->{$metricType->getValueColumn()} : null;
     }
 }

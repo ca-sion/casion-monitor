@@ -127,34 +127,4 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
             get: fn () => route('athletes.dashboard', ['hash' => $this->hash]),
         );
     }
-
-    /**
-     * Athlete's metrics by dates.
-     */
-    protected function metricsByDates(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->metrics->take(500)->sortByDesc('date')->groupBy('date'),
-        );
-    }
-
-    /**
-     * Athlete's last metrics.
-     */
-    protected function lastMetrics(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->metricsByDates->take(1),
-        );
-    }
-
-    /**
-     * Athlete's metrics for chart.
-     */
-    protected function metricsForChart(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->metrics->take(500)->sortBy('date')->groupBy('metric_type'),
-        );
-    }
 }
