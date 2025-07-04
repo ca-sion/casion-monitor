@@ -62,7 +62,7 @@ enum MetricType: string implements HasLabel
             self::MORNING_MOOD_WELLBEING   => 'Humeur',
             self::MORNING_FIRST_DAY_PERIOD => 'Premier jour règles',
 
-            self::PRE_SESSION_ENERGY_LEVEL  => "Énergie",
+            self::PRE_SESSION_ENERGY_LEVEL  => 'Énergie',
             self::PRE_SESSION_LEG_FEEL      => 'Jambes',
             self::PRE_SESSION_SESSION_GOALS => 'Obj. séance',
 

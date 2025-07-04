@@ -47,8 +47,17 @@ class MetricStatisticsService
             case 'last_7_days':
                 $query->where('date', '>=', $now->subDays(7)->startOfDay());
                 break;
+            case 'last_14_days':
+                $query->where('date', '>=', $now->subDays(14)->startOfDay());
+                break;
             case 'last_30_days':
                 $query->where('date', '>=', $now->subDays(30)->startOfDay());
+                break;
+            case 'last_60_days':
+                $query->where('date', '>=', $now->subDays(60)->startOfDay());
+                break;
+            case 'last_90_days':
+                $query->where('date', '>=', $now->subDays(90)->startOfDay());
                 break;
             case 'last_6_months':
                 $query->where('date', '>=', $now->subMonths(6)->startOfDay());

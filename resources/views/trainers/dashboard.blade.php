@@ -2,9 +2,22 @@
     <flux:heading size="xl" level="1">Bonjour, {{ $trainer->first_name }}</flux:heading>
 
     <flux:text class="mb-6 mt-2 text-base">
-        Voici ton tableau de bord. Les tendances sont calculées sur les
-        <strong>{{ $period_label === 'all_time' ? 'toutes les données disponibles' : str_replace('_', ' ', $period_label) }}</strong>.
+        Ce tableau de bord présente les métriques de vos athlètes.
+        Les tendances et graphiques sont calculés sur les
+        <strong>{{ $period_options[$period_label] ?? 'données sélectionnées' }}</strong>.
     </flux:text>
+
+    {{-- Sélecteur de période --}}
+    <form action="{{ route('trainers.dashboard', ['hash' => $trainer->hash]) }}" method="GET" class="flex items-center space-x-2 my-4">
+        <flux:text class="text-base whitespace-nowrap">Voir les données des:</flux:text>
+        <flux:select name="period" onchange="this.form.submit()">
+            @foreach ($period_options as $value => $label)
+                <option value="{{ $value }}" @selected($period_label === $value)>
+                    {{ $label }}
+                </option>
+            @endforeach
+        </flux:select>
+    </form>
 
     <flux:separator variant="subtle" />
 

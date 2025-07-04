@@ -32,15 +32,13 @@ class TrainerController extends Controller
         $athletes = $trainer->athletes; // Récupère tous les athlètes associés à cet entraîneur
 
         // Définir les types de métriques à afficher sur le tableau de bord
-        // Cette liste doit correspondre à celles que vous voulez voir dans le tableau.
-        // J'ai inclus quelques métriques numériques et non numériques pour l'exemple.
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
-            MetricType::POST_SESSION_SESSION_LOAD,
-            MetricType::MORNING_BODY_WEIGHT_KG, // Ajout de cette métrique si elle est pertinente
+            // MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::MORNING_BODY_WEIGHT_KG,
             // MetricType::MORNING_PAIN, // Exemple de métrique 'note' que l'on peut ajouter, mais qui affichera 'N/A' pour les tendances
         ];
 
@@ -49,7 +47,7 @@ class TrainerController extends Controller
 
         // Définir la période pour l'aperçu des tendances (ex: 'last_30_days', 'last_7_days', 'all_time')
         // Vous pourriez rendre cela configurable via la requête si vous voulez des filtres dynamiques.
-        $period = request()->input('period', 'last_30_days'); // Période par défaut, mais peut être surchargée par la requête
+        $period = request()->input('period', 'last_30_days');
 
         $athletesOverviewData = $this->metricStatisticsService->getOverviewMetricsForAthletes(
             $athletes, // Utiliser la collection d'athlètes récupérée
@@ -57,12 +55,26 @@ class TrainerController extends Controller
             $period
         );
 
+        // Définir les options de période pour le sélecteur dans la vue
+        $periodOptions = [
+            'last_7_days'   => '7 derniers jours',
+            'last_14_days'  => '14 derniers jours',
+            'last_30_days'  => '30 derniers jours',
+            'last_60_days'  => '60 derniers jours',
+            'last_90_days'  => '90 derniers jours',
+            'last_6_months' => '6 derniers mois',
+            'last_year'     => 'Dernière année',
+            'all_time'      => 'Depuis le début',
+            // Vous pourriez ajouter d'autres périodes personnalisées ici, comme 'custom:2024-01-01,2024-03-31'
+        ];
+
         $data = [
             'trainer' => $trainer,
             // Renommer 'athletes' en 'athletes_overview_data' pour correspondre à la vue
             'athletes_overview_data' => $athletesOverviewData,
             'dashboard_metric_types' => $dashboardMetricTypes, // Passer les objets Enum MetricType à la vue
             'period_label'           => $period, // Pour afficher la période dans la vue
+            'period_options'         => $periodOptions, // Les options pour le sélecteur
             // Les deux lignes ci-dessous sont pour un tableau de bord plus avancé avec filtres dynamiques,
             // mais ne sont pas strictement nécessaires pour la version actuelle de la vue si vous ne les utilisez pas.
             // 'available_metric_types' => collect(MetricType::cases())->map(fn ($enum) => ['value' => $enum->value, 'label' => $enum->getLabel()]),
