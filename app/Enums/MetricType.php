@@ -50,6 +50,29 @@ enum MetricType: string implements HasLabel
         };
     }
 
+    public function getLabelShort(): ?string
+    {
+        return match ($this) {
+            self::MORNING_BODY_WEIGHT_KG   => 'Poids',
+            self::MORNING_HRV              => 'VFC/HRV',
+            self::MORNING_SLEEP_QUALITY    => 'Sommeil',
+            self::MORNING_GENERAL_FATIGUE  => 'Fatigue mat.',
+            self::MORNING_PAIN             => 'Douleurs',
+            self::MORNING_PAIN_LOCATION    => 'Loc. douleurs',
+            self::MORNING_MOOD_WELLBEING   => 'Humeur',
+            self::MORNING_FIRST_DAY_PERIOD => 'Premier jour règles',
+
+            self::PRE_SESSION_ENERGY_LEVEL  => "Énergie",
+            self::PRE_SESSION_LEG_FEEL      => 'Jambes',
+            self::PRE_SESSION_SESSION_GOALS => 'Obj. séance',
+
+            self::POST_SESSION_SESSION_LOAD       => 'Ress. charge',
+            self::POST_SESSION_PERFORMANCE_FEEL   => 'Éval. perf.',
+            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'Eval. fatigue post',
+            self::POST_SESSION_TECHNICAL_FEEDBACK => 'Feedback',
+        };
+    }
+
     public function getDescription(): ?string
     {
         return match ($this) {
