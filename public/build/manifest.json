@@ -1,0 +1,18 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-D0z1_H-r.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/css/filament.css": {
+    "file": "assets/filament-Bbge0x8n.css",
+    "src": "resources/css/filament.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-l0sNRNKZ.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}
