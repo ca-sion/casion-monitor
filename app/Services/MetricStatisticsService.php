@@ -404,7 +404,7 @@ class MetricStatisticsService
      * @param MetricType $metricType
      * @return string
      */
-    protected function formatMetricValue(mixed $value, MetricType $metricType): string
+    public function formatMetricValue(mixed $value, MetricType $metricType): string
     {
         if ($value === null) {
             return 'N/A';
