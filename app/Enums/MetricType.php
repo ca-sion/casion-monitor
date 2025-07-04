@@ -73,6 +73,29 @@ enum MetricType: string implements HasLabel
         };
     }
 
+    public function getScale(): ?string
+    {
+        return match ($this) {
+            self::MORNING_BODY_WEIGHT_KG   => null,
+            self::MORNING_HRV              => null,
+            self::MORNING_SLEEP_QUALITY    => 10,
+            self::MORNING_GENERAL_FATIGUE  => 10,
+            self::MORNING_PAIN             => 10,
+            self::MORNING_PAIN_LOCATION    => 10,
+            self::MORNING_MOOD_WELLBEING   => 10,
+            self::MORNING_FIRST_DAY_PERIOD => null,
+
+            self::PRE_SESSION_ENERGY_LEVEL  => 10,
+            self::PRE_SESSION_LEG_FEEL      => 10,
+            self::PRE_SESSION_SESSION_GOALS => null,
+
+            self::POST_SESSION_SESSION_LOAD       => 10,
+            self::POST_SESSION_PERFORMANCE_FEEL   => 10,
+            self::POST_SESSION_SUBJECTIVE_FATIGUE => 10,
+            self::POST_SESSION_TECHNICAL_FEEDBACK => null,
+        };
+    }
+
     public function getScaleHint(): ?string
     {
         return match ($this) {
@@ -96,26 +119,26 @@ enum MetricType: string implements HasLabel
         };
     }
 
-    public function getHint(): ?string
+    public function getValueColumn(): ?string
     {
         return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => 'En kilogrammes',
-            self::MORNING_HRV              => 'En millisecondes',
-            self::MORNING_SLEEP_QUALITY    => '1: très mauvaise, 10: excellente',
-            self::MORNING_GENERAL_FATIGUE  => '1: pas fatigué, 10: épuisé',
-            self::MORNING_PAIN             => '1: aucune, 10: très fortes',
-            self::MORNING_PAIN_LOCATION    => null,
-            self::MORNING_MOOD_WELLBEING   => '1: très mauvaise, 10: excellente',
-            self::MORNING_FIRST_DAY_PERIOD => null,
+            self::MORNING_BODY_WEIGHT_KG   => 'value',
+            self::MORNING_HRV              => 'value',
+            self::MORNING_SLEEP_QUALITY    => 'value',
+            self::MORNING_GENERAL_FATIGUE  => 'value',
+            self::MORNING_PAIN             => 'note',
+            self::MORNING_PAIN_LOCATION    => 'note',
+            self::MORNING_MOOD_WELLBEING   => 'value',
+            self::MORNING_FIRST_DAY_PERIOD => 'value',
 
-            self::PRE_SESSION_ENERGY_LEVEL  => '1: très bas, 10: très haut',
-            self::PRE_SESSION_LEG_FEEL      => '1: très lourdes, 10: très légères',
-            self::PRE_SESSION_SESSION_GOALS => null,
+            self::PRE_SESSION_ENERGY_LEVEL  => 'value',
+            self::PRE_SESSION_LEG_FEEL      => 'value',
+            self::PRE_SESSION_SESSION_GOALS => 'note',
 
-            self::POST_SESSION_SESSION_LOAD       => '1: basse, 10: très haute',
-            self::POST_SESSION_PERFORMANCE_FEEL   => '1: mauvais, 10: excellent',
-            self::POST_SESSION_SUBJECTIVE_FATIGUE => '1: aucune, 10: extrême',
-            self::POST_SESSION_TECHNICAL_FEEDBACK => null,
+            self::POST_SESSION_SESSION_LOAD       => 'value',
+            self::POST_SESSION_PERFORMANCE_FEEL   => 'value',
+            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'value',
+            self::POST_SESSION_TECHNICAL_FEEDBACK => 'note',
         };
     }
 

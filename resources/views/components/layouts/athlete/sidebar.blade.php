@@ -16,7 +16,7 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('athletes.dashboard', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.dashboard')" wire:navigate>Tableau de bord</flux:navlist.item>
-                    <flux:navlist.item icon="plus" :href="route('athletes.metrics.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.form')" wire:navigate>Ajouter une métrique</flux:navlist.item>
+                    <flux:navlist.item icon="plus" :href="route('athletes.metrics.daily.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.daily.form')" wire:navigate>Quotidien</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 

@@ -19,7 +19,7 @@ use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 
-class AthleteMetricForm extends Component implements HasSchemas
+class AthleteDailyMetricForm extends Component implements HasSchemas
 {
     use InteractsWithSchemas;
 
@@ -55,7 +55,7 @@ class AthleteMetricForm extends Component implements HasSchemas
             ->whereDate('date', $this->date)
             ->get();
         $metricsData = $metrics->mapWithKeys(function (Metric $metric) {
-            return [$metric->metric_type => $metric->value];
+            return [$metric->metric_type->value => $metric->{$metric->metric_type->getValueColumn()} ?? 'value'];
         });
 
         $this->form->fill($metricsData->put('date', $this->date)->toArray());
@@ -78,6 +78,10 @@ class AthleteMetricForm extends Component implements HasSchemas
                     ->schema([
                         TextInput::make(MetricType::MORNING_HRV->value)
                             ->label(MetricType::MORNING_HRV->getLabel())
+                            ->integer()
+                            ->inputMode('numeric')
+                            ->minValue(10)
+                            ->maxValue(200)
                             ->suffix('ms'),
                         ToggleButtons::make(MetricType::MORNING_SLEEP_QUALITY->value)
                             ->label(MetricType::MORNING_SLEEP_QUALITY->getLabel())
@@ -118,6 +122,7 @@ class AthleteMetricForm extends Component implements HasSchemas
                         Textarea::make(MetricType::PRE_SESSION_SESSION_GOALS->value)
                             ->label(MetricType::PRE_SESSION_SESSION_GOALS->getLabel())
                             ->hint(MetricType::PRE_SESSION_SESSION_GOALS->getScaleHint())
+                            ->maxLength(255)
                             ->autosize(),
                     ]),
                 Section::make('Après la session')
@@ -146,7 +151,8 @@ class AthleteMetricForm extends Component implements HasSchemas
                         Textarea::make(MetricType::POST_SESSION_TECHNICAL_FEEDBACK->value)
                             ->label(MetricType::POST_SESSION_TECHNICAL_FEEDBACK->getLabel())
                             ->hint(MetricType::POST_SESSION_TECHNICAL_FEEDBACK->getScaleHint())
-                            ->helperText(MetricType::POST_SESSION_TECHNICAL_FEEDBACK->getDescription()),
+                            ->helperText(MetricType::POST_SESSION_TECHNICAL_FEEDBACK->getDescription())
+                            ->maxLength(255),
                     ]),
             ])
             ->statePath('data');
@@ -163,7 +169,7 @@ class AthleteMetricForm extends Component implements HasSchemas
             if ($value != null && $value != '<p></p>') {
                 Metric::updateOrCreate(
                     ['athlete_id' => $this->athlete->id, 'date' => $this->date, 'metric_type' => $metric, 'type' => $this->type],
-                    ['value' => $value, 'unit' => MetricType::from($metric)->getUnit()]
+                    [MetricType::from($metric)->getValueColumn() ?? 'value' => $value, 'unit' => MetricType::from($metric)->getUnit()]
                 );
             }
         }
@@ -173,6 +179,6 @@ class AthleteMetricForm extends Component implements HasSchemas
     #[Layout('components.layouts.athlete')]
     public function render(): View
     {
-        return view('livewire.athlete-metric-form');
+        return view('livewire.athlete-daily-metric-form');
     }
 }
