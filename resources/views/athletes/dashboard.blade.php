@@ -69,19 +69,33 @@
 
                 $average7Days = $trends['averages']['Derniers 7 jours'] ?? null;
                 $average30Days = $trends['averages']['Derniers 30 jours'] ?? null;
+                
+                $trend7DaysValue = $average7Days;
 
-                $trend7DaysValue = null;
-                if (isset($trends['trends']['Derniers 7 jours']['value'])) {
-                    $trend7DaysValue = $trends['trends']['Derniers 7 jours']['value'];
-                }
+                $evolutionTrendIcon = null;
+                $evolutionTrendColor = 'zinc';
 
-                $trendIcon = null;
-                $trendColor = 'zinc';
-                if ($trend7DaysValue !== null && $trend7DaysValue !== 0) {
-                    $trendIcon = $trend7DaysValue > 0 ? 'arrow-small-up' : 'arrow-small-down';
-                    $trendColor = $trend7DaysValue > 0 ? 'lime' : 'rose'; // Vert pour l'amélioration, rouge pour la dégradation
+                if ($average7Days !== null && $average7Days !== 0 && $evolutionTrend) {
+                    switch ($evolutionTrend['trend']) {
+                        case 'increasing':
+                            $evolutionTrendIcon = 'arrow-trending-up';
+                            $evolutionTrendColor = 'lime';
+                            break;
+                        case 'decreasing':
+                            $evolutionTrendIcon = 'arrow-trending-down';
+                            $evolutionTrendColor = 'rose';
+                            break;
+                        case 'stable':
+                            $evolutionTrendIcon = 'minus';
+                            $evolutionTrendColor = 'zinc';
+                            break;
+                        default:
+                        $evolutionTrendIcon = 'ellipsis-horizontal';
+                        $evolutionTrendColor = 'zinc';
+                            break;
+                    }
                 }
-                $trendPercentage = $trend7DaysValue !== null ? abs($trend7DaysValue).'%' : 'N/A';
+                $trendPercentage = $trend7DaysValue !== null ? number_format(abs($trend7DaysValue), 1).'%' : 'N/A';
             @endphp
 
             <flux:card class="p-4" size="sm">
@@ -90,8 +104,11 @@
                     @if ($metricType->getUnit())
                         <flux:badge size="xs" color="zinc">{{ $metricType->getUnit() }}</flux:badge>
                     @endif
+                    @if ($metricType->getScale())
+                        <flux:badge size="xs" color="zinc">sur {{ $metricType->getScale() }}</flux:badge>
+                    @endif
                 </flux:heading>
-                <flux:text class="text-3xl font-bold">{{ $lastValue ?? 'N/A' }}</flux:text>
+                <flux:text class="text-2xl font-bold">{{ $lastValue ?? 'N/A' }}</flux:text>
                 <flux:text class="text-sm text-zinc-500 mb-2">Dernière valeur</flux:text>
 
                 {{-- Graphique de la métrique --}}
@@ -113,8 +130,8 @@
                     <div class="text-right">
                         <flux:text class="text-zinc-500">Tendance 7j</flux:text>
                         <flux:text class="font-semibold flex items-center justify-end">
-                            @if ($trendIcon)
-                                <flux:icon :name="$trendIcon" :color="$trendColor" class="mr-1" />
+                            @if ($evolutionTrendIcon)
+                                <flux:icon :name="$evolutionTrendIcon" :color="$evolutionTrendColor" class="mr-1" />
                             @endif
                             {{ $trendPercentage }}
                         </flux:text>
@@ -160,7 +177,7 @@
                             @if ($metric && $metric->data->value !== null)
                                 <flux:badge size="xs" color="zinc" class="flex items-center gap-1">
                                     <span class="font-medium">{{ $metricLabel }}:</span>
-                                    {{ number_format($metric->data->value, 1) }}{{ $metric->metric_type->getUnit() ? ' '.$metric->metric_type->getUnit() : '' }}
+                                    {{ number_format($metric->data->value, 0) }}{{ $metric->metric_type->getUnit() ? ' '.$metric->metric_type->getUnit() : '' }}
                                 </flux:badge>
                             @endif
                         @endforeach
