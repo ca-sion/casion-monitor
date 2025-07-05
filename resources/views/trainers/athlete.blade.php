@@ -14,7 +14,7 @@
             </div>
             <div>
                 <flux:text class="font-semibold">Date de naissance:</flux:text>
-                <flux:text>{{ $athlete->dob ? \Carbon\Carbon::parse($athlete->dob)->locale('fr_CH')->isoFormat('L') : 'N/A' }}</flux:text>
+                <flux:text>{{ $athlete->birthdate ? \Carbon\Carbon::parse($athlete->birthdate)->locale('fr_CH')->isoFormat('L') : 'N/A' }}</flux:text>
             </div>
             <div>
                 <flux:text class="font-semibold">Dernière connexion:</flux:text>
@@ -52,62 +52,24 @@
         </div>
         <div class="p-6">
             @if ($chart_data && !empty($chart_data['labels']) && count(array_filter($chart_data['data'], fn($val) => $val !== null)) >= 2)
-                <div class="relative h-64 w-full">
-                    <canvas id="metricChart"></canvas>
-                </div>
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const ctx = document.getElementById('metricChart').getContext('2d');
-                        new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: @json($chart_data['labels']),
-                                datasets: [{
-                                    label: '{{ $chart_data['label'] }}' + (@json($chart_data['unit']) ? ' (' + @json($chart_data['unit']) + ')' : ''),
-                                    data: @json($chart_data['data']),
-                                    borderColor: 'rgb(75, 192, 192)',
-                                    tension: 0.1,
-                                    fill: false
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    tooltip: {
-                                        callbacks: {
-                                            label: function(context) {
-                                                let label = context.dataset.label || '';
-                                                if (label) {
-                                                    label += ': ';
-                                                }
-                                                if (context.parsed.y !== null) {
-                                                    label += context.parsed.y + (@json($chart_data['unit']) ? ' ' + @json($chart_data['unit']) : '');
-                                                }
-                                                return label;
-                                            }
-                                        }
-                                    }
-                                },
-                                scales: {
-                                    x: {
-                                        title: {
-                                            display: true,
-                                            text: 'Date'
-                                        }
-                                    },
-                                    y: {
-                                        title: {
-                                            display: true,
-                                            text: 'Valeur' + (@json($chart_data['unit']) ? ' (' + @json($chart_data['unit']) + ')' : '')
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    });
-                </script>
+                <flux:chart :value="$chart_data['labels_and_data']" class="h-64">
+                    <flux:chart.svg>
+                        <flux:chart.line field="value" />
+                        <flux:chart.axis axis="x" field="label">
+                            <flux:chart.axis.line />
+                            <flux:chart.axis.tick />
+                        </flux:chart.axis>
+                        <flux:chart.axis axis="y">
+                            <flux:chart.axis.grid />
+                            <flux:chart.axis.tick />
+                        </flux:chart.axis>
+                        <flux:chart.cursor />
+                    </flux:chart.svg>
+                    <flux:chart.tooltip>
+                        <flux:chart.tooltip.heading field="label" :format="['year' => 'numeric', 'month' => 'numeric', 'day' => 'numeric']" />
+                        <flux:chart.tooltip.value field="value" label="Valeur" />
+                    </flux:chart.tooltip>
+                </flux:chart>
             @else
                 <flux:card class="flex h-32 items-center justify-center border-2 border-dashed p-6">
                     <flux:text class="text-center text-sm text-zinc-500">Pas assez de données (au moins 2 points de données non nuls) pour afficher le graphique pour la métrique et la période sélectionnées.</flux:text>

@@ -39,7 +39,7 @@ class AthleteMetricController extends Controller
 
         $chartData = $this->metricStatisticsService->prepareChartDataForSingleMetric($metrics, $metricType);
         $trends = $this->metricStatisticsService->getMetricTrends($athlete, $metricType);
-        $evolutionTrend = $this->metricStatisticsService->getMetricEvolutionTrend($athlete, $metricType, $filters['period'] ?? 'all_time');
+        $evolutionTrend = $this->metricStatisticsService->getEvolutionTrendForCollection($metrics, $metricType, $filters['period'] ?? 'all_time');
 
         return response()->json([
             'athlete'          => $athlete->only('id', 'name'),

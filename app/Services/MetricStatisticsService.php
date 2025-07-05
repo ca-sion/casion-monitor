@@ -92,6 +92,7 @@ class MetricStatisticsService
     {
         $labels = [];
         $data = [];
+        $labelsAndData = [];
         $valueColumn = $metricType->getValueColumn();
         $unit = $metricType->getUnit();
 
@@ -100,15 +101,23 @@ class MetricStatisticsService
 
         foreach ($sortedMetrics as $metric) {
             if ($metric->metric_type === $metricType) {
-                $labels[] = $metric->date->format('Y-m-d');
+                $dateLabel = $metric->date->format('Y-m-d');
+                $labels[] = $dateLabel;
                 $value = $metric->{$valueColumn};
-                $data[] = is_numeric($value) ? (float) $value : null; // S'assurer que la valeur est numérique ou null
+                $numericValue = is_numeric($value) ? (float) $value : null;
+                $data[] = $numericValue;
+                $labelsAndData[] = [
+                    'label' => $dateLabel,
+                    'value' => $numericValue,
+                    'unit' => $unit
+                ];
             }
         }
 
         return [
             'labels' => $labels,
             'data'   => $data,
+            'labels_and_data' => $labelsAndData,
             'unit'   => $unit,
             'label'  => $metricType->getLabel(),
         ];
@@ -125,6 +134,7 @@ class MetricStatisticsService
     {
         $allLabels = $metrics->pluck('date')->unique()->map(fn ($date) => $date->format('Y-m-d'))->sort()->values()->toArray();
         $datasets = [];
+        $labelsAndData = [];
 
         foreach ($metricTypes as $metricType) {
             $valueColumn = $metricType->getValueColumn();
@@ -139,6 +149,13 @@ class MetricStatisticsService
                 // Prenez la première valeur numérique pour ce jour, ou null si aucune métrique ou valeur non numérique pour ce jour
                 $value = $groupedMetrics->has($dateLabel) ? $groupedMetrics[$dateLabel]->first()->{$valueColumn} : null;
                 $data[] = is_numeric($value) ? (float) $value : null;
+                
+                // Ajout pour labels_and_data
+                $labelsAndData[$metricType->value][] = [
+                    'label' => $dateLabel,
+                    'value' => is_numeric($value) ? (float) $value : null,
+                    'unit' => $unit
+                ];
             }
 
             $datasets[] = [
@@ -150,6 +167,7 @@ class MetricStatisticsService
         return [
             'labels'   => $allLabels,
             'datasets' => $datasets,
+            'labels_and_data' => $labelsAndData,
         ];
     }
 
