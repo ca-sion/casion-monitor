@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->date('birthdate')->nullable();
             $table->string('gender', 2)->nullable();
-            $table->date('last_connection')->nullable();
+            $table->datetime('last_connection')->nullable();
             $table->string('external_id')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
