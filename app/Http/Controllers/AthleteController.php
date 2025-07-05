@@ -37,13 +37,23 @@ class AthleteController extends Controller
         ];
 
         $period = $request->input('period', 'last_30_days');
+        $days = match($period) {
+            'last_7_days' => 7,
+            'last_14_days' => 14, 
+            'last_30_days' => 30,
+            'last_90_days' => 90,
+            'last_6_months' => 180,
+            'last_year' => 365,
+            'all_time' => 500,
+            default => 50
+        };
 
         $metricsDataForDashboard = [];
         foreach ($dashboardMetricTypes as $metricType) {
             $metricsDataForDashboard[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
         }
 
-        $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, 50);
+        $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, $days);
 
         $periodOptions = [
             'last_7_days'    => '7 derniers jours',

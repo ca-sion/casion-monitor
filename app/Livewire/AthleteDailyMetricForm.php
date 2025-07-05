@@ -55,7 +55,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             ->whereDate('date', $this->date)
             ->get();
         $metricsData = $metrics->mapWithKeys(function (Metric $metric) {
-            return [$metric->metric_type->value => $metric->{$metric->metric_type->getValueColumn()} ?? 'value'];
+            return [$metric->metric_type->value => $metric->{$metric->metric_type->getValueColumn()} ?? null];
         });
 
         $this->form->fill($metricsData->put('date', $this->date)->toArray());

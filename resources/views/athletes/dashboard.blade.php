@@ -124,7 +124,6 @@
                             @endphp
                             @if ($displayMetric)
                                 <flux:badge size="xs" color="zinc">
-                                    <span class="font-medium">{{ $displayMetric->metric_type->getLabelShort() }}:</span>
                                     {{ $displayMetric->data->formatted_value }}
                                 </flux:badge>
                             @else
