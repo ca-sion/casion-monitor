@@ -42,36 +42,44 @@
         @foreach ($dashboard_metrics_data as $metricTypeKey => $metricData)
             <flux:card class="p-4" size="sm">
                 <div class="flex items-center justify-between mb-2">
-                    <flux:tooltip content="{{ $metricData['description'] }}" icon="information-circle">
-                        <flux:text class="text-xs font-semibold uppercase text-zinc-500">{{ $metricData['short_label'] }}</flux:text>
-                    </flux:tooltip>
+                        <div>
+                            <flux:text class="text-xs font-semibold uppercase text-zinc-500 inline">{{ $metricData['short_label'] }}</flux:text>
+                            <flux:dropdown hover position="top" align="start">
+                                <flux:button size="xs" variant="outline" class="rounded-full!">ℹ︎</flux:button>
+                                <flux:popover class="max-w-xs">
+                                    <flux:heading>{{ $metricData['description'] }}</flux:heading>
+                                    <flux:separator variant="subtle" class="my-2" />
+                                    <flux:text>La valeur ci-après est la dernière valeur enregistrée pour cette métrique sur la période sélectionnée.</flux:text>
+                                    <flux:separator variant="subtle" class="my-2" />
+                                    <flux:text>La valeur dans le badge et une tendance qui compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours.</flux:text>
+                                </flux:popover>
+                            </flux:dropdown>
+                        </div>
                     @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
-                        <flux:tooltip content="La tendance compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours." icon="information-circle">
-                            <flux:badge size="xs" color="{{ $metricData['trend_color'] }}">
-                                <div class="flex items-center gap-1">
-                                    <flux:icon name="{{ $metricData['trend_icon'] }}" variant="mini" class="-mr-0.5" />
-                                    <span>{{ $metricData['trend_percentage'] }}</span>
-                                </div>
-                            </flux:badge>
-                        </flux:tooltip>
+                        <flux:badge size="xs" color="{{ $metricData['trend_color'] }}">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="{{ $metricData['trend_icon'] }}" variant="mini" class="-mr-0.5" />
+                                <span>{{ $metricData['trend_percentage'] }}</span>
+                            </div>
+                        </flux:badge>
                     @endif
                 </div>
-                <flux:tooltip content="Ceci est la dernière valeur enregistrée pour cette métrique sur la période sélectionnée." icon="information-circle">
-                    <flux:heading size="lg" level="2" class="mb-4">
-                        {{ $metricData['formatted_last_value'] }}
-                    </flux:heading>
-                </flux:tooltip>
+                <flux:heading size="lg" level="2" class="mb-4">
+                    {{ $metricData['formatted_last_value'] }}
+                </flux:heading>
 
                 <div class="mb-4">
                     {{-- Utilisation du composant Flux UI pour le graphique - MISE À JOUR AVEC VOTRE SOLUTION --}}
                     @if (!empty($metricData['chart_data']['labels']) && !empty($metricData['chart_data']['data']))
-                        <flux:chart class="aspect-[3/1] w-full mb-2" :value="$metricData['chart_data']['data']">
+                        <flux:chart class="aspect-[3/1] w-full mb-2 h-10" :value="$metricData['chart_data']['data']">
                             <flux:chart.svg gutter="0">
                                 <flux:chart.line class="text-blue-500 dark:text-blue-400" />
                             </flux:chart.svg>
                         </flux:chart>
                     @else
-                        <flux:text class="text-center text-zinc-500">Pas assez de données pour afficher le graphique.</flux:text>
+                        <flux:card class="flex h-10 items-center border-2 border-dashed">
+                            <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
+                        </flux:card>
                     @endif
                 </div>
 

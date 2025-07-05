@@ -81,18 +81,16 @@
                                 </div>
                                 @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
                                     <div class="mt-1 flex items-center justify-between">
-                                        <flux:tooltip content="La tendance compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours.">
-                                            <flux:badge size="sm"
-                                                inset="top bottom"
-                                                color="{{ $metricData['trend_color'] }}">
-                                                <div class="flex items-center gap-1">
-                                                    <flux:icon class="-mr-0.5"
-                                                        name="{{ $metricData['trend_icon'] }}"
-                                                        variant="micro" />
-                                                    <span>{{ $metricData['trend_percentage'] }}</span>
-                                                </div>
-                                            </flux:badge>
-                                        </flux:tooltip>
+                                    <flux:badge size="sm"
+                                        inset="top bottom"
+                                        color="{{ $metricData['trend_color'] }}">
+                                        <div class="flex items-center gap-1">
+                                            <flux:icon class="-mr-0.5"
+                                                name="{{ $metricData['trend_icon'] }}"
+                                                variant="micro" />
+                                            <span>{{ $metricData['trend_percentage'] }}</span>
+                                        </div>
+                                    </flux:badge>
                                     </div>
                                 @else
                                     <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">N/A</span></flux:text>
@@ -131,5 +129,8 @@
             @endforeach
         </flux:table.rows>
     </flux:table>
+
+    <flux:separator variant="subtle" class="my-2" />
+    <flux:text class="text-sm">La valeur dans les badges et une tendance qui compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours.</flux:text>
 
 </x-layouts.trainer>
