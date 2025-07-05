@@ -20,7 +20,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/filament.css'])
 </head>
 
-<body class="bg-stone-100 dark:bg-[#0a0a0a] text-stone-500 flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
+<body class="bg-stone-100 dark:bg-[#0a0a0a] text-stone-500 flex p-6 lg:p-8 items-center justify-center min-h-screen flex-col">
 
     <main class="flex items-center justify-center w-full transition-opacity opacity-100 duration-750 lg:grow starting:opacity-0">
     <div class="max-w-xl text-sm leading-sm flex-1 p-6 pb-12 lg:p-20 bg-white dark:bg-[#161615] dark:text-[#EDEDEC] shadow-lg rounded-es-lg rounded-ee-lg lg:rounded-ss-lg lg:rounded-ee-none">
