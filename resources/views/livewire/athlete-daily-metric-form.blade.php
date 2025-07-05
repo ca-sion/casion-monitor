@@ -1,3 +1,4 @@
+<x-slot:title>{{ $athlete->name }} - Formulaire quotidien</x-slot>
 <div class="mx-auto max-w-2xl">
 
     <flux:heading size="xl" level="1">{{ $athlete->name }}</flux:heading>
