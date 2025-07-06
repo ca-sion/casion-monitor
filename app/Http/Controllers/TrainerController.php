@@ -39,7 +39,7 @@ class TrainerController extends Controller
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
-        $period = request()->input('period', 'last_30_days');
+        $period = request()->input('period', 'last_60_days');
 
         $athletesOverviewData = $athletes->map(function ($athlete) use ($dashboardMetricTypes, $period) {
             $metricsDataForDashboard = [];

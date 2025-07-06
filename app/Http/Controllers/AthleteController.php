@@ -30,11 +30,15 @@ class AthleteController extends Controller
 
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
-            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::PRE_SESSION_LEG_FEEL,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
             MetricType::MORNING_BODY_WEIGHT_KG,
-            // MetricType::MORNING_SLEEP_QUALITY,
-            // MetricType::POST_SESSION_SESSION_LOAD,
         ];
 
         $period = $request->input('period', 'last_30_days');
@@ -45,7 +49,7 @@ class AthleteController extends Controller
             'last_90_days'  => 90,
             'last_6_months' => 180,
             'last_year'     => 365,
-            'all_time'      => 500,
+            'all_time'      => 500, // A large number to signify "all time" for daily metrics history
             default         => 50
         };
 
@@ -54,7 +58,53 @@ class AthleteController extends Controller
             $metricsDataForDashboard[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
         }
 
-        $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, $days);
+        // Fetch alerts for the athlete
+        $alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, 'last_60_days');
+
+        // Fetch menstrual cycle info if applicable
+        $menstrualCycleInfo = null;
+        if ($athlete->gender === 'w') {
+            $menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
+        }
+
+        // --- Préparation des données pour le tableau des métriques quotidiennes (maximum de calculs dans le contrôleur) ---
+        $dailyMetricsGroupedByDate = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, $days);
+
+        $displayTableMetricTypes = [
+            MetricType::MORNING_HRV,
+            MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::MORNING_BODY_WEIGHT_KG,
+            MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            // Ajoutez d'autres types de métriques si nécessaire pour le tableau détaillé
+        ];
+
+        $processedDailyMetricsForTable = collect([]);
+
+        foreach ($dailyMetricsGroupedByDate as $date => $metricsOnDate) {
+            $currentDate = Carbon::parse($date);
+            $rowData = [
+                'date'      => $currentDate->locale('fr_CH')->isoFormat('L'), // Formatage de la date ici
+                'metrics'   => [],
+                'edit_link' => route('athletes.metrics.daily.form', ['hash' => $athlete->hash, 'd' => $currentDate->format('Y-m-d')]), // Lien d'édition par jour
+            ];
+
+            foreach ($displayTableMetricTypes as $metricType) {
+                $metric = $metricsOnDate->where('metric_type', $metricType->value)->first();
+                if ($metric) {
+                    // Formatage de la valeur de la métrique ici
+                    $rowData['metrics'][$metricType->value] = $this->metricStatisticsService->formatMetricValue($metric->{$metricType->getValueColumn()}, $metricType);
+                } else {
+                    $rowData['metrics'][$metricType->value] = 'N/A';
+                }
+            }
+            $processedDailyMetricsForTable->put($date, $rowData);
+        }
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
@@ -67,12 +117,14 @@ class AthleteController extends Controller
         ];
 
         $data = [
-            'athlete'                => $athlete,
-            'dashboard_metrics_data' => $metricsDataForDashboard, // Données agrégées pour le tableau de bord
-            'period_label'           => $period,
-            'period_options'         => $periodOptions,
-            'daily_metrics_history'  => $dailyMetricsHistory,
-            'dashboard_metric_types' => $dashboardMetricTypes, // Garder pour les entêtes de tableau
+            'athlete'                    => $athlete,
+            'dashboard_metrics_data'     => $metricsDataForDashboard,
+            'alerts'                     => $alerts,
+            'menstrualCycleInfo'         => $menstrualCycleInfo,
+            'period_label'               => $period,
+            'period_options'             => $periodOptions,
+            'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable, // Renommé et pré-traité
+            'display_table_metric_types' => $displayTableMetricTypes,
         ];
 
         if ($request->expectsJson()) {
@@ -90,21 +142,18 @@ class AthleteController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
-        // Récupérer les paramètres de filtre et de pagination
-        $filterType = $request->input('filter_type'); // Exemple: 'pre_session_goals', 'post_competition_feedback'
-        $filterCategory = $request->input('filter_category'); // Exemple: 'session' ou 'competition'
-        $period = $request->input('period', 'last_15_days'); // Nouvelle option pour la période
-        $page = $request->input('page', 1); // Pour la pagination
-        $perPage = 10; // Nombre de feedbacks par page
+        $filterType = $request->input('filter_type');
+        $filterCategory = $request->input('filter_category');
+        $period = $request->input('period', 'last_15_days');
+        $page = $request->input('page', 1);
+        $perPage = 10;
 
         $query = $athlete->feedbacks()->with('trainer');
 
-        // Appliquer le filtre par type si spécifié
         if ($filterType && FeedbackType::tryFrom($filterType)) {
             $query->where('type', $filterType);
         }
 
-        // Appliquer le filtre par catégorie (session ou compétition)
         if ($filterCategory) {
             $sessionTypes = [
                 FeedbackType::PRE_SESSION_GOALS->value,
@@ -124,10 +173,8 @@ class AthleteController extends Controller
             }
         }
 
-        // Gérer la période d'affichage
-        // Gérer la période d'affichage
         $limitDate = null;
-        $periodMap = [ // Utilisation d'une map pour les jours réels
+        $periodMap = [
             'last_7_days'   => 7,
             'last_15_days'  => 15,
             'last_30_days'  => 30,
@@ -137,7 +184,6 @@ class AthleteController extends Controller
             'all_time'      => null,
         ];
 
-        // Définir les options pour la vue avec les labels directement
         $periodOptionsForView = [
             'last_7_days'   => '7 derniers jours',
             'last_15_days'  => '15 derniers jours',
@@ -148,21 +194,15 @@ class AthleteController extends Controller
             'all_time'      => 'Depuis le début',
         ];
 
-        // Utilisez $periodMap pour la logique de la date limite
         if (isset($periodMap[$period]) && $periodMap[$period] !== null) {
             $limitDate = Carbon::now()->subDays($periodMap[$period])->startOfDay();
             $query->where('date', '>=', $limitDate);
         }
 
-        // Ordonner les feedbacks et paginer
         $feedbacks = $query->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
-            ->paginate($perPage, ['*'], 'page', $page); // Utilisation de paginate
+            ->paginate($perPage, ['*'], 'page', $page);
 
-        // Regrouper les feedbacks par date (après pagination si nécessaire, ou alors sur le résultat paginé)
-        // Note: Le regroupement après pagination peut entraîner des dates incomplètes sur les limites de pages.
-        // Si vous voulez un regroupement parfait, il faudrait regrouper d'abord puis paginer les groupes.
-        // Pour l'instant, on regroupe les résultats de la page courante.
         $groupedFeedbacks = $feedbacks->groupBy(function ($feedback) {
             return \Carbon\Carbon::parse($feedback->date)->format('Y-m-d');
         });
@@ -170,12 +210,12 @@ class AthleteController extends Controller
         $data = [
             'athlete'               => $athlete,
             'groupedFeedbacks'      => $groupedFeedbacks,
-            'feedbackTypes'         => FeedbackType::cases(), // Garder pour le sélecteur de type
-            'periodOptions'         => $periodOptionsForView, // Pour l'affichage des options dans la vue
+            'feedbackTypes'         => FeedbackType::cases(),
+            'periodOptions'         => $periodOptionsForView,
             'currentPeriod'         => $period,
             'currentFilterType'     => $filterType,
             'currentFilterCategory' => $filterCategory,
-            'feedbacksPaginator'    => $feedbacks, // Passer l'objet paginator pour les liens de pagination
+            'feedbacksPaginator'    => $feedbacks,
         ];
 
         if ($request->expectsJson()) {

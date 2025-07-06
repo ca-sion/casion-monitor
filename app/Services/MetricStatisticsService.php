@@ -462,8 +462,9 @@ class MetricStatisticsService
 
         $formattedValue = number_format($value, $metricType->getPrecision());
         $unit = $metricType->getUnit();
+        $scale = $metricType->getScale();
 
-        return $formattedValue.($unit ? ' '.$unit : '');
+        return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
     }
 
     /**

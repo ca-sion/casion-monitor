@@ -22,6 +22,7 @@
 
     <flux:separator variant="subtle" />
 
+    {{-- Section pour ajouter une métrique (existante) --}}
     <a href="{{ route('athletes.metrics.daily.form', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une métrique">
         <flux:card class="bg-lime-50! border-lime-400! my-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
             size="sm"
@@ -35,12 +36,66 @@
         </flux:card>
     </a>
 
-    <flux:text class="mb-4 mt-8 text-lg font-semibold">Tes statistiques clés:</flux:text>
+    {{-- Section Alertes --}}
+    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
+        <flux:heading size="lg" level="2" class="mb-4 text-center">🔔 Tes Alertes Récentes</flux:heading>
+        @if (!empty($alerts))
+            <div class="flex flex-col gap-3">
+                @foreach ($alerts as $alert)
+                    <flux:badge size="md" inset="top bottom" class="w-full text-center py-2 px-4 whitespace-normal!"
+                        color="{{ match($alert['type']) {
+                            'danger' => 'rose',
+                            'warning' => 'amber',
+                            'info' => 'sky',
+                            'success' => 'emerald',
+                            default => 'zinc'
+                        } }}">
+                        <span>{{ $alert['message'] }}</span>
+                    </flux:badge>
+                @endforeach
+            </div>
+        @else
+            <flux:text class="text-center text-zinc-500 italic">
+                Aucune alerte détectée pour la période sélectionnée. Tout semble en ordre ! 🎉
+            </flux:text>
+        @endif
+        @if ($athlete->gender === 'w' && $menstrualCycleInfo)
+            @php
+                $menstrualCycleBoxBorderColor = 'border-emerald-400';
+                $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';
 
-    {{-- Section des cartes de métriques individuelles --}}
+                if ($menstrualCycleInfo['phase'] === 'Aménorrhée' || $menstrualCycleInfo['phase'] === 'Oligoménorrhée') {
+                    $menstrualCycleBoxBorderColor = 'border-rose-400';
+                    $menstrualCycleBoxBgColor = 'bg-rose-50/50 dark:bg-rose-950/50';
+                } elseif ($menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long') {
+                    $menstrualCycleBoxBorderColor = 'border-amber-400';
+                    $menstrualCycleBoxBgColor = 'bg-amber-50/50 dark:bg-amber-950/50';
+                } elseif ($menstrualCycleInfo['phase'] === 'Inconnue') {
+                    $menstrualCycleBoxBorderColor = 'border-sky-400';
+                    $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
+                }
+            @endphp
+            <div class="mt-4 p-3 border rounded-md {{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }}">
+                <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
+                <flux:text class="text-xs">
+                    Phase: <span class="font-medium">{{ $menstrualCycleInfo['phase'] }}</span><br>
+                    Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'N/A' }}</span><br>
+                    Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'N/A' }} jours</span>
+                    @if($menstrualCycleInfo['last_period_start'])
+                        <br>Dernières règles: <span class="font-medium">{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
+                    @endif
+                </flux:text>
+            </div>
+        @endif
+    </flux:card>
+
+
+    <flux:text class="mb-4 mt-8 text-lg font-semibold">📈 Tes statistiques clés:</flux:text>
+
+    {{-- Section des cartes de métriques individuelles (existante) --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-4">
         @foreach ($dashboard_metrics_data as $metricTypeKey => $metricData)
-            <flux:card class="p-4" size="sm">
+            <flux:card class="p-4 transform transition-transform duration-200 hover:scale-105 hover:shadow-xl" size="sm">
                 <div class="flex items-center justify-between mb-2">
                         <div>
                             <flux:text class="text-xs font-semibold uppercase text-zinc-500 inline">{{ $metricData['short_label'] }}</flux:text>
@@ -64,38 +119,35 @@
                         </flux:badge>
                     @endif
                 </div>
-                <flux:heading size="lg" level="2" class="mb-4">
+                <flux:heading size="lg" level="2" class="mb-4 text-slate-600 dark:text-slate-400">
                     {{ $metricData['formatted_last_value'] }}
                 </flux:heading>
-
                 <div class="mb-4">
                     {{-- Utilisation du composant Flux UI pour le graphique - MISE À JOUR AVEC VOTRE SOLUTION --}}
-                    @if (!empty($metricData['chart_data']['labels']) && !empty($metricData['chart_data']['data']))
-                        <flux:chart class="aspect-[3/1] w-full mb-2 h-10" :value="$metricData['chart_data']['data']">
-                            <flux:chart.svg gutter="0">
-                                <flux:chart.line class="text-blue-500 dark:text-blue-400" />
+                    @if (!empty($metricData['chart_data']['labels_and_data']) && count(array_filter($metricData['chart_data']['data'], fn($val) => $val !== null)) >= 2)
+                        <flux:chart :value="$metricData['chart_data']['labels_and_data']" class="h-24">
+                            <flux:chart.svg>
+                                <flux:chart.line field="value" class="stroke-slate-500!" />
+                                <flux:chart.axis axis="x" field="label" class="text-xs text-zinc-400">
+                                    <flux:chart.axis.line />
+                                    <flux:chart.axis.tick />
+                                </flux:chart.axis>
+                                <flux:chart.axis axis="y" class="text-xs text-zinc-400">
+                                    <flux:chart.axis.grid stroke-dasharray="2 2" />
+                                    <flux:chart.axis.tick />
+                                </flux:chart.axis>
+                                <flux:chart.cursor />
                             </flux:chart.svg>
+                            <flux:chart.tooltip>
+                                <flux:chart.tooltip.heading field="label" :format="['year' => 'numeric', 'month' => 'numeric', 'day' => 'numeric']" />
+                                <flux:chart.tooltip.value field="value" label="Valeur" />
+                            </flux:chart.tooltip>
                         </flux:chart>
                     @else
-                        <flux:card class="flex h-10 items-center border-2 border-dashed">
-                            <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
+                        <flux:card class="flex h-24 items-center justify-center border-2 border-dashed p-4 text-zinc-400">
+                            <flux:text class="text-center text-sm">Pas assez de données pour le graphique.</flux:text>
                         </flux:card>
                     @endif
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 text-sm text-zinc-600">
-                    <div>
-                        Moy. 7j:
-                        <flux:tooltip content="Moyenne des valeurs sur les 7 derniers jours." icon="information-circle">
-                            <span class="font-medium">{{ $metricData['formatted_average_7_days'] }}</span>
-                        </flux:tooltip>
-                    </div>
-                    <div>
-                        Moy. 30j:
-                        <flux:tooltip content="Moyenne des valeurs sur les 30 derniers jours." icon="information-circle">
-                            <span class="font-medium">{{ $metricData['formatted_average_30_days'] }}</span>
-                        </flux:tooltip>
-                    </div>
                 </div>
             </flux:card>
         @endforeach
@@ -103,58 +155,64 @@
 
     <flux:separator variant="subtle" class="my-8" />
 
-    <flux:text class="mb-4 mt-8 text-lg font-semibold">Ton historique des métriques quotidiennes:</flux:text>
+    {{-- Section Tableau de toutes les données métriques brutes --}}
+    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
+        <flux:heading size="lg" level="2" class="mb-4 text-center">📋 Tes Données Quotidiennes Détaillées</flux:heading>
+        <flux:text class="mb-4 text-zinc-600 dark:text-zinc-400 text-center">
+            Explore tes entrées de métriques jour par jour. Clique sur "Modifier" pour ajuster une entrée.
+        </flux:text>
 
-    <flux:table class="my-4">
-        <flux:table.columns>
-            <flux:table.column>Date</flux:table.column>
-            @foreach ($dashboard_metric_types as $metricType)
-                <flux:table.column>
-                    <flux:tooltip content="{{ $metricType->getDescription() }}" icon="information-circle">
-                        {{ $metricType->getLabelShort() }}
-                    </flux:tooltip>
-                </flux:table.column>
-            @endforeach
-            <flux:table.column class="text-center">Actions</flux:table.column>
-        </flux:table.columns>
-
-        <flux:table.rows>
-            @forelse ($daily_metrics_history as $date => $metricDates)
-                <flux:table.row>
-                    <flux:table.cell>
-                        {{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L') }}
-                        ({{ \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('dddd') }})
-                    </flux:table.cell>
-                    @foreach ($dashboard_metric_types as $metricType)
-                        <flux:table.cell>
-                            @php
-                                $displayMetric = $metricDates->where('metric_type', $metricType->value)->first();
-                            @endphp
-                            @if ($displayMetric)
-                                <flux:badge size="xs" color="zinc">
-                                    {{ $displayMetric->data->formatted_value }}
-                                </flux:badge>
-                            @else
-                                N/A
-                            @endif
-                        </flux:table.cell>
+        <div class="overflow-x-auto">
+            <flux:table class="min-w-full text-nowrap">
+                <flux:table.columns>
+                    <flux:table.column class="z-1 sticky left-0 bg-white dark:bg-zinc-900 w-32">Date</flux:table.column>
+                    @foreach ($display_table_metric_types as $metricType)
+                        <flux:table.column class="text-center">
+                            {{ $metricType->getLabelShort() }}
+                            <flux:tooltip content="{{ $metricType->getDescription() }}">
+                                <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
+                            </flux:tooltip>
+                        </flux:table.column>
                     @endforeach
-                    <flux:table.cell class="text-center">
-                        @if ($metricDates->first())
-                            <flux:link href="{{ $metricDates->first()->data->edit_link }}">Modifier</flux:link>
-                        @else
-                            N/A
-                        @endif
-                    </flux:table.table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="{{ count($dashboard_metric_types) + 2 }}" class="text-center text-zinc-500 py-4">
-                        Aucune entrée de métrique trouvée pour cette période.
-                    </flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+                    <flux:table.column class="text-center w-24">Actions</flux:table.column>
+                </flux:table.columns>
+
+                <flux:table.rows>
+                    {{-- Utilisation de $processed_daily_metrics_for_table --}}
+                    @forelse ($daily_metrics_grouped_by_date as $date => $rowData)
+                        <flux:table.row>
+                            <flux:table.cell class="z-1 sticky left-0 bg-white dark:bg-zinc-900 font-semibold">
+                                {{ $rowData['date'] }}
+                            </flux:table.cell>
+                            @foreach ($display_table_metric_types as $metricType)
+                                <flux:table.cell class="text-center">
+                                    @if (isset($rowData['metrics'][$metricType->value]))
+                                        <flux:badge size="xs" color="zinc">
+                                            {{ $rowData['metrics'][$metricType->value] }}
+                                        </flux:badge>
+                                    @else
+                                        <flux:text class="text-zinc-500">N/A</flux:text>
+                                    @endif
+                                </flux:table.cell>
+                            @endforeach
+                            <flux:table.cell class="text-center">
+                                @if ($rowData['edit_link'])
+                                    <flux:link href="{{ $rowData['edit_link'] }}">Modifier</flux:link>
+                                @else
+                                    <flux:text class="text-zinc-400">N/A</flux:text>
+                                @endif
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell class="py-4 text-center text-zinc-500" colspan="{{ count($display_table_metric_types) + 2 }}">
+                                Aucune entrée de métrique trouvée pour cette période. Commence à enregistrer tes données pour les voir ici ! ✨
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
+    </flux:card>
 
 </x-layouts.athlete>
