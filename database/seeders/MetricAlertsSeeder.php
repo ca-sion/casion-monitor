@@ -62,7 +62,6 @@ class MetricAlertsSeeder extends Seeder
 
         // Scénario 4 : Potentiel Retard (Alerte d'Avertissement)
         // La dernière J1 sera à (Carbon::now() - 34 jours). Le cycle moyen est d'environ 29 jours.
-        // *ATTENTION : Ceci nécessite la modification de votre fonction getAthleteAlerts comme expliqué précédemment.*
         // $this->seedPotentialDelayScenario($athlete->id);
 
         // Scénario 5 : Cycle Normal (Alerte de Succès / Pas d'alerte de cycle spécifique)
@@ -101,12 +100,13 @@ class MetricAlertsSeeder extends Seeder
 
     private function seedOligomenorrheaLongScenario(int $athleteId): void
     {
-        $this->command->info("  - Scenario: Oligoménorrhée (Cycles longs)");
-        // Dates: J1 - 96 jours (2025-04-01), J1 - 56 jours (2025-05-11), J1 - 16 jours (2025-06-20)
-        $this->insertMetric($athleteId, 96);
-        $this->insertMetric($athleteId, 56);
-        $this->insertMetric($athleteId, 16); // Dernière J1
-        $this->command->info("    -> Attendu: Phase Oligoménorrhée, Alerte de Danger (moy. 40 jours).");
+        $this->command->info("  - Scénario: Oligoménorrhée (cycles longs)");
+        // J1 sur des dates qui génèrent des cycles de 50 jours.
+        // Dernier J1 il y a 35 jours (par exemple: 1er juin si aujourd'hui est le 6 juillet)
+        $this->insertMetric($athleteId, 135); // J1 antérieur
+        $this->insertMetric($athleteId, 85);  // J1 antérieur
+        $this->insertMetric($athleteId, 35);  // Dernier J1
+        $this->command->info("    -> Attendu: Phase Oligoménorrhée, Alerte de Danger (moy. ~50 jours).");
         $this->command->newLine();
     }
 

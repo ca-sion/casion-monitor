@@ -82,17 +82,32 @@
 
                             {{-- Cycle Menstruel (uniquement pour les filles) --}}
                             @if ($athlete->gender === 'w' && $athlete->menstrualCycleInfo)
-                                <div class="p-2 border rounded-md {{ $athlete->menstrualCycleInfo['phase'] === 'Inconnue' || $athlete->menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long' ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/50' : 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/50' }}">
+                                @php
+                                    $menstrualCycleBoxBorderColor = 'border-emerald-400';
+                                    $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';
+
+                                    if ($athlete->menstrualCycleInfo['phase'] === 'Aménorrhée' || $athlete->menstrualCycleInfo['phase'] === 'Oligoménorrhée') {
+                                        $menstrualCycleBoxBorderColor = 'border-rose-400';
+                                        $menstrualCycleBoxBgColor = 'bg-rose-50/50 dark:bg-rose-950/50';
+                                    } elseif ($athlete->menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long') {
+                                        $menstrualCycleBoxBorderColor = 'border-amber-400';
+                                        $menstrualCycleBoxBgColor = 'bg-amber-50/50 dark:bg-amber-950/50';
+                                    } elseif ($athlete->menstrualCycleInfo['phase'] === 'Inconnue') {
+                                        $menstrualCycleBoxBorderColor = 'border-sky-400';
+                                        $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
+                                    }
+                                @endphp
+                                <div class="p-2 border rounded-md {{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }}">
                                     <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
                                     <flux:text class="text-xs">
                                         Phase: <span class="font-medium">{{ $athlete->menstrualCycleInfo['phase'] }}</span><br>
                                         Jours dans la phase: <span class="font-medium">{{ intval($athlete->menstrualCycleInfo['days_in_phase']) ?? 'N/A' }}</span><br>
                                         Longueur moy. cycle: <span class="font-medium">{{ $athlete->menstrualCycleInfo['cycle_length_avg'] ?? 'N/A' }} jours</span>
                                         @if($athlete->menstrualCycleInfo['last_period_start'])
-                                            <br>Dernier J1: <span class="font-medium">{{ $athlete->menstrualCycleInfo['last_period_start']->format('d.m.Y') }}</span>
+                                            <br>Dernier J1: <span class="font-medium">{{ $athlete->menstrualCycleInfo['last_period_start'] }}</span>
                                         @endif
                                         @if($athlete->menstrualCycleInfo['reason'])
-                                            <br><span class="text-zinc-500 text-xs italic">{{ $athlete->menstrualCycleInfo['reason'] }}</span>
+                                            <br><span class="text-zinc-500 text-xs italic whitespace-normal!">{{ $athlete->menstrualCycleInfo['reason'] }}</span>
                                         @endif
                                     </flux:text>
                                 </div>

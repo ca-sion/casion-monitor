@@ -27,7 +27,7 @@ class MetricTrendAlertsSeeder extends Seeder
                 'id' => 3,
                 'first_name' => 'Athlète',
                 'last_name' => 'De Test 2',
-                'gender' => 'm', // Peut être 'm' ou 'w' car ces alertes ne dépendent pas du cycle
+                'gender' => 'w', // Peut être 'm' ou 'w' car ces alertes ne dépendent pas du cycle
                 'email' => 'athlete3@example.com',
             ]);
         }
@@ -55,7 +55,7 @@ class MetricTrendAlertsSeeder extends Seeder
         // Scénario A : Fatigue Élevée en phase Menstruelle (Alerte Info)
         // La dernière J1 sera à (Carbon::now() - 3 jours) pour être en phase Menstruelle.
         // La fatigue du jour sera élevée (e.g., 7 ou 8).
-        // $this->seedFatigueDuringPeriodScenario($athlete->id);
+        $this->seedFatigueDuringPeriodScenario($athlete->id);
 
         // Scénario B : Performance Faible en phase Menstruelle (Alerte Info)
         // La dernière J1 sera à (Carbon::now() - 3 jours) pour être en phase Menstruelle.
@@ -68,15 +68,15 @@ class MetricTrendAlertsSeeder extends Seeder
 
         // Scénario D : Tendance VFC (Danger/Warning)
         // La moyenne 7 jours sera significativement plus basse que la moyenne 30 jours.
-        // $this->seedHrvTrendScenario($athlete->id);
+        $this->seedHrvTrendScenario($athlete->id);
 
         // Scénario E : Tendance Qualité de Sommeil (Danger/Warning)
         // La moyenne 7 jours sera significativement plus basse que la moyenne 30 jours.
-        $this->seedSleepQualityTrendScenario($athlete->id);
+        // $this->seedSleepQualityTrendScenario($athlete->id);
 
         // Scénario F : Tendance Poids Corporel (Warning si forte variation)
         // La moyenne 7 jours sera significativement différente de la moyenne 30 jours.
-        $this->seedBodyWeightTrendScenario($athlete->id);
+        // $this->seedBodyWeightTrendScenario($athlete->id);
 
         // Scénario G : RAS / Pas d'alertes spécifiques (Alerte Succès)
         // Toutes les métriques seront dans les plages normales avec des tendances stables.

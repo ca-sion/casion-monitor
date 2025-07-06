@@ -428,70 +428,111 @@ class MetricStatisticsService
     }
 
     /**
-     * Déduit la phase actuelle du cycle menstruel d'une athlète.
-     * Nécessite des données régulières du premier jour des règles.
+     * Déduit la phase du cycle menstruel d'un athlète féminin.
      *
-     * @return array ['phase' => string, 'days_in_phase' => int|null, 'cycle_length_avg' => int|null, 'last_period_start' => Carbon|null]
+     * @param  Athlete  $athlete
+     * @return array
      */
     public function deduceMenstrualCyclePhase(Athlete $athlete): array
     {
-        if ($athlete->gender !== 'w') {
-            return ['phase' => 'N/A', 'days_in_phase' => null, 'cycle_length_avg' => null, 'last_period_start' => null, 'reason' => 'Athlète non féminine.'];
-        }
+        // Initialiser les valeurs par défaut
+        $phase = 'Inconnue';
+        $reason = 'Données de cycle non disponibles.';
+        $averageCycleLength = null;
+        $daysSinceLastPeriod = null;
+        $lastPeriodStart = null;
 
-        $periodMetrics = $athlete->metrics()
+        // Récupérer toutes les métriques J1 (Premier Jour des Règles) dans l'ordre chronologique inverse
+        $j1Metrics = $athlete->metrics()
             ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
-            ->where('value', 1) // Assuming '1' means it's the first day
-            ->orderByDesc('date')
-            ->limit(3) // Get the last 3 first days to calculate average cycle length
+            ->where('value', 1) // Assurez-vous que la valeur est bien 1 pour un J1
+            ->orderBy('date', 'desc') // Les plus récentes en premier
             ->get();
 
-        if ($periodMetrics->isEmpty()) {
-            return ['phase' => 'Inconnue', 'days_in_phase' => null, 'cycle_length_avg' => null, 'last_period_start' => null, 'reason' => 'Pas de données sur le premier jour des règles.'];
+        // Déterminer le dernier J1 et les jours depuis le dernier J1
+        if ($j1Metrics->isNotEmpty()) {
+            $lastPeriodStart = Carbon::parse($j1Metrics->first()->date);
+            $daysSinceLastPeriod = Carbon::now()->diffInDays($lastPeriodStart, true);
         }
 
-        $lastPeriodStart = $periodMetrics->first()->date;
+        // Calculer les longueurs des cycles précédents et la moyenne
         $cycleLengths = [];
+        if ($j1Metrics->count() >= 2) {
+            // Parcourir les métriques pour calculer la durée de chaque cycle
+            for ($i = 0; $i < $j1Metrics->count() - 1; $i++) {
+                $start = Carbon::parse($j1Metrics[$i + 1]->date); // J1 précédent
+                $end = Carbon::parse($j1Metrics[$i]->date);       // J1 actuel
+                $cycleLengths[] = $end->diffInDays($start, true);
+            }
+            // Calculer la longueur moyenne du cycle
+            $averageCycleLength = count($cycleLengths) > 0 ? array_sum($cycleLengths) / count($cycleLengths) : null;
+        }
 
-        // Calculate average cycle length from the last two complete cycles
-        if ($periodMetrics->count() >= 2) {
-            for ($i = 0; $i < $periodMetrics->count() - 1; $i++) {
-                $diff = $periodMetrics[$i]->date->diffInDays($periodMetrics[$i + 1]->date, true);
-                $cycleLengths[] = $diff;
+        // --- DÉDUCTION DE LA PHASE DU CYCLE MENSTRUEL PAR ORDRE DE PRIORITÉ ---
+
+        // 1. Cas : Données insuffisantes pour établir un historique de cycle
+        if ($j1Metrics->count() < 2 || $averageCycleLength === null) {
+            $phase = 'Inconnue';
+            $reason = 'Pas assez de données pour le cycle moyen (nécessite au moins 2 J1).';
+        }
+        // 2. Cas : Aménorrhée (absence prolongée de règles) - La condition la plus grave
+        // Définition: Absence de règles pendant au moins 90 jours (ou un seuil significativement plus long que la moyenne attendue).
+        // Ici, si les jours passés depuis le dernier J1 dépassent la moyenne du cycle + 60 jours.
+        elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null && $daysSinceLastPeriod > ($averageCycleLength + 60)) {
+            $phase = 'Aménorrhée';
+            $reason = 'Absence prolongée de règles (plus de 60 jours au-delà de la longueur moyenne du cycle attendue).';
+        }
+        // 3. Cas : Oligoménorrhée (longueur moyenne du cycle anormalement courte ou longue)
+        // La longueur moyenne du cycle est en dehors de la plage normale (généralement 21-35 jours).
+        // Cette condition prend le pas sur les phases normales si le cycle est globalement irrégulier.
+        elseif ($averageCycleLength !== null && ($averageCycleLength < 21 || $averageCycleLength > 35)) {
+            $phase = 'Oligoménorrhée';
+            $reason = 'Longueur moyenne du cycle hors de la plage normale (21-35 jours).';
+        }
+        // 4. Cas : Potentiel retard ou cycle long (le cycle actuel dépasse la moyenne mais n'est pas Aménorrhée)
+        // Si le cycle en cours a dépassé la longueur moyenne du cycle de plus de 7 jours (un seuil de "retard").
+        elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null && $daysSinceLastPeriod >= $averageCycleLength + 7) {
+            $phase = 'Potentiel retard ou cycle long';
+            $reason = 'Le nombre de jours sans règles est significativement plus long que la durée moyenne du cycle.';
+        }
+        // 5. Cas : Déduction des phases normales du cycle (si aucune anomalie majeure n'est détectée)
+        elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null) {
+            // Phase Menstruelle (généralement J1 à J5)
+            if ($daysSinceLastPeriod >= 1 && $daysSinceLastPeriod <= 5) {
+                $phase = 'Menstruelle';
+                $reason = 'Phase de saignement.';
+            }
+            // Phase Folliculaire (post-menstruation, pré-ovulation)
+            // Du jour 6 jusqu'au jour juste avant l'ovulation estimée (moyenne/2)
+            elseif ($daysSinceLastPeriod > 5 && $daysSinceLastPeriod < ($averageCycleLength / 2)) {
+                $phase = 'Folliculaire';
+                $reason = 'Développement des follicules ovariens.';
+            }
+            // Phase Ovulatoire (autour de l'ovulation estimée)
+            // Un fenêtre de 3 jours autour du milieu du cycle estimé (moyenne/2)
+            elseif ($daysSinceLastPeriod >= ($averageCycleLength / 2) && $daysSinceLastPeriod <= ($averageCycleLength / 2) + 2) {
+                $phase = 'Ovulatoire (estimée)';
+                $reason = 'Libération de l\'ovule.';
+            }
+            // Phase Lutéale (post-ovulation, pré-prochaines règles)
+            // Du jour après l'ovulation estimée jusqu'à la veille de la durée moyenne du cycle.
+            elseif ($daysSinceLastPeriod > ($averageCycleLength / 2) + 2 && $daysSinceLastPeriod < $averageCycleLength) {
+                $phase = 'Lutéale';
+                $reason = 'Préparation de l\'utérus pour une éventuelle grossesse.';
+            }
+            // Cas de secours pour les phases normales si non couvertes
+            else {
+                $phase = 'Inconnue';
+                $reason = 'Impossible de déterminer la phase du cycle normal avec les données actuelles.';
             }
         }
 
-        $averageCycleLength = !empty($cycleLengths) ? round(array_sum($cycleLengths) / count($cycleLengths)) : 28;
-
-        $daysSinceLastPeriod = $lastPeriodStart->diffInDays(Carbon::now());
-
-        // Standard cycle phases (approximate, adjust as needed based on common literature)
-        // Follicular: Day 1 (period starts) to ovulation (around Day 14)
-        // Ovulatory: Around Day 14
-        // Luteal: Day 15 to Day 28 (before next period)
-        $phase = 'Inconnue';
-        $daysInPhase = $daysSinceLastPeriod;
-
-        if ($daysSinceLastPeriod >= 1 && $daysSinceLastPeriod <= 5) { // Assuming period typically lasts 3-7 days
-            $phase = 'Menstruelle'; // Phase folliculaire précoce
-        } elseif ($daysSinceLastPeriod > 5 && $daysSinceLastPeriod <= ($averageCycleLength / 2) - 1) { // Up to day before estimated ovulation
-            $phase = 'Folliculaire';
-        } elseif ($daysSinceLastPeriod >= ($averageCycleLength / 2) - 1 && $daysSinceLastPeriod <= ($averageCycleLength / 2) + 1) { // Around estimated ovulation day
-            $phase = 'Ovulatoire (estimée)';
-        } elseif ($daysSinceLastPeriod > ($averageCycleLength / 2) + 1 && $daysSinceLastPeriod < $averageCycleLength) {
-            $phase = 'Lutéale';
-        } elseif ($daysSinceLastPeriod >= $averageCycleLength && $daysSinceLastPeriod < $averageCycleLength + 7) {
-             $phase = 'Potentiel retard ou cycle long'; // Could be late period, or just a longer cycle for this athlete
-        } elseif ($daysSinceLastPeriod > ($averageCycleLength + 60)) {
-            $phase = 'Aménorrhée';
-        }
-
         return [
-            'phase'              => $phase,
-            'days_in_phase'      => $daysInPhase,
-            'cycle_length_avg'   => $averageCycleLength,
-            'last_period_start'  => $lastPeriodStart,
-            'reason'             => null,
+            'phase'               => $phase,
+            'reason'              => $reason,
+            'days_in_phase'       => $daysSinceLastPeriod,
+            'cycle_length_avg'    => $averageCycleLength !== null ? round($averageCycleLength) : null, // Arrondi pour l'affichage
+            'last_period_start'   => $lastPeriodStart ? $lastPeriodStart->format('d.m.Y') : null,
         ];
     }
 
@@ -644,7 +685,7 @@ class MetricStatisticsService
 
         // Si aucune alerte mais suffisamment de données, on peut donner un statut "RAS"
         if (empty($alerts) && $metrics->isNotEmpty()) {
-            $alerts[] = ['type' => 'success', 'message' => "Aucun signal d'alerte majeur détecté sur la période."];
+            $alerts[] = ['type' => 'success', 'message' => "Aucune alerte détectée."];
         } elseif (empty($alerts)) {
              $alerts[] = ['type' => 'info', 'message' => "Pas encore suffisamment de données pour une analyse complète."];
         }
