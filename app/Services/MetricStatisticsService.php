@@ -332,6 +332,8 @@ class MetricStatisticsService
     {
         $metricsForPeriod = $this->getAthleteMetrics($athlete, ['metric_type' => $metricType->value, 'period' => $period]);
 
+        dd($metricsForPeriod->pluck('value', 'date')->toArray());
+
         $valueColumn = $metricType->getValueColumn();
 
         $metricData = [
@@ -487,8 +489,8 @@ class MetricStatisticsService
             $reason = 'Longueur moyenne du cycle hors de la plage normale (21-35 jours).';
         }
         // 4. Cas : Potentiel retard ou cycle long (le cycle actuel dépasse la moyenne mais n'est pas Aménorrhée)
-        // Si le cycle en cours a dépassé la longueur moyenne du cycle de plus de 5 jours (un seuil de "retard").
-        elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null && $daysSinceLastPeriod >= $averageCycleLength + 5) {
+        // Si le cycle en cours a dépassé la longueur moyenne du cycle de plus de 2 jours (un seuil de "retard").
+        elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null && $daysSinceLastPeriod >= $averageCycleLength + 2) {
             $phase = 'Potentiel retard ou cycle long';
             $reason = 'Le nombre de jours sans règles est significativement plus long que la durée moyenne du cycle.';
         }

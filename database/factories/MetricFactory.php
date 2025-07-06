@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\MetricType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,10 +18,10 @@ class MetricFactory extends Factory
     public function definition(): array
     {
         return [
-            'athlete_id'  => fake()->randomElement([1, 2]),
+            'athlete_id'  => fake()->randomElement([1]),
             'date'        => fake()->dateTimeThisMonth()->format('Y-m-d'),
             'type'        => 'daily',
-            'metric_type' => fake()->randomElement(['morning_hrv', 'post_session_subjective_fatigue']),
+            'metric_type' => fake()->randomElement([MetricType::MORNING_GENERAL_FATIGUE->value, MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value]),
             'value'       => fake()->numberBetween(1, 10),
         ];
     }

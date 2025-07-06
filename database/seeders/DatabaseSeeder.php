@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\Metric;
 use App\Models\Athlete;
 use App\Models\Trainer;
@@ -16,37 +15,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->create([
-            'name'  => 'Admin',
-            'email' => 'admin@example.com',
-        ]);
+        // Appeler le seeder de données de base en premier
+        $this->call(BaseDataSeeder::class);
 
-        Athlete::factory()->create([
-            'first_name' => 'Arthur',
-            'last_name'  => 'de Bretagne',
-            'email'      => 'athlete@example.com',
-        ]);
+        // Optionnel: Créer quelques métriques aléatoires pour d'autres athlètes ou juste pour voir des données
+        // Metric::factory(100)->create();
 
-        Athlete::factory()->create([
-            'first_name' => 'Genièvre',
-            'last_name'  => 'Lindron',
-            'email'      => 'athlete2@example.com',
-            'gender'     => 'w',
-        ]);
+        // Appeler les seeders de scénarios spécifiques à chaque athlète
+        // Vous pouvez commenter/décommenter ces lignes pour choisir quels athlètes recevront des données de scénario.
+        $this->call(Athlete1RealisticScenariosSeeder::class);
+        // $this->call(Athlete1ScenariosSeeder::class);
+        $this->call(Athlete2ScenariosSeeder::class);
+        $this->call(Athlete3ScenariosSeeder::class);
+        $this->call(Athlete4ScenariosSeeder::class);
 
-        $trainer = Trainer::factory()->create([
-            'first_name' => 'Merlin',
-            'last_name'  => "L'enchenteur",
-            'email'      => 'trainer@example.com',
-        ]);
-
-        $trainer->athletes()->attach([1, 2]);
-
-        Metric::factory(100)->create();
-
-        $this->call(MetricAlertsSeeder::class);
-        $this->call(MetricTrendAlertsSeeder::class);
-
-        $trainer->athletes()->attach([3, 4]);
+        $this->command->info('Tous les seeders ont été exécutés.');
     }
 }
