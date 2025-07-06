@@ -16,6 +16,7 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('trainers.dashboard', ['hash' => auth('trainer')->user()->hash])" :current="request()->routeIs('trainers.dashboard')" wire:navigate>Tableau de bord</flux:navlist.item>
+                    <flux:navlist.item icon="plus" :href="route('trainers.feedbacks.form', ['hash' => auth('trainer')->user()->hash])" :current="request()->routeIs('trainers.feedbacks.form')" wire:navigate>Feedback</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 

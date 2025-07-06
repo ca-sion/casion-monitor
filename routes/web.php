@@ -10,6 +10,7 @@ use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
 use App\Http\Controllers\AthleteMetricController;
+use App\Livewire\TrainerFeedbackForm;
 
 Route::get('/', function () {
     return view('welcome');
@@ -22,6 +23,7 @@ Route::view('dashboard', 'dashboard')
 Route::middleware([TrainerHashProtect::class])->group(function () {
     Route::get('/t/{hash}', [TrainerController::class, 'dashboard'])->name('trainers.dashboard');
     Route::get('/t/{hash}/athletes/{athlete}', [TrainerController::class, 'athlete'])->name('trainers.athlete');
+    Route::get('/t/{hash}/feedbacks/form', TrainerFeedbackForm::class)->name('trainers.feedbacks.form');
 });
 
 Route::middleware([AthleteHashProtect::class])->group(function () {
