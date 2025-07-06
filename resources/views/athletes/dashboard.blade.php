@@ -51,7 +51,7 @@
                                     <flux:separator variant="subtle" class="my-2" />
                                     <flux:text>La valeur ci-après est la dernière valeur enregistrée pour cette métrique sur la période sélectionnée.</flux:text>
                                     <flux:separator variant="subtle" class="my-2" />
-                                    <flux:text>La valeur dans le badge et une tendance qui compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours.</flux:text>
+                                    <flux:text>La valeur dans le badge indique comment vos mesures changent, montrant si elles augmentent, diminuent, ou restent stables dans le temps.</flux:text>
                                 </flux:popover>
                             </flux:dropdown>
                         </div>

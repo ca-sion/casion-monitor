@@ -131,6 +131,6 @@
     </flux:table>
 
     <flux:separator variant="subtle" class="my-2" />
-    <flux:text class="text-sm">La valeur dans les badges et une tendance qui compare la moyenne des 7 derniers jours à la moyenne des 30 derniers jours.</flux:text>
+    <flux:text class="text-sm">La valeur dans les badges indique la tendance des changements d'une métrique spécifique dans une période donnée. Elle examine si la métrique augmente, diminue ou reste stable en comparant les valeurs moyennes du début et de la fin d'un ensemble de données filtrées et triées par date.</flux:text>
 
 </x-layouts.trainer>
