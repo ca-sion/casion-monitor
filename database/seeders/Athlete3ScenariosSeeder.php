@@ -29,10 +29,10 @@ class Athlete3ScenariosSeeder extends Seeder
         // $scenarioFactory->seedFatigueDuringPeriodScenario($athlete->id); // Si l'athlète est féminine et on veut tester cette alerte
         // $scenarioFactory->seedLowPerformanceDuringPeriodScenario($athlete->id); // Si l'athlète est féminine
         // $scenarioFactory->seedGeneralFatigueTrendScenario($athlete->id);
-        $scenarioFactory->seedHrvTrendScenario($athlete->id);
+        // $scenarioFactory->seedHrvTrendScenario($athlete->id);
         // $scenarioFactory->seedSleepQualityTrendScenario($athlete->id);
         // $scenarioFactory->seedBodyWeightTrendScenario($athlete->id);
-        // $scenarioFactory->seedNoAlertsScenario($athlete->id);
+        $scenarioFactory->seedNoAlertsScenario($athlete->id);
 
         // Scénarios d'alertes spécifiques (pour tester getAthleteAlerts)
         // $scenarioFactory->seedPersistentHighFatigueAlert($athlete->id);
