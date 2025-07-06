@@ -6,9 +6,54 @@
                     Journal de bord
                 </flux:heading>
                 <flux:text class="text-gray-600 text-md">
-                    Retrouvez ici tous les feedbacks des 15 derniers jours, qu'ils proviennent de vous ou de votre entraîneur.
+                    Retrouvez ici tous les feedbacks. Utilisez les filtres ci-dessous pour affiner votre recherche.
                 </flux:text>
             </div>
+
+            {{-- Section des filtres --}}
+            <div class="px-4 py-6 sm:px-6 bg-gray-50 border-b border-gray-200">
+                <form action="{{ route('athletes.feedbacks', ['hash' => $athlete->hash]) }}" method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label for="filter_type" class="block text-sm font-medium text-gray-700">Filtrer par type</label>
+                        <select id="filter_type" name="filter_type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">Tous les types</option>
+                            @foreach ($feedbackTypes as $type)
+                                <option value="{{ $type->value }}" @selected($currentFilterType === $type->value)>
+                                    {{ $type->getLabel() }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="filter_category" class="block text-sm font-medium text-gray-700">Filtrer par catégorie</label>
+                        <select id="filter_category" name="filter_category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="">Toutes les catégories</option>
+                            <option value="session" @selected($currentFilterCategory === 'session')>Séance</option>
+                            <option value="competition" @selected($currentFilterCategory === 'competition')>Compétition</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="period" class="block text-sm font-medium text-gray-700">Période</label>
+                        <select id="period" name="period" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            @foreach ($periodOptions as $key => $label)
+                                <option value="{{ $key }}" @selected($currentPeriod === $key)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="col-span-full md:col-span-3 text-right">
+                        <flux:button type="submit" variant="primary" class="w-full md:w-auto">
+                            Appliquer les filtres
+                        </flux:button>
+                    </div>
+                </form>
+            </div>
+            {{-- Fin de la section des filtres --}}
+
 
             @forelse ($groupedFeedbacks as $date => $feedbacksGroup)
                 <div class="px-4 py-8 sm:p-8 border-b border-gray-100 last:border-b-0">
@@ -103,14 +148,19 @@
             @empty
                 <div class="p-8">
                     <flux:callout icon="chat-bubble-left-right">
-                        <flux:callout.heading>Aucun feedback pour les 15 derniers jours</flux:callout.heading>
+                        <flux:callout.heading>Aucun feedback trouvé</flux:callout.heading>
 
                         <flux:callout.text>
-                            Il semble qu'aucun feedback n'ait été enregistré récemment. Revenez plus tard ou attendez que votre entraîneur ajoute des retours !
+                            Il semble qu'aucun feedback ne corresponde à vos critères de recherche pour cette période.
                         </flux:callout.text>
                     </flux:callout>
                 </div>
             @endforelse
+
+            {{-- Liens de pagination --}}
+            <div class="px-4 py-6 sm:px-6 border-t border-gray-200">
+                {{ $feedbacksPaginator->appends(request()->query())->links() }}
+            </div>
         </div>
     </div>
 </x-layouts.athlete>
