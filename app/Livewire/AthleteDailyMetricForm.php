@@ -55,14 +55,12 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
 
         $metrics = Metric::where('athlete_id', $this->athlete->id)
             ->whereDate('date', $this->date)
+            ->whereIn('metric_type', $this->desiredMetricTypes())
             ->get();
         $metricsData = $metrics->mapWithKeys(function (Metric $metric) {
             return [$metric->metric_type->value => $metric->{$metric->metric_type->getValueColumn()} ?? null];
         });
-        $desiredFeedbackTypes = [
-            FeedbackType::PRE_SESSION_GOALS->value,
-            FeedbackType::POST_SESSION_SENSATION->value,
-        ];
+
         $feedbacks = Feedback::where('athlete_id', $this->athlete->id)
             ->whereDate('date', $this->date)
             ->whereIn('type', $this->desiredFeedbackTypes())
