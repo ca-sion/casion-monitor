@@ -26,6 +26,7 @@
     <flux:table class="my-4">
         <flux:table.columns>
             <flux:table.column class="z-1 sticky left-0 max-w-36 bg-white dark:bg-zinc-900">Athlète</flux:table.column>
+            <flux:table.column class="max-w-36 text-center">Alertes & Cycle</flux:table.column>
             @foreach ($dashboard_metric_types as $metricType)
                 <flux:table.column class="w-fit text-center">
                     {{ $metricType->getLabelShort() }}
@@ -56,6 +57,45 @@
                                 {{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->diffForHumans() : 'Jamais' }}
                             </div>
                         </a>
+                    </flux:table.cell>
+
+                    {{-- Alertes & Cycle --}}
+                    <flux:table.cell>
+                        <div class="flex flex-col gap-2">
+                            {{-- Alertes --}}
+                            <div class="space-y-1">
+                                @foreach ($athlete->alerts as $alert)
+                                    <flux:badge size="sm" inset="top bottom" class="whitespace-normal!"
+                                        color="{{ match($alert['type']) {
+                                            'danger' => 'rose',
+                                            'warning' => 'amber',
+                                            'info' => 'sky',
+                                            'success' => 'emerald',
+                                            default => 'zinc'
+                                        } }}">
+                                        {{ $alert['message'] }}
+                                    </flux:badge>
+                                @endforeach
+                            </div>
+
+                            {{-- Cycle Menstruel (uniquement pour les filles) --}}
+                            @if ($athlete->gender === 'w' && $athlete->menstrualCycleInfo)
+                                <div class="p-2 border rounded-md {{ $athlete->menstrualCycleInfo['phase'] === 'Inconnue' || $athlete->menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long' ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/50' : 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/50' }}">
+                                    <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
+                                    <flux:text class="text-xs">
+                                        Phase: <span class="font-medium">{{ $athlete->menstrualCycleInfo['phase'] }}</span><br>
+                                        Jours dans la phase: <span class="font-medium">{{ intval($athlete->menstrualCycleInfo['days_in_phase']) ?? 'N/A' }}</span><br>
+                                        Longueur moy. cycle: <span class="font-medium">{{ $athlete->menstrualCycleInfo['cycle_length_avg'] ?? 'N/A' }} jours</span>
+                                        @if($athlete->menstrualCycleInfo['last_period_start'])
+                                            <br>Dernier J1: <span class="font-medium">{{ $athlete->menstrualCycleInfo['last_period_start']->format('d.m.Y') }}</span>
+                                        @endif
+                                        @if($athlete->menstrualCycleInfo['reason'])
+                                            <br><span class="text-zinc-500 text-xs italic">{{ $athlete->menstrualCycleInfo['reason'] }}</span>
+                                        @endif
+                                    </flux:text>
+                                </div>
+                            @endif
+                        </div>
                     </flux:table.cell>
 
                     @foreach ($dashboard_metric_types as $metricType)
@@ -111,6 +151,7 @@
                             </div>
                         </flux:table.cell>
                     @endforeach
+
                     <flux:table.cell class="text-center">
                         <flux:modal.trigger :name="'copy-link-account-'.$athlete->id">
                             <flux:button icon="user" variant="ghost" size="sm">Compte</flux:button>

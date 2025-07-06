@@ -50,6 +50,10 @@ class TrainerController extends Controller
             // Attache les données agrégées directement à l'objet Athlete pour un accès facile dans la vue
             $athlete->metricsDataForDashboard = $metricsDataForDashboard;
 
+            // Alertes et le cycle menstruel
+            $athlete->alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, 'last_60_days');
+            $athlete->menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
+
             return $athlete;
         });
 
