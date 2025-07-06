@@ -12,48 +12,51 @@
 
             {{-- Section des filtres --}}
             <div class="px-4 py-6 sm:px-6 bg-gray-50 border-b border-gray-200">
-                <form action="{{ route('athletes.feedbacks', ['hash' => $athlete->hash]) }}" method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <form action="{{ route('athletes.feedbacks', ['hash' => $athlete->hash]) }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                    {{-- Filtre par type --}}
                     <div>
-                        <label for="filter_type" class="block text-sm font-medium text-gray-700">Filtrer par type</label>
-                        <select id="filter_type" name="filter_type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <label for="filter_type" class="block text-sm font-medium text-gray-700 sr-only">Filtrer par type</label>
+                        <flux:select id="filter_type" name="filter_type" placeholder="Filtrer par type" class="w-full">
                             <option value="">Tous les types</option>
                             @foreach ($feedbackTypes as $type)
                                 <option value="{{ $type->value }}" @selected($currentFilterType === $type->value)>
                                     {{ $type->getLabel() }}
                                 </option>
                             @endforeach
-                        </select>
+                        </flux:select>
                     </div>
 
+                    {{-- Filtre par catégorie --}}
                     <div>
-                        <label for="filter_category" class="block text-sm font-medium text-gray-700">Filtrer par catégorie</label>
-                        <select id="filter_category" name="filter_category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <label for="filter_category" class="block text-sm font-medium text-gray-700 sr-only">Filtrer par catégorie</label>
+                        <flux:select id="filter_category" name="filter_category" placeholder="Filtrer par catégorie" class="w-full">
                             <option value="">Toutes les catégories</option>
                             <option value="session" @selected($currentFilterCategory === 'session')>Séance</option>
                             <option value="competition" @selected($currentFilterCategory === 'competition')>Compétition</option>
-                        </select>
+                        </flux:select>
                     </div>
 
+                    {{-- Sélecteur de période --}}
                     <div>
-                        <label for="period" class="block text-sm font-medium text-gray-700">Période</label>
-                        <select id="period" name="period" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <label for="period" class="block text-sm font-medium text-gray-700 sr-only">Période</label>
+                        <flux:select id="period" name="period" placeholder="Sélectionner une période" class="w-full">
                             @foreach ($periodOptions as $key => $label)
                                 <option value="{{ $key }}" @selected($currentPeriod === $key)>
                                     {{ $label }}
                                 </option>
                             @endforeach
-                        </select>
+                        </flux:select>
                     </div>
 
-                    <div class="col-span-full md:col-span-3 text-right">
-                        <flux:button type="submit" variant="primary" class="w-full md:w-auto">
-                            Appliquer les filtres
+                    {{-- Bouton Appliquer --}}
+                    <div class="text-right">
+                        <flux:button type="submit" variant="primary" icon="magnifying-glass" class="w-full">
+                            Appliquer
                         </flux:button>
                     </div>
                 </form>
             </div>
             {{-- Fin de la section des filtres --}}
-
 
             @forelse ($groupedFeedbacks as $date => $feedbacksGroup)
                 <div class="px-4 py-8 sm:p-8 border-b border-gray-100 last:border-b-0">
@@ -125,13 +128,14 @@
 
                                         @if ($needsTruncation)
                                             <div class="mt-2 text-right">
-                                                <flux:button
-                                                    size="xs"
+                                                <flux:link
+                                                    href="javascript:void(0)"
+                                                    class="text-xs"
                                                     variant="subtle"
                                                     @click="expanded = !expanded"
                                                     x-text="expanded ? 'Voir moins' : 'Voir plus'"
                                                 >
-                                                </flux:button>
+                                                </flux:link>
                                             </div>
                                         @endif
                                     </div>
