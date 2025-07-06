@@ -429,9 +429,6 @@ class MetricStatisticsService
 
     /**
      * Déduit la phase du cycle menstruel d'un athlète féminin.
-     *
-     * @param  Athlete  $athlete
-     * @return array
      */
     public function deduceMenstrualCyclePhase(Athlete $athlete): array
     {
@@ -473,7 +470,7 @@ class MetricStatisticsService
         // 1. Cas : Données insuffisantes pour établir un historique de cycle
         if ($j1Metrics->count() < 2 || $averageCycleLength === null) {
             $phase = 'Inconnue';
-            $reason = 'Pas assez de données pour le cycle moyen (nécessite au moins 2 J1).';
+            $reason = 'Enregistrez au moins deux J1 pour calculer la durée moyenne de votre cycle.';
         }
         // 2. Cas : Aménorrhée (absence prolongée de règles) - La condition la plus grave
         // Définition: Absence de règles pendant au moins 90 jours (ou un seuil significativement plus long que la moyenne attendue).
@@ -490,8 +487,8 @@ class MetricStatisticsService
             $reason = 'Longueur moyenne du cycle hors de la plage normale (21-35 jours).';
         }
         // 4. Cas : Potentiel retard ou cycle long (le cycle actuel dépasse la moyenne mais n'est pas Aménorrhée)
-        // Si le cycle en cours a dépassé la longueur moyenne du cycle de plus de 7 jours (un seuil de "retard").
-        elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null && $daysSinceLastPeriod >= $averageCycleLength + 7) {
+        // Si le cycle en cours a dépassé la longueur moyenne du cycle de plus de 5 jours (un seuil de "retard").
+        elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null && $daysSinceLastPeriod >= $averageCycleLength + 5) {
             $phase = 'Potentiel retard ou cycle long';
             $reason = 'Le nombre de jours sans règles est significativement plus long que la durée moyenne du cycle.';
         }
@@ -528,11 +525,11 @@ class MetricStatisticsService
         }
 
         return [
-            'phase'               => $phase,
-            'reason'              => $reason,
-            'days_in_phase'       => $daysSinceLastPeriod,
-            'cycle_length_avg'    => $averageCycleLength !== null ? round($averageCycleLength) : null, // Arrondi pour l'affichage
-            'last_period_start'   => $lastPeriodStart ? $lastPeriodStart->format('d.m.Y') : null,
+            'phase'             => $phase,
+            'reason'            => $reason,
+            'days_in_phase'     => $daysSinceLastPeriod,
+            'cycle_length_avg'  => $averageCycleLength !== null ? round($averageCycleLength) : null, // Arrondi pour l'affichage
+            'last_period_start' => $lastPeriodStart ? $lastPeriodStart->format('d.m.Y') : null,
         ];
     }
 
@@ -540,7 +537,6 @@ class MetricStatisticsService
      * Analyse les tendances des métriques et identifie des signaux d'alerte.
      * Cette fonction est générique pour tous les genres, mais aura des signaux spécifiques pour les femmes.
      *
-     * @param  Athlete  $athlete
      * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months')
      * @return array Des drapeaux et des messages d'alerte.
      */
@@ -558,13 +554,13 @@ class MetricStatisticsService
             $averageFatigue30Days = $this->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 30 jours'] ?? null;
 
             if ($averageFatigue7Days !== null && $averageFatigue7Days >= 7 && $averageFatigue30Days >= 6) { // Ex: 7/10 en moyenne sur 7j, 6/10 sur 30j
-                $alerts[] = ['type' => 'warning', 'message' => "Fatigue générale très élevée persistante (moy. 7j: " . round($averageFatigue7Days) . "/10). Potentiel signe de surentraînement ou manque de récupération."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Fatigue générale très élevée persistante (moy. 7j: '.round($averageFatigue7Days).'/10). Potentiel signe de surentraînement ou manque de récupération.'];
             } elseif ($averageFatigue7Days !== null && $averageFatigue7Days >= 5 && $averageFatigue30Days >= 5) {
-                 $alerts[] = ['type' => 'info', 'message' => "Fatigue générale élevée (moy. 7j: " . round($averageFatigue7Days) . "/10). Surveiller la récupération."];
+                $alerts[] = ['type' => 'info', 'message' => 'Fatigue générale élevée (moy. 7j: '.round($averageFatigue7Days).'/10). Surveiller la récupération.'];
             }
             $fatigueTrend = $this->getEvolutionTrendForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE);
             if ($fatigueTrend['trend'] === 'increasing' && $fatigueTrend['change'] > 15) { // Augmentation de plus de 15%
-                $alerts[] = ['type' => 'warning', 'message' => "Augmentation significative de la fatigue générale (+".number_format($fatigueTrend['change'], 1)."%)."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative de la fatigue générale (+'.number_format($fatigueTrend['change'], 1).'%).'];
             }
         }
 
@@ -575,11 +571,11 @@ class MetricStatisticsService
             $averageSleep30Days = $this->getMetricTrendsForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 30 jours'] ?? null;
 
             if ($averageSleep7Days !== null && $averageSleep7Days <= 4 && $averageSleep30Days <= 5) { // Ex: 4/10 en moyenne sur 7j, 5/10 sur 30j
-                $alerts[] = ['type' => 'warning', 'message' => "Qualité de sommeil très faible persistante (moy. 7j: " . round($averageSleep7Days) . "/10). Peut affecter la récupération et la performance."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Qualité de sommeil très faible persistante (moy. 7j: '.round($averageSleep7Days).'/10). Peut affecter la récupération et la performance.'];
             }
             $sleepTrend = $this->getEvolutionTrendForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY);
             if ($sleepTrend['trend'] === 'decreasing' && $sleepTrend['change'] < -15) { // Diminution de plus de 15%
-                $alerts[] = ['type' => 'warning', 'message' => "Diminution significative de la qualité du sommeil (".number_format($sleepTrend['change'], 1)."%)."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la qualité du sommeil ('.number_format($sleepTrend['change'], 1).'%).'];
             }
         }
 
@@ -588,11 +584,11 @@ class MetricStatisticsService
         if ($painMetrics->count() > 5) {
             $averagePain7Days = $this->getMetricTrendsForCollection($painMetrics, MetricType::MORNING_PAIN)['averages']['Derniers 7 jours'] ?? null;
             if ($averagePain7Days !== null && $averagePain7Days >= 5) { // Ex: 5/10 en moyenne sur 7j
-                $alerts[] = ['type' => 'warning', 'message' => "Douleurs musculaires/articulaires persistantes (moy. 7j: " . round($averagePain7Days) . "/10). Évaluer la cause et la nécessité d'un repos."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Douleurs musculaires/articulaires persistantes (moy. 7j: '.round($averagePain7Days)."/10). Évaluer la cause et la nécessité d'un repos."];
             }
             $painTrend = $this->getEvolutionTrendForCollection($painMetrics, MetricType::MORNING_PAIN);
             if ($painTrend['trend'] === 'increasing' && $painTrend['change'] > 20) { // Augmentation de plus de 20%
-                $alerts[] = ['type' => 'warning', 'message' => "Augmentation significative des douleurs (+".number_format($painTrend['change'], 1)."%)."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative des douleurs (+'.number_format($painTrend['change'], 1).'%).'];
             }
         }
 
@@ -601,7 +597,7 @@ class MetricStatisticsService
         if ($hrvMetrics->count() > 5) {
             $hrvTrend = $this->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
             if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < -10) { // Diminution de plus de 10%
-                $alerts[] = ['type' => 'warning', 'message' => "Diminution significative de la VFC (".number_format($hrvTrend['change'], 1)."%). Peut indiquer un stress ou une fatigue accrue."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%). Peut indiquer un stress ou une fatigue accrue.'];
             }
         }
 
@@ -610,7 +606,7 @@ class MetricStatisticsService
         if ($perfFeelMetrics->count() > 5) {
             $perfFeelTrend = $this->getEvolutionTrendForCollection($perfFeelMetrics, MetricType::POST_SESSION_PERFORMANCE_FEEL);
             if ($perfFeelTrend['trend'] === 'decreasing' && $perfFeelTrend['change'] < -15) {
-                $alerts[] = ['type' => 'warning', 'message' => "Diminution significative du ressenti de performance en séance (".number_format($perfFeelTrend['change'], 1)."%)."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative du ressenti de performance en séance ('.number_format($perfFeelTrend['change'], 1).'%).'];
             }
         }
 
@@ -625,8 +621,8 @@ class MetricStatisticsService
             // 1. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)
             if ($cycleData['phase'] === 'Aménorrhée' || $cycleData['phase'] === 'Oligoménorrhée') {
                 $alerts[] = [
-                    'type' => 'danger',
-                    'message' => "Cycle menstruel irrégulier (moy. {$cycleData['cycle_length_avg']} jours). Fortement suggéré de consulter un professionnel de santé pour évaluer un potentiel RED-S."
+                    'type'    => 'danger',
+                    'message' => "Cycle menstruel irrégulier (moy. {$cycleData['cycle_length_avg']} jours). Il est suggéré de consulter pour évaluer un potentiel RED-S.",
                 ];
             }
             // 2. Absence de règles prolongée sans données de cycle moyen (cas où 'deduceMenstrualCyclePhase' n'aurait pas pu déterminer la phase 'Aménorrhée' faute de données de moyenne)
@@ -634,23 +630,23 @@ class MetricStatisticsService
             // par exemple s'il n'y a qu'un J1 très ancien sans historique.
             // On s'assure que cette alerte ne s'ajoute que si aucune alerte de danger majeure n'a déjà été ajoutée pour le cycle.
             elseif (empty($alerts) && $cycleData['cycle_length_avg'] === null && $cycleData['last_period_start']) {
-                $daysSinceLastPeriod = $cycleData['last_period_start']->diffInDays(Carbon::now());
+                $daysSinceLastPeriod = Carbon::parse($cycleData['last_period_start'])->diffInDays(Carbon::now());
                 if ($daysSinceLastPeriod > 45) {
-                    $alerts[] = ['type' => 'danger', 'message' => "Absence de règles prolongée (" . $daysSinceLastPeriod . " jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative."];
+                    $alerts[] = ['type' => 'danger', 'message' => 'Absence de règles prolongée ('.$daysSinceLastPeriod.' jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative.'];
                 }
             }
             // 3. Potentiel retard ou cycle long avec une moyenne de cycle NORMAL (21-35 jours)
             // Ceci gère le scénario où le cycle est en retard, mais l'athlète a des antécédents de cycles réguliers.
             elseif (empty($alerts) && $cycleData['phase'] === 'Potentiel retard ou cycle long' && $cycleData['cycle_length_avg'] >= 21 && $cycleData['cycle_length_avg'] <= 35) {
                 $alerts[] = [
-                    'type' => 'warning',
-                    'message' => "Retard du cycle menstruel (moy. {$cycleData['cycle_length_avg']} jours). Suggéré de surveiller."
+                    'type'    => 'warning',
+                    'message' => "Retard du cycle menstruel (moy. {$cycleData['cycle_length_avg']} jours). Suggéré de surveiller.",
                 ];
             }
             // 4. Phase 'Inconnue' en raison de l'absence de données J1 (priorité faible)
             // Ceci devrait être la dernière condition de cycle pour les problèmes de données.
             elseif (empty($alerts) && $cycleData['phase'] === 'Inconnue' && $cycleData['reason'] === 'Pas de données sur le premier jour des règles.') {
-                $alerts[] = ['type' => 'info', 'message' => "Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé."];
+                $alerts[] = ['type' => 'info', 'message' => 'Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé.'];
             }
 
             // 3. Corrélation entre phase menstruelle et performance/fatigue
@@ -663,10 +659,10 @@ class MetricStatisticsService
                 $currentDayPerformanceFeel = $metrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)?->value;
 
                 if ($currentDayFatigue !== null && $currentDayFatigue >= 7) {
-                    $alerts[] = ['type' => 'info', 'message' => "Fatigue élevée (" . $currentDayFatigue . "/10) pendant la phase menstruelle. Adapter l'entraînement peut être bénéfique."];
+                    $alerts[] = ['type' => 'info', 'message' => 'Fatigue élevée ('.$currentDayFatigue."/10) pendant la phase menstruelle. Adapter l'entraînement peut être bénéfique."];
                 }
                 if ($currentDayPerformanceFeel !== null && $currentDayPerformanceFeel <= 4) {
-                    $alerts[] = ['type' => 'info', 'message' => "Performance ressentie faible (" . $currentDayPerformanceFeel . "/10) pendant la phase menstruelle. Évaluer l'intensité de l'entraînement."];
+                    $alerts[] = ['type' => 'info', 'message' => 'Performance ressentie faible ('.$currentDayPerformanceFeel."/10) pendant la phase menstruelle. Évaluer l'intensité de l'entraînement."];
                 }
             }
         }
@@ -679,15 +675,15 @@ class MetricStatisticsService
         if ($weightMetrics->count() > 5) {
             $weightTrend = $this->getEvolutionTrendForCollection($weightMetrics, MetricType::MORNING_BODY_WEIGHT_KG);
             if ($weightTrend['trend'] === 'decreasing' && $weightTrend['change'] < -3) { // Perte de plus de 3% du poids sur la période
-                $alerts[] = ['type' => 'warning', 'message' => "Perte de poids significative (".number_format(abs($weightTrend['change']), 1)."%). Peut être un signe de déficit énergétique."];
+                $alerts[] = ['type' => 'warning', 'message' => 'Perte de poids significative ('.number_format(abs($weightTrend['change']), 1).'%). Peut être un signe de déficit énergétique.'];
             }
         }
 
         // Si aucune alerte mais suffisamment de données, on peut donner un statut "RAS"
         if (empty($alerts) && $metrics->isNotEmpty()) {
-            $alerts[] = ['type' => 'success', 'message' => "Aucune alerte détectée."];
+            $alerts[] = ['type' => 'success', 'message' => 'Aucune alerte détectée.'];
         } elseif (empty($alerts)) {
-             $alerts[] = ['type' => 'info', 'message' => "Pas encore suffisamment de données pour une analyse complète."];
+            $alerts[] = ['type' => 'info', 'message' => 'Pas encore suffisamment de données pour une analyse complète.'];
         }
 
         return $alerts;

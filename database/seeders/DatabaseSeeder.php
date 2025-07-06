@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(MetricAlertsSeeder::class);
         $this->call(MetricTrendAlertsSeeder::class);
-        
+
         $trainer->athletes()->attach([3, 4]);
     }
 }
