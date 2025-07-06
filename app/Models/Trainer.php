@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Trainer extends Model implements AuthenticatableContract, AuthorizableContract
 {
@@ -117,5 +118,13 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
     public function athletes(): BelongsToMany
     {
         return $this->belongsToMany(Athlete::class);
+    }
+
+    /**
+     * The feedbacks that belong to the trainer.
+     */
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(Athlete::class);
     }
 }

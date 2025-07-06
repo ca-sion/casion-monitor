@@ -76,6 +76,14 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
+     * The feedbacks that belong to the athlete.
+     */
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(Athlete::class);
+    }
+
+    /**
      * Get the athlete's name.
      */
     protected function name(): Attribute
