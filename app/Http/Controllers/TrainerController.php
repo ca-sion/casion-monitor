@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Athlete;
+use App\Models\Feedback;
 use App\Enums\MetricType;
 use Illuminate\View\View;
+use App\Enums\FeedbackType;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\MetricStatisticsService;
@@ -182,5 +185,105 @@ class TrainerController extends Controller
             'period_options'                   => $periodOptions,
             'available_metric_types_for_chart' => $availableMetricTypesForChart,
         ]);
+    }
+
+    public function feedbacks(): View|JsonResponse
+    {
+        $trainer = Auth::guard('trainer')->user();
+
+        if (! $trainer) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        // Récupérer les paramètres de filtre et de pagination
+        $filterType = request()->input('filter_type');
+        $filterCategory = request()->input('filter_category');
+        $period = request()->input('period', 'last_15_days');
+        $page = request()->input('page', 1);
+        $perPage = 10;
+
+        // Commencer la requête des feedbacks
+        $query = Feedback::query()
+                         ->whereIn('athlete_id', $trainer->athletes->pluck('id')) // Filtrer les feedbacks pour les athlètes de cet entraîneur
+                         ->with(['athlete', 'trainer']); // Charger l'athlète et le créateur (entraîneur ou athlète) du feedback
+
+        // Appliquer le filtre par type si spécifié
+        if ($filterType && FeedbackType::tryFrom($filterType)) {
+            $query->where('type', $filterType);
+        }
+
+        // Appliquer le filtre par catégorie (session ou compétition)
+        if ($filterCategory) {
+            $sessionTypes = [
+                FeedbackType::PRE_SESSION_GOALS->value,
+                FeedbackType::POST_SESSION_FEEDBACK->value,
+                FeedbackType::POST_SESSION_SENSATION->value,
+            ];
+            $competitionTypes = [
+                FeedbackType::PRE_COMPETITION_GOALS->value,
+                FeedbackType::POST_COMPETITION_FEEDBACK->value,
+                FeedbackType::POST_COMPETITION_SENSATION->value,
+            ];
+
+            if ($filterCategory === 'session') {
+                $query->whereIn('type', $sessionTypes);
+            } elseif ($filterCategory === 'competition') {
+                $query->whereIn('type', $competitionTypes);
+            }
+        }
+
+        // Gérer la période d'affichage
+        $limitDate = null;
+        $periodMap = [
+            'last_7_days'   => 7,
+            'last_15_days'  => 15,
+            'last_30_days'  => 30,
+            'last_90_days'  => 90,
+            'last_6_months' => 180,
+            'last_year'     => 365,
+            'all_time'      => null,
+        ];
+
+        $periodOptionsForView = [
+            'last_7_days'   => '7 derniers jours',
+            'last_15_days'  => '15 derniers jours',
+            'last_30_days'  => '30 derniers jours',
+            'last_90_days'  => '90 derniers jours',
+            'last_6_months' => '6 derniers mois',
+            'last_year'     => 'Dernière année',
+            'all_time'      => 'Depuis le début',
+        ];
+
+        if (isset($periodMap[$period]) && $periodMap[$period] !== null) {
+            $limitDate = Carbon::now()->subDays($periodMap[$period])->startOfDay();
+            $query->where('date', '>=', $limitDate);
+        }
+
+        // Ordonner les feedbacks et paginer
+        $feedbacksPaginator = $query->orderBy('date', 'desc')
+                                    ->orderBy('created_at', 'desc')
+                                    ->paginate($perPage, ['*'], 'page', $page);
+
+        // Regrouper les feedbacks par date (pour l'affichage)
+        $groupedFeedbacks = $feedbacksPaginator->groupBy(function ($feedback) {
+            return Carbon::parse($feedback->date)->format('Y-m-d');
+        });
+
+        $data = [
+            'trainer'               => $trainer,
+            'groupedFeedbacks'      => $groupedFeedbacks,
+            'feedbackTypes'         => FeedbackType::cases(),
+            'periodOptions'         => $periodOptionsForView,
+            'currentPeriod'         => $period,
+            'currentFilterType'     => $filterType,
+            'currentFilterCategory' => $filterCategory,
+            'feedbacksPaginator'    => $feedbacksPaginator,
+        ];
+
+        if (request()->expectsJson()) {
+            return response()->json($data);
+        }
+
+        return view('trainers.feedbacks', $data);
     }
 }

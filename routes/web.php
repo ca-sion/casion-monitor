@@ -23,6 +23,7 @@ Route::view('dashboard', 'dashboard')
 Route::middleware([TrainerHashProtect::class])->group(function () {
     Route::get('/t/{hash}', [TrainerController::class, 'dashboard'])->name('trainers.dashboard');
     Route::get('/t/{hash}/athletes/{athlete}', [TrainerController::class, 'athlete'])->name('trainers.athlete');
+    Route::get('/t/{hash}/feedbacks', [TrainerController::class, 'feedbacks'])->name('trainers.feedbacks');
     Route::get('/t/{hash}/feedbacks/form', TrainerFeedbackForm::class)->name('trainers.feedbacks.form');
 });
 
