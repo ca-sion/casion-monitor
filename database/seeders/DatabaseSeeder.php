@@ -16,8 +16,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         User::factory()->create([
             'name'  => 'Admin',
             'email' => 'admin@example.com',
@@ -45,5 +43,10 @@ class DatabaseSeeder extends Seeder
         $trainer->athletes()->attach([1, 2]);
 
         Metric::factory(100)->create();
+
+        $this->call(MetricAlertsSeeder::class);
+        $this->call(MetricTrendAlertsSeeder::class);
+        
+        $trainer->athletes()->attach([3, 4]);
     }
 }

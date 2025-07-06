@@ -456,11 +456,12 @@ class MetricStatisticsService
         // Calculate average cycle length from the last two complete cycles
         if ($periodMetrics->count() >= 2) {
             for ($i = 0; $i < $periodMetrics->count() - 1; $i++) {
-                $cycleLengths[] = $periodMetrics[$i]->date->diffInDays($periodMetrics[$i + 1]->date);
+                $diff = $periodMetrics[$i]->date->diffInDays($periodMetrics[$i + 1]->date, true);
+                $cycleLengths[] = $diff;
             }
         }
 
-        $averageCycleLength = !empty($cycleLengths) ? round(array_sum($cycleLengths) / count($cycleLengths)) : 28; // Default to 28 days if not enough data
+        $averageCycleLength = !empty($cycleLengths) ? round(array_sum($cycleLengths) / count($cycleLengths)) : 28;
 
         $daysSinceLastPeriod = $lastPeriodStart->diffInDays(Carbon::now());
 
@@ -481,6 +482,8 @@ class MetricStatisticsService
             $phase = 'Lutéale';
         } elseif ($daysSinceLastPeriod >= $averageCycleLength && $daysSinceLastPeriod < $averageCycleLength + 7) {
              $phase = 'Potentiel retard ou cycle long'; // Could be late period, or just a longer cycle for this athlete
+        } elseif ($daysSinceLastPeriod > ($averageCycleLength + 60)) {
+            $phase = 'Aménorrhée';
         }
 
         return [
@@ -577,27 +580,36 @@ class MetricStatisticsService
             // 1. Irrégularité ou absence de règles
             // Nécessite plus de données que le simple J1 pour être précis, idéalement un historique sur 3-6 mois
             // Pour l'instant, on se base sur la longueur du cycle moyenne calculée.
-            if ($cycleData['cycle_length_avg'] && ($cycleData['cycle_length_avg'] < 21 || $cycleData['cycle_length_avg'] > 35)) {
-                $alerts[] = ['type' => 'danger', 'message' => "Cycle menstruel irrégulier (moy. " . $cycleData['cycle_length_avg'] . " jours). Fortement suggéré de consulter un professionnel de santé pour évaluer un potentiel RED-S."];
-            } elseif ($cycleData['cycle_length_avg'] === null && $cycleData['last_period_start']) {
+
+            // 1. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)
+            if ($cycleData['phase'] === 'Aménorrhée' || $cycleData['phase'] === 'Oligoménorrhée') {
+                $alerts[] = [
+                    'type' => 'danger',
+                    'message' => "Cycle menstruel irrégulier (moy. {$cycleData['cycle_length_avg']} jours). Fortement suggéré de consulter un professionnel de santé pour évaluer un potentiel RED-S."
+                ];
+            }
+            // 2. Absence de règles prolongée sans données de cycle moyen (cas où 'deduceMenstrualCyclePhase' n'aurait pas pu déterminer la phase 'Aménorrhée' faute de données de moyenne)
+            // Ceci est une condition de secours si l'Aménorrhée n'est pas déjà détectée par la phase elle-même,
+            // par exemple s'il n'y a qu'un J1 très ancien sans historique.
+            // On s'assure que cette alerte ne s'ajoute que si aucune alerte de danger majeure n'a déjà été ajoutée pour le cycle.
+            elseif (empty($alerts) && $cycleData['cycle_length_avg'] === null && $cycleData['last_period_start']) {
                 $daysSinceLastPeriod = $cycleData['last_period_start']->diffInDays(Carbon::now());
-                if ($daysSinceLastPeriod > 45) { // Plus de 45 jours sans règles est un signe d'aménorrhée/oligoménorrhée
+                if ($daysSinceLastPeriod > 45) {
                     $alerts[] = ['type' => 'danger', 'message' => "Absence de règles prolongée (" . $daysSinceLastPeriod . " jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative."];
                 }
-            } elseif ($cycleData['phase'] === 'Inconnue' && $cycleData['reason'] === 'Pas de données sur le premier jour des règles.') {
-                $alerts[] = ['type' => 'info', 'message' => "Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé."];
             }
-
-            // 2. Faible poids corporel ou perte de poids rapide (MORNING_BODY_WEIGHT_KG)
-            // C'est un indicateur complexe et sensible. À manier avec précaution.
-            // Il faudrait idéalement une connaissance du poids "sain" de l'athlète.
-            // Ici, nous nous basons sur une diminution significative du poids.
-            $weightMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_BODY_WEIGHT_KG);
-            if ($weightMetrics->count() > 5) {
-                $weightTrend = $this->getEvolutionTrendForCollection($weightMetrics, MetricType::MORNING_BODY_WEIGHT_KG);
-                if ($weightTrend['trend'] === 'decreasing' && $weightTrend['change'] < -3) { // Perte de plus de 3% du poids sur la période
-                    $alerts[] = ['type' => 'warning', 'message' => "Perte de poids significative (".number_format(abs($weightTrend['change']), 1)."%). Peut être un signe de déficit énergétique."];
-                }
+            // 3. Potentiel retard ou cycle long avec une moyenne de cycle NORMAL (21-35 jours)
+            // Ceci gère le scénario où le cycle est en retard, mais l'athlète a des antécédents de cycles réguliers.
+            elseif (empty($alerts) && $cycleData['phase'] === 'Potentiel retard ou cycle long' && $cycleData['cycle_length_avg'] >= 21 && $cycleData['cycle_length_avg'] <= 35) {
+                $alerts[] = [
+                    'type' => 'warning',
+                    'message' => "Retard du cycle menstruel (moy. {$cycleData['cycle_length_avg']} jours). Suggéré de surveiller."
+                ];
+            }
+            // 4. Phase 'Inconnue' en raison de l'absence de données J1 (priorité faible)
+            // Ceci devrait être la dernière condition de cycle pour les problèmes de données.
+            elseif (empty($alerts) && $cycleData['phase'] === 'Inconnue' && $cycleData['reason'] === 'Pas de données sur le premier jour des règles.') {
+                $alerts[] = ['type' => 'info', 'message' => "Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé."];
             }
 
             // 3. Corrélation entre phase menstruelle et performance/fatigue
@@ -615,6 +627,18 @@ class MetricStatisticsService
                 if ($currentDayPerformanceFeel !== null && $currentDayPerformanceFeel <= 4) {
                     $alerts[] = ['type' => 'info', 'message' => "Performance ressentie faible (" . $currentDayPerformanceFeel . "/10) pendant la phase menstruelle. Évaluer l'intensité de l'entraînement."];
                 }
+            }
+        }
+
+        // 2. Faible poids corporel ou perte de poids rapide (MORNING_BODY_WEIGHT_KG)
+        // C'est un indicateur complexe et sensible. À manier avec précaution.
+        // Il faudrait idéalement une connaissance du poids "sain" de l'athlète.
+        // Ici, nous nous basons sur une diminution significative du poids.
+        $weightMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_BODY_WEIGHT_KG);
+        if ($weightMetrics->count() > 5) {
+            $weightTrend = $this->getEvolutionTrendForCollection($weightMetrics, MetricType::MORNING_BODY_WEIGHT_KG);
+            if ($weightTrend['trend'] === 'decreasing' && $weightTrend['change'] < -3) { // Perte de plus de 3% du poids sur la période
+                $alerts[] = ['type' => 'warning', 'message' => "Perte de poids significative (".number_format(abs($weightTrend['change']), 1)."%). Peut être un signe de déficit énergétique."];
             }
         }
 

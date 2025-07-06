@@ -63,8 +63,9 @@
                     <flux:table.cell>
                         <div class="flex flex-col gap-2">
                             {{-- Alertes --}}
-                            <div class="space-y-1">
+                            <div class="flex flex-col gap-2">
                                 @foreach ($athlete->alerts as $alert)
+                                <div>
                                     <flux:badge size="sm" inset="top bottom" class="whitespace-normal!"
                                         color="{{ match($alert['type']) {
                                             'danger' => 'rose',
@@ -75,6 +76,7 @@
                                         } }}">
                                         {{ $alert['message'] }}
                                     </flux:badge>
+                                </div>
                                 @endforeach
                             </div>
 
