@@ -3,6 +3,7 @@
 use App\Livewire\Settings\Profile;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Appearance;
+use App\Livewire\TrainerFeedbackForm;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\AthleteDailyMetricForm;
 use App\Http\Controllers\AthleteController;
@@ -10,7 +11,6 @@ use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
 use App\Http\Controllers\AthleteMetricController;
-use App\Livewire\TrainerFeedbackForm;
 
 Route::get('/', function () {
     return view('welcome');
@@ -29,6 +29,7 @@ Route::middleware([TrainerHashProtect::class])->group(function () {
 Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}', [AthleteController::class, 'dashboard'])->name('athletes.dashboard');
     Route::get('/a/{hash}/metrics/daily/form', AthleteDailyMetricForm::class)->name('athletes.metrics.daily.form');
+    Route::get('/a/{hash}/feedbacks', [AthleteController::class, 'feedbacks'])->name('athletes.feedbacks');
 });
 
 /*
