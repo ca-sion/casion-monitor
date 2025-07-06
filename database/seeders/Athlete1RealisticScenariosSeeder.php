@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Athlete;
-use App\Enums\MetricType; // Assurez-vous que MetricType contient POST_SESSION_SUBJECTIVE_FATIGUE
+use App\Enums\MetricType;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +15,7 @@ class Athlete1RealisticScenariosSeeder extends Seeder
      */
     public function run(): void
     {
+
         $athlete = Athlete::find(1); // Athlète ID 1 (Arthur)
 
         if (!$athlete) {
@@ -86,40 +87,40 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                      // Ajustement mensuel du poids (petite variation sur le poids actuel)
                     $currentBodyWeight = $currentBodyWeight + (rand(-30, 30) / 100); // +/- 0.3kg
                     $currentBodyWeight = max(70.0, min(80.0, $currentBodyWeight)); // Maintenir dans une plage réaliste
-                    $this->insertMetric($athlete->id, MetricType::MORNING_BODY_WEIGHT_KG, $daysAgo, $currentBodyWeight);
+                    $this->insertMetric($athlete->id, MetricType::MORNING_BODY_WEIGHT_KG, $currentDate, $currentBodyWeight);
                     $monthCounter++;
                 }
 
                 // Fatigue Générale (MORNING_GENERAL_FATIGUE)
                 $fatigue = max(1.0, min(10.0, $baseFatigue + $phaseParams['fatigue_mod'] + (rand(-10, 10) / 100)));
-                $this->insertMetric($athlete->id, MetricType::MORNING_GENERAL_FATIGUE, $daysAgo, $fatigue);
+                $this->insertMetric($athlete->id, MetricType::MORNING_GENERAL_FATIGUE, $currentDate, $fatigue);
 
                 // VFC (MORNING_HRV)
                 $hrv = max(80.0, min(160.0, $baseHrv + ($baseHrv * $phaseParams['hrv_mod']) + (rand(-50, 50) / 100)));
-                $this->insertMetric($athlete->id, MetricType::MORNING_HRV, $daysAgo, $hrv);
+                $this->insertMetric($athlete->id, MetricType::MORNING_HRV, $currentDate, $hrv);
 
                 // Qualité de Sommeil (MORNING_SLEEP_QUALITY)
                 $sleepQuality = max(1.0, min(10.0, $baseSleepQuality + $phaseParams['sleep_mod'] + (rand(-5, 5) / 10)));
-                $this->insertMetric($athlete->id, MetricType::MORNING_SLEEP_QUALITY, $daysAgo, $sleepQuality);
+                $this->insertMetric($athlete->id, MetricType::MORNING_SLEEP_QUALITY, $currentDate, $sleepQuality);
 
                 // Fréquence Cardiaque au Repos (MORNING_RESTING_HEART_RATE)
                 // $restingHr = max(40.0, min(70.0, $baseRestingHr - ($baseRestingHr * $phaseParams['hrv_mod'] * 0.5) + (rand(-100, 100) / 100))); // Inverse de HRV
-                // $this->insertMetric($athlete->id, MetricType::MORNING_RESTING_HEART_RATE, $daysAgo, $restingHr);
+                // $this->insertMetric($athlete->id, MetricType::MORNING_RESTING_HEART_RATE, $currentDate, $restingHr);
 
                 // Ressenti de Performance Post-Séance (POST_SESSION_PERFORMANCE_FEEL)
                 $performanceFeel = max(1.0, min(10.0, $basePerformanceFeel + $phaseParams['perf_mod'] + (rand(-5, 5) / 10)));
-                $this->insertMetric($athlete->id, MetricType::POST_SESSION_PERFORMANCE_FEEL, $daysAgo, $performanceFeel);
+                $this->insertMetric($athlete->id, MetricType::POST_SESSION_PERFORMANCE_FEEL, $currentDate, $performanceFeel);
 
                 // Fatigue Subjective Post-Séance (POST_SESSION_SUBJECTIVE_FATIGUE)
                 $subjectiveFatigue = max(1.0, min(10.0, $baseSubjectiveFatigue + $phaseParams['subj_fatigue_mod'] + (rand(-5, 5) / 10)));
-                $this->insertMetric($athlete->id, MetricType::POST_SESSION_SUBJECTIVE_FATIGUE, $daysAgo, $subjectiveFatigue);
+                $this->insertMetric($athlete->id, MetricType::POST_SESSION_SUBJECTIVE_FATIGUE, $currentDate, $subjectiveFatigue);
 
                 // Douleur (MORNING_PAIN) - sporadiquement et généralement basse
                 if (mt_rand() / mt_getrandmax() < $phaseParams['pain_prob']) {
                     $pain = rand(2, 6); // Douleur légère à modérée
-                    $this->insertMetric($athlete->id, MetricType::MORNING_PAIN, $daysAgo, $pain);
+                    $this->insertMetric($athlete->id, MetricType::MORNING_PAIN, $currentDate, $pain);
                 } else {
-                    $this->insertMetric($athlete->id, MetricType::MORNING_PAIN, $daysAgo, $basePain); // Pas de douleur significative
+                    $this->insertMetric($athlete->id, MetricType::MORNING_PAIN, $currentDate, $basePain); // Pas de douleur significative
                 }
 
                 $currentDate->addDay();
@@ -134,14 +135,14 @@ class Athlete1RealisticScenariosSeeder extends Seeder
     /**
      * Insère une métrique pour un type donné.
      */
-    private function insertMetric(int $athleteId, MetricType $metricType, int $daysAgo, float $value): void
+    private function insertMetric(int $athleteId, MetricType $metricType, Carbon $currentDate, float $value): void
     {
         DB::table('metrics')->insert([
             'athlete_id'  => $athleteId,
-            'date'        => Carbon::now()->subDays($daysAgo)->startOfDay(),
+            'date'        => $currentDate->copy()->startOfDay(),
             'metric_type' => $metricType->value,
             'value'       => $value,
-            'unit'        => $metricType->getUnit(), // Assurez-vous que votre Enum MetricType a une méthode getUnit()
+            'unit'        => $metricType->getUnit(),
             'time'        => null, 'note' => null, 'metadata' => null,
             'created_at'  => Carbon::now(),
             'updated_at'  => Carbon::now(),

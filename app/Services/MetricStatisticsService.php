@@ -332,8 +332,6 @@ class MetricStatisticsService
     {
         $metricsForPeriod = $this->getAthleteMetrics($athlete, ['metric_type' => $metricType->value, 'period' => $period]);
 
-        dd($metricsForPeriod->pluck('value', 'date')->toArray());
-
         $valueColumn = $metricType->getValueColumn();
 
         $metricData = [

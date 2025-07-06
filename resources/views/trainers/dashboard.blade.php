@@ -136,7 +136,6 @@
                                     <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
                                     <flux:text class="ms-1 font-medium">{{ $metricData['formatted_average_30_days'] }}</flux:text>
                                 </div>
-                                {{ dd($metricData) }}
                                 @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
                                     <div class="mt-1 flex items-center justify-between">
                                     <flux:badge size="sm"
