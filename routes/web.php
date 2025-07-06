@@ -1,8 +1,6 @@
 <?php
 
-use App\Livewire\Settings\Profile;
-use App\Livewire\Settings\Password;
-use App\Livewire\Settings\Appearance;
+use App\Livewire\Actions\Logout;
 use App\Livewire\TrainerFeedbackForm;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\AthleteDailyMetricForm;
@@ -16,9 +14,8 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+Route::view('dashboard', 'dashboard')->middleware(['auth', 'verified'])->name('dashboard');
+Route::post('logout', Logout::class)->name('logout');
 
 Route::middleware([TrainerHashProtect::class])->group(function () {
     Route::get('/t/{hash}', [TrainerController::class, 'dashboard'])->name('trainers.dashboard');
@@ -32,18 +29,6 @@ Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}/metrics/daily/form', AthleteDailyMetricForm::class)->name('athletes.metrics.daily.form');
     Route::get('/a/{hash}/feedbacks', [AthleteController::class, 'feedbacks'])->name('athletes.feedbacks');
 });
-
-/*
-Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', 'settings/profile');
-
-    Route::get('settings/profile', Profile::class)->name('settings.profile');
-    Route::get('settings/password', Password::class)->name('settings.password');
-    Route::get('settings/appearance', Appearance::class)->name('settings.appearance');
-});
-*/
-
-require __DIR__.'/auth.php';
 
 Route::prefix('api')->group(function () {
     Route::prefix('athletes')->group(function () {

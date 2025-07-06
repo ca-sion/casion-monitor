@@ -76,8 +76,8 @@ class TrainerFeedbackForm extends Component implements HasSchemas
         // Charger les feedbacks existants pour l'athlète et la date sélectionnée
         if ($this->athlete_id && $this->date) {
             $feedbacks = Feedback::where('athlete_id', $this->athlete_id)
-                                 ->whereDate('date', $this->date)
-                                 ->get();
+                ->whereDate('date', $this->date)
+                ->get();
 
             foreach ($feedbacks as $feedback) {
                 $formData[$feedback->type->value] = $feedback->content;
@@ -116,7 +116,7 @@ class TrainerFeedbackForm extends Component implements HasSchemas
                             }
                             // Clear fields that are not present in new feedbacks
                             foreach (FeedbackType::cases() as $type) {
-                                if (!$feedbacks->contains('type', $type)) {
+                                if (! $feedbacks->contains('type', $type)) {
                                     $set($type->value, null);
                                 }
                             }
@@ -138,7 +138,7 @@ class TrainerFeedbackForm extends Component implements HasSchemas
                         }
                         // Clear fields that are not present in new feedbacks
                         foreach (FeedbackType::cases() as $type) {
-                            if (!$feedbacks->contains('type', $type)) {
+                            if (! $feedbacks->contains('type', $type)) {
                                 $set($type->value, null);
                             }
                         }
@@ -219,9 +219,9 @@ class TrainerFeedbackForm extends Component implements HasSchemas
             } else {
                 // Si le contenu est vide, supprime le feedback existant
                 Feedback::where('athlete_id', $data['athlete_id'])
-                        ->where('date', $data['date'])
-                        ->where('type', $feedbackType)
-                        ->delete();
+                    ->where('date', $data['date'])
+                    ->where('type', $feedbackType)
+                    ->delete();
             }
         }
         $this->dispatch('feedback-saved'); // Déclenche un événement pour notifier la sauvegarde si besoin

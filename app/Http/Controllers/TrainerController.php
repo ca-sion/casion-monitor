@@ -208,8 +208,8 @@ class TrainerController extends Controller
 
         // Commencer la requête des feedbacks
         $query = Feedback::query()
-                         ->whereIn('athlete_id', $trainerAthletes->pluck('id')) // Filtrer les feedbacks pour les athlètes de cet entraîneur
-                         ->with(['athlete', 'trainer']); // Charger l'athlète et le créateur (entraîneur ou athlète) du feedback
+            ->whereIn('athlete_id', $trainerAthletes->pluck('id')) // Filtrer les feedbacks pour les athlètes de cet entraîneur
+            ->with(['athlete', 'trainer']); // Charger l'athlète et le créateur (entraîneur ou athlète) du feedback
 
         // Appliquer le filtre par athlète si spécifié
         if ($filterAthleteId && $trainerAthletes->contains('id', $filterAthleteId)) { // Vérifier que l'athlète appartient bien à l'entraîneur
@@ -270,8 +270,8 @@ class TrainerController extends Controller
 
         // Ordonner les feedbacks et paginer
         $feedbacksPaginator = $query->orderBy('date', 'desc')
-                                    ->orderBy('created_at', 'desc')
-                                    ->paginate($perPage, ['*'], 'page', $page);
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
 
         // Regrouper les feedbacks par date (pour l'affichage)
         $groupedFeedbacks = $feedbacksPaginator->groupBy(function ($feedback) {
@@ -279,16 +279,16 @@ class TrainerController extends Controller
         });
 
         $data = [
-            'trainer'               => $trainer,
-            'groupedFeedbacks'      => $groupedFeedbacks,
-            'feedbackTypes'         => FeedbackType::cases(),
-            'periodOptions'         => $periodOptionsForView,
-            'currentPeriod'         => $period,
-            'currentFilterType'     => $filterType,
-            'currentFilterCategory' => $filterCategory,
+            'trainer'                => $trainer,
+            'groupedFeedbacks'       => $groupedFeedbacks,
+            'feedbackTypes'          => FeedbackType::cases(),
+            'periodOptions'          => $periodOptionsForView,
+            'currentPeriod'          => $period,
+            'currentFilterType'      => $filterType,
+            'currentFilterCategory'  => $filterCategory,
             'currentFilterAthleteId' => $filterAthleteId,
-            'trainerAthletes'       => $trainerAthletes,
-            'feedbacksPaginator'    => $feedbacksPaginator,
+            'trainerAthletes'        => $trainerAthletes,
+            'feedbacksPaginator'     => $feedbacksPaginator,
         ];
 
         if (request()->expectsJson()) {
