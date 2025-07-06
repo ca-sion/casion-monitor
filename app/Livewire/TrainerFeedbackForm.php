@@ -146,7 +146,7 @@ class TrainerFeedbackForm extends Component implements HasSchemas
             if ($content != null && $content != '<p></p>') {
                 Feedback::updateOrCreate(
                     ['athlete_id' => $data['athlete_id'], 'date' => $data['date'], 'type' => $feedback],
-                    ['content' => $content, 'author_type' => 'trainer']
+                    ['content' => $content, 'author_type' => 'trainer', 'trainer_id' => $this->trainer->id]
                 );
             }
         }

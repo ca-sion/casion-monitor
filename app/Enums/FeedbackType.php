@@ -16,11 +16,11 @@ enum FeedbackType: string implements HasLabel
     public function getLabel(): ?string
     {
         return match ($this) {
-            self::PRE_SESSION_GOALS => 'Objectifs de la séance',
-            self::POST_SESSION_FEEDBACK => 'Feedback de la séance',
-            self::POST_SESSION_SENSATION => 'Sensation après la séance',
-            self::PRE_COMPETITION_GOALS => 'Objectifs de la compétition',
-            self::POST_COMPETITION_FEEDBACK => 'Feedback de la compétition',
+            self::PRE_SESSION_GOALS          => 'Objectifs de la séance',
+            self::POST_SESSION_FEEDBACK      => 'Feedback de la séance',
+            self::POST_SESSION_SENSATION     => 'Sensation après la séance',
+            self::PRE_COMPETITION_GOALS      => 'Objectifs de la compétition',
+            self::POST_COMPETITION_FEEDBACK  => 'Feedback de la compétition',
             self::POST_COMPETITION_SENSATION => 'Sensation après la compétition',
         };
     }
@@ -28,11 +28,11 @@ enum FeedbackType: string implements HasLabel
     public function getLabelShort(): ?string
     {
         return match ($this) {
-            self::PRE_SESSION_GOALS => 'Obj. séance',
-            self::POST_SESSION_FEEDBACK => 'Feedback',
-            self::POST_SESSION_SENSATION => 'Sensation',
-            self::PRE_COMPETITION_GOALS => 'Obj. compét.',
-            self::POST_COMPETITION_FEEDBACK => 'Feedback comp.',
+            self::PRE_SESSION_GOALS          => 'Obj. séance',
+            self::POST_SESSION_FEEDBACK      => 'Feedback',
+            self::POST_SESSION_SENSATION     => 'Sensation',
+            self::PRE_COMPETITION_GOALS      => 'Obj. compét.',
+            self::POST_COMPETITION_FEEDBACK  => 'Feedback comp.',
             self::POST_COMPETITION_SENSATION => 'Sensation comp.',
         };
     }
@@ -40,11 +40,11 @@ enum FeedbackType: string implements HasLabel
     public function getDescription(): ?string
     {
         return match ($this) {
-            self::PRE_SESSION_GOALS => 'Objectifs de la séance.',
-            self::POST_SESSION_FEEDBACK => 'Feedback de la séance.',
-            self::POST_SESSION_SENSATION => 'Sensations après la séance.',
-            self::PRE_COMPETITION_GOALS => 'Objectifs de la compétition.',
-            self::POST_COMPETITION_FEEDBACK => 'Feedback de la compétition.',
+            self::PRE_SESSION_GOALS          => 'Objectifs de la séance.',
+            self::POST_SESSION_FEEDBACK      => 'Feedback de la séance.',
+            self::POST_SESSION_SENSATION     => 'Sensations après la séance.',
+            self::PRE_COMPETITION_GOALS      => 'Objectifs de la compétition.',
+            self::POST_COMPETITION_FEEDBACK  => 'Feedback de la compétition.',
             self::POST_COMPETITION_SENSATION => 'Sensations après la compétitions.',
         };
     }

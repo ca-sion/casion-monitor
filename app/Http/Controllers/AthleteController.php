@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Athlete;
 use App\Enums\MetricType;
 use Illuminate\View\View;
+use App\Enums\FeedbackType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\MetricStatisticsService;
@@ -37,15 +38,15 @@ class AthleteController extends Controller
         ];
 
         $period = $request->input('period', 'last_30_days');
-        $days = match($period) {
-            'last_7_days' => 7,
-            'last_14_days' => 14, 
-            'last_30_days' => 30,
-            'last_90_days' => 90,
+        $days = match ($period) {
+            'last_7_days'   => 7,
+            'last_14_days'  => 14,
+            'last_30_days'  => 30,
+            'last_90_days'  => 90,
             'last_6_months' => 180,
-            'last_year' => 365,
-            'all_time' => 500,
-            default => 50
+            'last_year'     => 365,
+            'all_time'      => 500,
+            default         => 50
         };
 
         $metricsDataForDashboard = [];
@@ -56,13 +57,13 @@ class AthleteController extends Controller
         $dailyMetricsHistory = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, $days);
 
         $periodOptions = [
-            'last_7_days'    => '7 derniers jours',
-            'last_14_days'   => '14 derniers jours',
-            'last_30_days'   => '30 derniers jours',
-            'last_90_days'   => '90 derniers jours',
-            'last_6_months'  => '6 derniers mois',
-            'last_year'      => 'Dernière année',
-            'all_time'       => 'Depuis le début',
+            'last_7_days'   => '7 derniers jours',
+            'last_14_days'  => '14 derniers jours',
+            'last_30_days'  => '30 derniers jours',
+            'last_90_days'  => '90 derniers jours',
+            'last_6_months' => '6 derniers mois',
+            'last_year'     => 'Dernière année',
+            'all_time'      => 'Depuis le début',
         ];
 
         $data = [
@@ -77,7 +78,47 @@ class AthleteController extends Controller
         if ($request->expectsJson()) {
             return response()->json($data);
         }
-        
+
         return view('athletes.dashboard', $data);
+    }
+
+    public function feedbacks(Request $request): View|JsonResponse
+    {
+        $athlete = Auth::guard('athlete')->user();
+
+        if (! $athlete) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        // Définir la date limite (15 jours avant aujourd'hui)
+        $limitDate = Carbon::now()->subDays(15)->startOfDay();
+
+        // Récupérer tous les feedbacks liés à l'athlète, datant des 15 derniers jours
+        $feedbacks = $athlete->feedbacks()
+            ->with('trainer')
+            ->where('date', '>=', $limitDate)
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Regrouper les feedbacks par date
+        $groupedFeedbacks = $feedbacks->groupBy(function ($feedback) {
+            return \Carbon\Carbon::parse($feedback->date)->format('Y-m-d');
+        });
+
+        // Passer tous les types de Feedback à la vue pour d'éventuels filtres futurs
+        $feedbackTypes = FeedbackType::cases();
+
+        $data = [
+            'athlete'          => $athlete,
+            'groupedFeedbacks' => $groupedFeedbacks,
+            'feedbackTypes'    => $feedbackTypes,
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json($data);
+        }
+
+        return view('athletes.feedbacks', $data);
     }
 }

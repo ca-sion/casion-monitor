@@ -109,17 +109,17 @@ class MetricStatisticsService
                 $labelsAndData[] = [
                     'label' => $dateLabel,
                     'value' => $numericValue,
-                    'unit' => $unit
+                    'unit'  => $unit,
                 ];
             }
         }
 
         return [
-            'labels' => $labels,
-            'data'   => $data,
+            'labels'          => $labels,
+            'data'            => $data,
             'labels_and_data' => $labelsAndData,
-            'unit'   => $unit,
-            'label'  => $metricType->getLabel(),
+            'unit'            => $unit,
+            'label'           => $metricType->getLabel(),
         ];
     }
 
@@ -149,12 +149,12 @@ class MetricStatisticsService
                 // Prenez la première valeur numérique pour ce jour, ou null si aucune métrique ou valeur non numérique pour ce jour
                 $value = $groupedMetrics->has($dateLabel) ? $groupedMetrics[$dateLabel]->first()->{$valueColumn} : null;
                 $data[] = is_numeric($value) ? (float) $value : null;
-                
+
                 // Ajout pour labels_and_data
                 $labelsAndData[$metricType->value][] = [
                     'label' => $dateLabel,
                     'value' => is_numeric($value) ? (float) $value : null,
-                    'unit' => $unit
+                    'unit'  => $unit,
                 ];
             }
 
@@ -165,8 +165,8 @@ class MetricStatisticsService
         }
 
         return [
-            'labels'   => $allLabels,
-            'datasets' => $datasets,
+            'labels'          => $allLabels,
+            'datasets'        => $datasets,
             'labels_and_data' => $labelsAndData,
         ];
     }
@@ -243,7 +243,7 @@ class MetricStatisticsService
      * Calcule la tendance d'évolution (accroissement/décroissement) pour une métrique sur une période.
      * Compare la valeur moyenne au début et à la fin de la période ou la première/dernière valeur.
      *
-     * @param Collection<Metric> $metrics Collection de métriques déjà filtrée par type.
+     * @param  Collection<Metric>  $metrics  Collection de métriques déjà filtrée par type.
      * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
      */
     public function getEvolutionTrendForCollection(Collection $metrics, MetricType $metricType): array
@@ -253,7 +253,7 @@ class MetricStatisticsService
         }
 
         $valueColumn = $metricType->getValueColumn();
-        $numericMetrics = $metrics->filter(fn($m) => is_numeric($m->{$valueColumn}))->sortBy('date');
+        $numericMetrics = $metrics->filter(fn ($m) => is_numeric($m->{$valueColumn}))->sortBy('date');
 
         if ($numericMetrics->count() < 2) {
             return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
@@ -277,7 +277,7 @@ class MetricStatisticsService
         if ($firstValue === null || $lastValue === null) {
             return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
         }
-        
+
         // Handle division by zero for percentage change
         if ($firstValue == 0 && $lastValue != 0) {
             $change = 100; // Represents a significant increase from zero
@@ -304,8 +304,7 @@ class MetricStatisticsService
     /**
      * Récupère les métriques les plus récentes groupées par date.
      *
-     * @param Athlete $athlete
-     * @param int $limit Le nombre maximum de métriques brutes à récupérer.
+     * @param  int  $limit  Le nombre maximum de métriques brutes à récupérer.
      * @return Collection<string, Collection<Metric>> Une collection de métriques groupées par date (format Y-m-d).
      */
     public function getLatestMetricsGroupedByDate(Athlete $athlete, int $limit = 50): Collection
@@ -323,16 +322,11 @@ class MetricStatisticsService
 
         // Regrouper par date et s'assurer que les dates sont triées de la plus récente à la plus ancienne
         return $metrics->groupBy(fn ($metric) => $metric->date->format('Y-m-d'))
-                       ->sortByDesc(fn ($metrics, $date) => $date);
+            ->sortByDesc(fn ($metrics, $date) => $date);
     }
 
     /**
      * Prépare toutes les données agrégées pour le tableau de bord d'une métrique spécifique.
-     *
-     * @param Athlete $athlete
-     * @param MetricType $metricType
-     * @param string $period
-     * @return array
      */
     public function getDashboardMetricData(Athlete $athlete, MetricType $metricType, string $period): array
     {
@@ -341,26 +335,26 @@ class MetricStatisticsService
         $valueColumn = $metricType->getValueColumn();
 
         $metricData = [
-            'label'           => $metricType->getLabel(),
-            'short_label'     => $metricType->getLabelShort(),
-            'description'     => $metricType->getDescription(),
-            'unit'            => $metricType->getUnit(),
-            'last_value'      => null,
-            'formatted_last_value' => 'N/A',
-            'average_7_days'  => null,
-            'formatted_average_7_days' => 'N/A',
-            'average_30_days' => null,
+            'label'                     => $metricType->getLabel(),
+            'short_label'               => $metricType->getLabelShort(),
+            'description'               => $metricType->getDescription(),
+            'unit'                      => $metricType->getUnit(),
+            'last_value'                => null,
+            'formatted_last_value'      => 'N/A',
+            'average_7_days'            => null,
+            'formatted_average_7_days'  => 'N/A',
+            'average_30_days'           => null,
             'formatted_average_30_days' => 'N/A',
-            'trend_icon'      => 'ellipsis-horizontal', // default
-            'trend_color'     => 'zinc', // default
-            'trend_percentage' => 'N/A',
-            'chart_data'      => [],
-            'is_numerical'    => ($valueColumn !== 'note'),
+            'trend_icon'                => 'ellipsis-horizontal', // default
+            'trend_color'               => 'zinc', // default
+            'trend_percentage'          => 'N/A',
+            'chart_data'                => [],
+            'is_numerical'              => ($valueColumn !== 'note'),
         ];
 
         // Prepare chart data
         $metricData['chart_data'] = $this->prepareChartDataForSingleMetric($metricsForPeriod, $metricType);
-        
+
         // Get last value
         // Use the metrics from the current period for the last value, if available
         $lastMetric = $metricsForPeriod->sortByDesc('date')->first();
@@ -373,7 +367,7 @@ class MetricStatisticsService
         // Only calculate trends and evolution for numerical metrics
         if ($metricData['is_numerical']) {
             $trends = $this->getMetricTrendsForCollection($metricsForPeriod, $metricType);
-            
+
             $metricData['average_7_days'] = $trends['averages']['Derniers 7 jours'] ?? null;
             $metricData['average_30_days'] = $trends['averages']['Derniers 30 jours'] ?? null;
 
@@ -381,7 +375,7 @@ class MetricStatisticsService
             $metricData['formatted_average_30_days'] = $this->formatMetricValue($metricData['average_30_days'], $metricType);
 
             $evolutionTrendData = $this->getEvolutionTrendForCollection($metricsForPeriod, $metricType);
-            
+
             if ($metricData['average_7_days'] !== null && $evolutionTrendData && isset($evolutionTrendData['trend'])) {
                 switch ($evolutionTrendData['trend']) {
                     case 'increasing':
@@ -401,14 +395,14 @@ class MetricStatisticsService
                         break;
                 }
             }
-            
+
             // Trend percentage - calculate change from 30 days to 7 days if applicable
             if ($metricData['average_7_days'] !== null && $metricData['average_30_days'] !== null && $metricData['average_30_days'] !== 0) {
                 $change = (($metricData['average_7_days'] - $metricData['average_30_days']) / $metricData['average_30_days']) * 100;
                 $metricData['trend_percentage'] = ($change > 0 ? '+' : '').number_format($change, 1).'%';
             } elseif ($metricData['average_7_days'] !== null && $metricType->getValueColumn() !== 'note') {
-                 // If only 7-day average exists and it's numerical, format its value for percentage
-                 $metricData['trend_percentage'] = $this->formatMetricValue($metricData['average_7_days'], $metricType);
+                // If only 7-day average exists and it's numerical, format its value for percentage
+                $metricData['trend_percentage'] = $this->formatMetricValue($metricData['average_7_days'], $metricType);
             }
         }
 
@@ -417,10 +411,6 @@ class MetricStatisticsService
 
     /**
      * Formate une valeur de métrique en fonction de son type et de sa précision.
-     *
-     * @param mixed $value
-     * @param MetricType $metricType
-     * @return string
      */
     public function formatMetricValue(mixed $value, MetricType $metricType): string
     {
@@ -434,6 +424,6 @@ class MetricStatisticsService
         $formattedValue = number_format($value, $metricType->getPrecision());
         $unit = $metricType->getUnit();
 
-        return $formattedValue . ($unit ? ' ' . $unit : '');
+        return $formattedValue.($unit ? ' '.$unit : '');
     }
 }

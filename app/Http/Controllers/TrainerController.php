@@ -46,6 +46,7 @@ class TrainerController extends Controller
             }
             // Attache les données agrégées directement à l'objet Athlete pour un accès facile dans la vue
             $athlete->metricsDataForDashboard = $metricsDataForDashboard;
+
             return $athlete;
         });
 
@@ -119,13 +120,13 @@ class TrainerController extends Controller
                 $metric = $metricDates->where('metric_type', $metricType->value)->first();
                 $rowData['metrics'][$metricType->value] = $metric ? $this->metricStatisticsService->formatMetricValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
             }
-            
+
             // Assuming the edit link is associated with any metric entry for that day, or a specific "daily check-in" metric
             // For simplicity, we'll try to get it from the first available metric for the day.
             // In a real app, you might have a dedicated daily entry record or a more robust way to generate this link.
             $firstMetricOfDay = $metricDates->first();
             if ($firstMetricOfDay && isset($firstMetricOfDay->metadata['edit_link'])) { // Assuming edit_link might be in metadata
-                 $rowData['edit_link'] = $firstMetricOfDay->metadata['edit_link'];
+                $rowData['edit_link'] = $firstMetricOfDay->metadata['edit_link'];
             } elseif ($firstMetricOfDay) {
                 // Fallback: if no specific edit_link in metadata, create a generic one based on date and athlete.
                 // This would need a route that allows editing metrics for a specific date.
@@ -134,14 +135,13 @@ class TrainerController extends Controller
                 $rowData['edit_link'] = '#'; // Placeholder
             }
 
-
             return $rowData;
         });
 
         // Préparer les données pour le graphique détaillé d'une métrique spécifique
         $chartMetricType = null;
         $chartData = ['labels' => [], 'data' => [], 'unit' => null, 'label' => null];
-        
+
         if ($selectedMetricType && MetricType::tryFrom($selectedMetricType)) {
             $chartMetricType = MetricType::tryFrom($selectedMetricType);
             $metricsForChart = $this->metricStatisticsService->getAthleteMetrics($athlete, ['metric_type' => $selectedMetricType, 'period' => $period]);
@@ -152,7 +152,6 @@ class TrainerController extends Controller
             $metricsForChart = $this->metricStatisticsService->getAthleteMetrics($athlete, ['metric_type' => MetricType::MORNING_HRV->value, 'period' => $period]);
             $chartData = $this->metricStatisticsService->prepareChartDataForSingleMetric($metricsForChart, MetricType::MORNING_HRV);
         }
-
 
         // Options de période pour le sélecteur du graphique
         $periodOptions = [
@@ -168,20 +167,19 @@ class TrainerController extends Controller
 
         // Types de métriques disponibles pour la sélection du graphique
         $availableMetricTypesForChart = collect(MetricType::cases())
-            ->filter(fn($mt) => $mt->getValueColumn() !== 'note') // Filtrer les métriques non numériques pour les graphiques simples
-            ->mapWithKeys(fn($mt) => [$mt->value => $mt->getLabel()])
+            ->filter(fn ($mt) => $mt->getValueColumn() !== 'note') // Filtrer les métriques non numériques pour les graphiques simples
+            ->mapWithKeys(fn ($mt) => [$mt->value => $mt->getLabel()])
             ->toArray();
 
-
         return view('trainers.athlete', [
-            'trainer'                    => $trainer,
-            'athlete'                    => $athlete,
-            'daily_metrics_history'      => $processedDailyMetrics,
-            'display_table_metric_types' => $displayTableMetricTypes,
-            'chart_data'                 => $chartData,
-            'chart_metric_type'          => $chartMetricType, // The MetricType object for the chart
-            'period_label'               => $period,
-            'period_options'             => $periodOptions,
+            'trainer'                          => $trainer,
+            'athlete'                          => $athlete,
+            'daily_metrics_history'            => $processedDailyMetrics,
+            'display_table_metric_types'       => $displayTableMetricTypes,
+            'chart_data'                       => $chartData,
+            'chart_metric_type'                => $chartMetricType, // The MetricType object for the chart
+            'period_label'                     => $period,
+            'period_options'                   => $periodOptions,
             'available_metric_types_for_chart' => $availableMetricTypesForChart,
         ]);
     }

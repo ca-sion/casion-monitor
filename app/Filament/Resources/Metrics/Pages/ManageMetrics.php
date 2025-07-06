@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Metrics\Pages;
 
-use App\Filament\Resources\Metrics\MetricResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ManageRecords;
+use App\Filament\Resources\Metrics\MetricResource;
 
 class ManageMetrics extends ManageRecords
 {

@@ -13,8 +13,6 @@ use Livewire\Attributes\Url;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Illuminate\Contracts\View\View;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -61,13 +59,17 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         $metricsData = $metrics->mapWithKeys(function (Metric $metric) {
             return [$metric->metric_type->value => $metric->{$metric->metric_type->getValueColumn()} ?? null];
         });
+        $desiredFeedbackTypes = [
+            FeedbackType::PRE_SESSION_GOALS->value,
+            FeedbackType::POST_SESSION_SENSATION->value,
+        ];
         $feedbacks = Feedback::where('athlete_id', $this->athlete->id)
             ->whereDate('date', $this->date)
+            ->whereIn('type', $this->desiredFeedbackTypes())
             ->get();
-        $feedbacksData = $feedbacks->mapWithKeys(function (Feedback $feedback) {
-            return [$feedback->type->value => $feedback->content ?? null];
-        });
-        $data = $metricsData->merge($feedbacksData->all())->put('date', $this->date)->all();
+        $feedbacksData = $feedbacks->pluck('content', 'type.value');
+
+        $data = $metricsData->merge($feedbacksData)->put('date', $this->date)->all();
 
         $this->form->fill($data);
     }
@@ -184,18 +186,8 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
     {
         $data = $this->form->getState();
         $metricsData = collect($data)->filter(function (mixed $value, string $key) {
-            return in_array($key, [
-                MetricType::MORNING_HRV->value,
-                MetricType::MORNING_SLEEP_QUALITY->value,
-                MetricType::MORNING_GENERAL_FATIGUE->value,
-                MetricType::MORNING_MOOD_WELLBEING->value,
-                MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value,
-                MetricType::POST_SESSION_SESSION_LOAD->value,
-                MetricType::POST_SESSION_PERFORMANCE_FEEL->value,
-                MetricType::MORNING_FIRST_DAY_PERIOD->value,
-            ]);
+            return in_array($key, $this->desiredMetricTypes());
         });
-
         foreach ($metricsData as $metric => $value) {
             if ($value != null && $value != '<p></p>') {
                 Metric::updateOrCreate(
@@ -204,13 +196,10 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                 );
             }
         }
-        $feedbacksData = collect($data)->filter(function (mixed $value, string $key) {
-            return in_array($key, [
-                FeedbackType::PRE_SESSION_GOALS->value,
-                FeedbackType::POST_SESSION_SENSATION->value,
-            ]);
-        });
 
+        $feedbacksData = collect($data)->filter(function (mixed $value, string $key) {
+            return in_array($key, $this->desiredFeedbackTypes());
+        });
         foreach ($feedbacksData as $feedback => $content) {
             if ($content != null && $content != '<p></p>') {
                 Feedback::updateOrCreate(
@@ -220,6 +209,28 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             }
         }
 
+    }
+
+    private function desiredMetricTypes(): array
+    {
+        return [
+            MetricType::MORNING_HRV->value,
+            MetricType::MORNING_SLEEP_QUALITY->value,
+            MetricType::MORNING_GENERAL_FATIGUE->value,
+            MetricType::MORNING_MOOD_WELLBEING->value,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value,
+            MetricType::POST_SESSION_SESSION_LOAD->value,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL->value,
+            MetricType::MORNING_FIRST_DAY_PERIOD->value,
+        ];
+    }
+
+    private function desiredFeedbackTypes(): array
+    {
+        return [
+            FeedbackType::PRE_SESSION_GOALS->value,
+            FeedbackType::POST_SESSION_SENSATION->value,
+        ];
     }
 
     #[Layout('components.layouts.athlete')]

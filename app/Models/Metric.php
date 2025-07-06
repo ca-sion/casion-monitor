@@ -97,6 +97,7 @@ class Metric extends Model
         }
 
         $formatted = number_format($value, $metricType->getPrecision());
-        return $formatted . ($unit ? ' ' . $unit : ($scale ? '/' . $scale : ''));
+
+        return $formatted.($unit ? ' '.$unit : ($scale ? '/'.$scale : ''));
     }
 }
