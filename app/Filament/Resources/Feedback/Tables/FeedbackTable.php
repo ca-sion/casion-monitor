@@ -1,38 +1,31 @@
 <?php
 
-namespace App\Filament\Resources\Trainers\Tables;
+namespace App\Filament\Resources\Feedback\Tables;
 
 use Filament\Tables\Table;
-use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
-use Illuminate\Database\Eloquent\Model;
 
-class TrainersTable
+class FeedbackTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('first_name')
-                    ->searchable(),
-                TextColumn::make('last_name')
-                    ->searchable(),
-                TextColumn::make('email')
-                    ->searchable(),
-                TextColumn::make('birthdate')
+                TextColumn::make('athlete.first_name')
+                    ->sortable(),
+                TextColumn::make('trainer.first_name')
+                    ->sortable(),
+                TextColumn::make('date')
                     ->date()
                     ->isoDateTime('LL')
                     ->sortable(),
-                TextColumn::make('gender')
+                TextColumn::make('type')
                     ->searchable(),
-                TextColumn::make('last_connection')
-                    ->dateTime()
-                    ->since()
-                    ->isoDateTimeTooltip('LLL')
-                    ->sortable(),
+                TextColumn::make('author_type')
+                    ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -47,11 +40,6 @@ class TrainersTable
             ])
             ->recordActions([
                 EditAction::make(),
-                Action::make('accountLink')
-                    ->label('Compte')
-                    ->icon('heroicon-m-arrow-top-right-on-square')
-                    ->url(fn (Model $record) => $record->accountLink)
-                    ->openUrlInNewTab(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

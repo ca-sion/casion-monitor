@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Athletes\Schemas;
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 
 class AthleteForm
 {
@@ -18,7 +19,10 @@ class AthleteForm
                     ->email(),
                 DatePicker::make('birthdate'),
                 TextInput::make('gender'),
-                DatePicker::make('last_connection'),
+                DateTimePicker::make('last_connection')
+                    ->native(false)
+                    ->displayFormat('d.m.Y H:i')
+                    ->locale('fr'),
             ]);
     }
 }

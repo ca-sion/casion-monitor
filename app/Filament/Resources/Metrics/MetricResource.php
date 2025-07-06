@@ -76,11 +76,11 @@ class MetricResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('athlete.id')
-                    ->numeric()
+                TextColumn::make('athlete.first_name')
                     ->sortable(),
                 TextColumn::make('date')
                     ->date()
+                    ->isoDateTime('LL')
                     ->sortable(),
                 TextColumn::make('type')
                     ->searchable(),

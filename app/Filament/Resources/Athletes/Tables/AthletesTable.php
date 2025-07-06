@@ -24,11 +24,14 @@ class AthletesTable
                     ->searchable(),
                 TextColumn::make('birthdate')
                     ->date()
+                    ->isoDateTime('LL')
                     ->sortable(),
                 TextColumn::make('gender')
                     ->searchable(),
                 TextColumn::make('last_connection')
-                    ->date()
+                    ->dateTime()
+                    ->since()
+                    ->isoDateTimeTooltip('LLL')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
