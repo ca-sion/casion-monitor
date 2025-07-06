@@ -12,7 +12,20 @@
 
             {{-- Section des filtres --}}
             <div class="px-4 py-6 sm:px-6 bg-gray-50 border-b border-gray-200">
-                <form action="{{ route('trainers.feedbacks', ['hash' => $trainer->hash]) }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                <form action="{{ route('trainers.feedbacks', ['hash' => $trainer->hash]) }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end"> {{-- md:grid-cols-5 pour ajouter un filtre athlète --}}
+                    {{-- Filtre par athlète --}}
+                    <div>
+                        <label for="athlete_id" class="block text-sm font-medium text-gray-700 sr-only">Filtrer par athlète</label>
+                        <flux:select id="athlete_id" name="athlete_id" placeholder="Filtrer par athlète" class="w-full">
+                            <option value="">Tous les athlètes</option>
+                            @foreach ($trainerAthletes as $athleteOption)
+                                <option value="{{ $athleteOption->id }}" @selected($currentFilterAthleteId == $athleteOption->id)>
+                                    {{ $athleteOption->first_name }} {{ $athleteOption->last_name }}
+                                </option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+
                     {{-- Filtre par type --}}
                     <div>
                         <label for="filter_type" class="block text-sm font-medium text-gray-700 sr-only">Filtrer par type</label>
@@ -84,7 +97,7 @@
                                 $cardBg = $isTrainerFeedback ? 'bg-slate-50!' : 'bg-yellow-50!';
                                 $cardBorder = $isTrainerFeedback ? 'border-slate-300!' : 'border-yellow-300!';
                                 $badgeColor = $isTrainerFeedback ? 'slate' : 'yellow';
-                                // Logique de l'auteur révisée
+                                
                                 if ($isTrainerFeedback) {
                                     $authorText = $feedback->trainer ? $feedback->trainer->first_name : 'Entraîneur Inconnu';
                                 } else {
@@ -115,6 +128,17 @@
                                 <div class="text-[8px] text-gray-500 mb-3 mt-1">
                                     {{ \Carbon\Carbon::parse($feedback->created_at)->format('d.m.Y à H:i') }}
                                 </div>
+
+                                {{-- Nom de l'athlète et lien vers son profil --}}
+                                <div class="mb-2">
+                                    <flux:text class="text-sm font-semibold text-gray-700">
+                                        Pour : <a href="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $feedback->athlete->id]) }}" class="text-indigo-600 hover:text-indigo-800 underline">
+                                            {{ $feedback->athlete->first_name }} {{ $feedback->athlete->last_name }}
+                                        </a>
+                                    </flux:text>
+                                </div>
+
+
                                 {{-- Section du contenu avec "Voir plus" / Alpine.js Collapse --}}
                                 @if ($feedback->content)
                                     <div x-data="{ expanded: false }" class="text-gray-800 text-sm leading-relaxed">
@@ -149,6 +173,18 @@
                                     </div>
                                 @endif
                                 {{-- Fin de la section du contenu --}}
+
+                                {{-- Lien d'édition du feedback --}}
+                                <div class="mt-4 text-right">
+                                    <a href="{{ route('trainers.feedbacks.form', [
+                                        'hash' => $trainer->hash,
+                                        'athlete' => $feedback->athlete->id,
+                                        'd' => \Carbon\Carbon::parse($feedback->date)->format('Y-m-d')
+                                    ]) }}"
+                                    class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center justify-end">
+                                        <flux:icon name="pencil" class="w-4 h-4 mr-1" /> Modifier le feedback
+                                    </a>
+                                </div>
                             </flux:card>
                         @endforeach
                     </div>

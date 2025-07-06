@@ -199,13 +199,22 @@ class TrainerController extends Controller
         $filterType = request()->input('filter_type');
         $filterCategory = request()->input('filter_category');
         $period = request()->input('period', 'last_15_days');
+        $filterAthleteId = request()->input('athlete_id');
         $page = request()->input('page', 1);
         $perPage = 10;
 
+        // Récupérer les athlètes de cet entraîneur
+        $trainerAthletes = $trainer->athletes; // Collection d'athlètes de l'entraîneur
+
         // Commencer la requête des feedbacks
         $query = Feedback::query()
-                         ->whereIn('athlete_id', $trainer->athletes->pluck('id')) // Filtrer les feedbacks pour les athlètes de cet entraîneur
+                         ->whereIn('athlete_id', $trainerAthletes->pluck('id')) // Filtrer les feedbacks pour les athlètes de cet entraîneur
                          ->with(['athlete', 'trainer']); // Charger l'athlète et le créateur (entraîneur ou athlète) du feedback
+
+        // Appliquer le filtre par athlète si spécifié
+        if ($filterAthleteId && $trainerAthletes->contains('id', $filterAthleteId)) { // Vérifier que l'athlète appartient bien à l'entraîneur
+            $query->where('athlete_id', $filterAthleteId);
+        }
 
         // Appliquer le filtre par type si spécifié
         if ($filterType && FeedbackType::tryFrom($filterType)) {
@@ -277,6 +286,8 @@ class TrainerController extends Controller
             'currentPeriod'         => $period,
             'currentFilterType'     => $filterType,
             'currentFilterCategory' => $filterCategory,
+            'currentFilterAthleteId' => $filterAthleteId,
+            'trainerAthletes'       => $trainerAthletes,
             'feedbacksPaginator'    => $feedbacksPaginator,
         ];
 
