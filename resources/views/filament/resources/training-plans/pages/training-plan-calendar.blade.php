@@ -31,7 +31,7 @@
                             <p class="text-xs text-center text-gray-500 mb-2">Vol: {{ $week['volume_planned'] ?? 'N/A' }} / 5</p>
 
                             <div class="font-semibold text-center mb-2">S{{ $week['week_number'] }}</div>
-                            <div class="text-xs text-center text-gray-500">{{ \Carbon\Carbon::parse($week['start_date'])->isoFormat('l') }}</div>
+                            <div class="text-xs text-center text-gray-500">{{ \Carbon\Carbon::parse($week['start_date'])->isoFormat('DD.MM') }}</div>
                             
                             {{-- Bouton pour affiner les jours (sera un modal plus tard) --}}
                             <button class="mt-2 px-2 py-1 text-white rounded-md text-xs hover:bg-gray-50 mb-2"
@@ -46,8 +46,8 @@
                                 <input type="range" min="0" max="100" step="1"
                                        wire:model.live="weeks.{{ $loop->index }}.intensity_planned"
                                        wire:change="updateWeekData('{{ $week['start_date'] }}', 'intensity_planned', $event.target.value)"
-                                       class="absolute h-1 w-36 transform -rotate-90 origin-center bg-orange-500 rounded-lg appearance-none cursor-pointer"
-                                       style="writing-mode: bt-lr;">
+                                       class="absolute h-1 w-36 transform -rotate-90 origin-center rounded-lg appearance-none cursor-pointer"
+                                       style="writing-mode: bt-lr; background: linear-gradient(to right, {{ $week['intensity_planned'] === null ? 'rgb(203, 213, 225)' : 'rgb(' . (203 - ($week['intensity_planned'] * 0.75)) . ', ' . (213 - ($week['intensity_planned'] * 0.75)) . ', ' . (225 - ($week['intensity_planned'] * 0.75)) . ')' }} 0%, rgb(128, 0, 128) {{ $week['intensity_planned'] ?? 0 }}%, rgb(203, 213, 225) {{ $week['intensity_planned'] ?? 0 }}%);">
                             </div>
                         </div>
                     @endforeach

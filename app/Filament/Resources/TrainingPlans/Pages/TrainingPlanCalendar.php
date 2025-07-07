@@ -82,19 +82,6 @@ class TrainingPlanCalendar extends Page
         $this->redirect(TrainingPlanResource::getUrl('create'));
     }
 
-    // La méthode selectDay n'est plus pertinente dans la nouvelle interface
-    // public function selectDay(string $date): void
-    // {
-    //     // Convertir la date pour éviter les problèmes de fuseau horaire
-    //     $parsedDate = \Carbon\Carbon::parse($date)->toDateString();
-
-    //     \Filament\Notifications\Notification::make()
-    //         ->title('Jour sélectionné')
-    //         ->body("Vous avez sélectionné le jour : {$parsedDate}")
-    //         ->success()
-    //         ->send();
-    // }
-
     public function selectWeekForDailyRefinement(string $date): void
     {
         if (!$this->selectedTrainingPlanId) {
@@ -152,7 +139,7 @@ class TrainingPlanCalendar extends Page
 
         \Filament\Notifications\Notification::make()
             ->title('Données hebdomadaires mises à jour')
-            ->body("{$field} mis à jour pour la semaine du {$startOfWeek}.")
+            ->body("{$field} mis à jour pour la semaine {$weekNumber}.")
             ->success()
             ->send();
     }
