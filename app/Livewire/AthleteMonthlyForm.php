@@ -20,6 +20,8 @@ class AthleteMonthlyForm extends Component implements HasSchemas
 {
     use InteractsWithSchemas;
 
+    public ?array $data = [];
+
     public Athlete $athlete;
 
     public Carbon $date;
@@ -42,6 +44,11 @@ class AthleteMonthlyForm extends Component implements HasSchemas
 
         if ($existingEntry) {
             $data->put(MetricType::MORNING_BODY_WEIGHT_KG->value, $existingEntry->value);
+
+            Notification::make()
+                ->title('Vous avez déjà soumis votre poids pour ce mois.')
+                ->warning()
+                ->send();
         }
         $data->put('current_month', $this->currentMonth);
 
@@ -68,25 +75,12 @@ class AthleteMonthlyForm extends Component implements HasSchemas
 
     public function save(): void
     {
-        $existingEntry = Metric::where('athlete_id', $this->athlete->id)
-            ->where('metric_type', MetricType::MORNING_BODY_WEIGHT_KG->value)
-            ->whereMonth('date', $this->date->month)
-            ->whereYear('date', $this->date->year)
-            ->first();
-
-        if ($existingEntry) {
-            Notification::make()
-                ->title('Vous avez déjà soumis votre poids pour ce mois.')
-                ->warning()
-                ->send();
-
-            return;
-        }
+        $data = $this->form->getState();
 
         Metric::create([
             'athlete_id'  => $this->athlete->id,
             'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
-            'value'       => $this->weight,
+            'value'       => data_get($data, MetricType::MORNING_BODY_WEIGHT_KG->value),
             'date'        => $this->date,
         ]);
 
