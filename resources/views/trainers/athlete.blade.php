@@ -1,6 +1,6 @@
-<x-layouts.trainer :title="$athlete->name">
+<x-layouts.trainer :title="'Détail de l\'athlète '.$athlete->name">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-        <flux:heading size="xl" level="1" class="mb-4 sm:mb-0">{{ $athlete->name }}</flux:heading>
+        <flux:heading size="xl" level="1" class="mb-4 sm:mb-0">Détail de l'athlète {{ $athlete->name }}</flux:heading>
 
         {{-- Sélecteur de période pour l'entraîneur --}}
         <form action="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $athlete->id]) }}" method="GET" class="flex items-center space-x-2">
@@ -20,23 +20,73 @@
         <strong>{{ $period_options[$period_label] ?? 'données sélectionnées' }}</strong>.
     </flux:text>
 
-    {{-- Section Profil Athlète (compact) --}}
-    <flux:card class="mb-6 p-4 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
-        <flux:heading size="md" level="2" class="mb-3 text-center">Informations Personnelles</flux:heading>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-            <flux:text><span class="font-semibold">Email:</span> {{ $athlete->email }}</flux:text>
-            <flux:text><span class="font-semibold">Date de naissance:</span> {{ $athlete->birthdate ? \Carbon\Carbon::parse($athlete->birthdate)->locale('fr_CH')->isoFormat('L') : 'N/A' }}</flux:text>
-            <flux:text><span class="font-semibold">Dernière connexion:</span> {{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->diffForHumans() : 'Jamais' }}</flux:text>
-            @if ($athlete->gender)
-                <flux:text><span class="font-semibold">Sexe:</span> {{ $athlete->gender === 'm' ? 'Homme' : 'Femme' }}</flux:text>
-            @endif
-            @if ($athlete->height)
-                <flux:text><span class="font-semibold">Taille:</span> {{ $athlete->height }} cm</flux:text>
-            @endif
-            @if ($athlete->weight)
-                <flux:text><span class="font-semibold">Poids:</span> {{ $athlete->weight }} kg</flux:text>
-            @endif
-            {{-- Ajoutez d'autres informations personnelles si disponibles sur l'athlète --}}
+    {{-- Section Profil Athlète (compact, refonte punchy) --}}
+    <flux:card class="mb-6 p-4 bg-gradient-to-br from-slate-600 to-slate-700 text-white shadow-lg rounded-lg overflow-hidden relative">
+        {{-- Effet de fond subtil --}}
+        <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cucG9ydC5vcmcvMjAwMC9zdmciPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PHBhdGggZmlsbD0iI0ZGRkZGRiIgZD0iTTAgMGg2MHY2MEgweiIvPjxwYXRoIGZpbGw9IiMwMDAwMDAiIGQ9Ik0wIDBoMzB2MzBIMHoiIG9wYWNpdHk9Ii4wNSIvPjxwYXRoIGZpbGw9IiMwMDAwMDAiIGQ9Ik0zMCAzMGg2MHY2MEgzMHoiIG9wYWNpdHk9Ii4xIi8+PC9nPg==');"></div>
+
+        <div class="relative z-10">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <flux:heading size="lg" level="2" class="text-white mb-2 sm:mb-0">
+                    {{ $athlete->name }}
+                </flux:heading>
+                <div class="flex items-center space-x-2 text-sm">
+                    @if ($athlete->last_connection)
+                        <flux:icon name="clock" class="size-4 text-white/80" />
+                        <flux:text class="text-white/80">
+                            Connecté {{ $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->diffForHumans() }}
+                        </flux:text>
+                    @else
+                        <flux:icon name="clock" class="size-4 text-white/80" />
+                        <flux:text class="text-white/80">Jamais connecté</flux:text>
+                    @endif
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+
+                @if ($athlete->birthdate)
+                    <div class="flex items-center space-x-2">
+                        <flux:icon name="cake" class="size-5 text-slate-200" />
+                        <flux:text class="text-white">
+                            {{ \Carbon\Carbon::parse($athlete->birthdate)->locale('fr_CH')->isoFormat('L') }}
+                        </flux:text>
+                    </div>
+                @endif
+
+                @if ($athlete->gender)
+                    <div class="flex items-center space-x-2">
+                        @if ($athlete->gender === 'm')
+                            <flux:icon name="user" class="size-5 text-slate-200" />
+                            <flux:text class="text-white">Homme</flux:text>
+                        @else
+                            <flux:icon name="user" class="size-5 text-slate-200" />
+                            <flux:text class="text-white">Femme</flux:text>
+                        @endif
+                    </div>
+                @endif
+
+                @if ($athlete->email)
+                    <div class="flex items-center space-x-2">
+                        <flux:icon name="at-symbol" class="size-5 text-slate-200" />
+                        <flux:text class="text-white font-medium">{{ $athlete->email }}</flux:text>
+                    </div>
+                @endif
+
+                @if ($athlete->height)
+                    <div class="flex items-center space-x-2">
+                        <flux:icon name="arrows-up-down" class="size-5 text-slate-200" />
+                        <flux:text class="text-white">{{ $athlete->height }} cm</flux:text>
+                    </div>
+                @endif
+
+                @if ($athlete->weight)
+                    <div class="flex items-center space-x-2">
+                        <flux:icon name="scale" class="size-5 text-slate-200" />
+                        <flux:text class="text-white">{{ $athlete->weight }} kg</flux:text>
+                    </div>
+                @endif
+            </div>
         </div>
     </flux:card>
 
