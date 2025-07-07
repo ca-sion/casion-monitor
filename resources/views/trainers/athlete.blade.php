@@ -1,38 +1,171 @@
 <x-layouts.trainer :title="$athlete->name">
-    <flux:heading size="xl" level="1">{{ $athlete->name }}</flux:heading>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <flux:heading size="xl" level="1" class="mb-4 sm:mb-0">{{ $athlete->name }}</flux:heading>
+
+        {{-- Sélecteur de période pour l'entraîneur --}}
+        <form action="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $athlete->id]) }}" method="GET" class="flex items-center space-x-2">
+            <flux:text class="text-base whitespace-nowrap">Voir les données des:</flux:text>
+            <flux:select name="period" onchange="this.form.submit()">
+                @foreach ($period_options as $value => $label)
+                    <option value="{{ $value }}" @selected($period_label === $value)>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </flux:select>
+        </form>
+    </div>
+
     <flux:text class="mb-6 mt-2 text-base">
-        Voici les métriques détaillées de {{ $athlete->name }}.
+        Voici le tableau de bord détaillé de {{ $athlete->name }}. Les statistiques sont calculées sur les
+        <strong>{{ $period_options[$period_label] ?? 'données sélectionnées' }}</strong>.
     </flux:text>
 
-    {{-- Section Profil Athlète --}}
-    <flux:card class="mb-6">
-        <flux:heading size="lg" level="2">Profil de l'athlète</flux:heading>
-        <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-            <div>
-                <flux:text class="font-semibold">Email:</flux:text>
-                <flux:text>{{ $athlete->email }}</flux:text>
-            </div>
-            <div>
-                <flux:text class="font-semibold">Date de naissance:</flux:text>
-                <flux:text>{{ $athlete->birthdate ? \Carbon\Carbon::parse($athlete->birthdate)->locale('fr_CH')->isoFormat('L') : 'N/A' }}</flux:text>
-            </div>
-            <div>
-                <flux:text class="font-semibold">Dernière connexion:</flux:text>
-                <flux:text>{{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->diffForHumans() : 'Jamais' }}</flux:text>
-            </div>
+    {{-- Section Profil Athlète (compact) --}}
+    <flux:card class="mb-6 p-4 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
+        <flux:heading size="md" level="2" class="mb-3 text-center">Informations Personnelles</flux:heading>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+            <flux:text><span class="font-semibold">Email:</span> {{ $athlete->email }}</flux:text>
+            <flux:text><span class="font-semibold">Date de naissance:</span> {{ $athlete->birthdate ? \Carbon\Carbon::parse($athlete->birthdate)->locale('fr_CH')->isoFormat('L') : 'N/A' }}</flux:text>
+            <flux:text><span class="font-semibold">Dernière connexion:</span> {{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->diffForHumans() : 'Jamais' }}</flux:text>
+            @if ($athlete->gender)
+                <flux:text><span class="font-semibold">Sexe:</span> {{ $athlete->gender === 'm' ? 'Homme' : 'Femme' }}</flux:text>
+            @endif
+            @if ($athlete->height)
+                <flux:text><span class="font-semibold">Taille:</span> {{ $athlete->height }} cm</flux:text>
+            @endif
+            @if ($athlete->weight)
+                <flux:text><span class="font-semibold">Poids:</span> {{ $athlete->weight }} kg</flux:text>
+            @endif
             {{-- Ajoutez d'autres informations personnelles si disponibles sur l'athlète --}}
         </div>
     </flux:card>
 
-    <flux:separator variant="subtle" />
+    <flux:separator variant="subtle" class="my-6" />
+
+    {{-- Section Alertes --}}
+    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
+        <flux:heading size="lg" level="2" class="mb-4 text-center">🔔 Alertes Récentes</flux:heading>
+        @if (!empty($alerts))
+            <div class="flex flex-col gap-3">
+                @foreach ($alerts as $alert)
+                    <flux:badge size="md" inset="top bottom" class="w-full text-center py-2 px-4 whitespace-normal!"
+                        color="{{ match($alert['type']) {
+                            'danger' => 'rose',
+                            'warning' => 'amber',
+                            'info' => 'sky',
+                            'success' => 'emerald',
+                            default => 'zinc'
+                        } }}">
+                        <span>{{ $alert['message'] }}</span>
+                    </flux:badge>
+                @endforeach
+            </div>
+        @else
+            <flux:text class="text-center text-zinc-500 italic">
+                Aucune alerte détectée pour la période sélectionnée. Tout semble en ordre ! 🎉
+            </flux:text>
+        @endif
+        @if ($athlete->gender === 'w' && $menstrualCycleInfo)
+            @php
+                $menstrualCycleBoxBorderColor = 'border-emerald-400';
+                $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';
+
+                if ($menstrualCycleInfo['phase'] === 'Aménorrhée' || $menstrualCycleInfo['phase'] === 'Oligoménorrhée') {
+                    $menstrualCycleBoxBorderColor = 'border-rose-400';
+                    $menstrualCycleBoxBgColor = 'bg-rose-50/50 dark:bg-rose-950/50';
+                } elseif ($menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long') {
+                    $menstrualCycleBoxBorderColor = 'border-amber-400';
+                    $menstrualCycleBoxBgColor = 'bg-amber-50/50 dark:bg-amber-950/50';
+                } elseif ($menstrualCycleInfo['phase'] === 'Inconnue') {
+                    $menstrualCycleBoxBorderColor = 'border-sky-400';
+                    $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
+                }
+            @endphp
+            <div class="mt-4 p-3 border rounded-md {{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }}">
+                <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
+                <flux:text class="text-xs">
+                    Phase: <span class="font-medium">{{ $menstrualCycleInfo['phase'] }}</span><br>
+                    Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'N/A' }}</span><br>
+                    Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'N/A' }} jours</span>
+                    @if($menstrualCycleInfo['last_period_start'])
+                        <br>Dernières règles: <span class="font-medium">{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
+                    @endif
+                </flux:text>
+            </div>
+        @endif
+    </flux:card>
+
+    <flux:text class="mb-4 mt-8 text-lg font-semibold">📈 Statistiques clés:</flux:text>
+
+    {{-- Section des cartes de métriques individuelles --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-4">
+        @foreach ($dashboard_metrics_data as $metricTypeKey => $metricData)
+            <flux:card class="p-4 transform transition-transform duration-200 hover:scale-105 hover:shadow-xl" size="sm">
+                <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <flux:text class="text-xs font-semibold uppercase text-zinc-500 inline">{{ $metricData['short_label'] }}</flux:text>
+                            <flux:dropdown hover position="top" align="start">
+                                <flux:button size="xs" variant="outline" class="rounded-full!">ℹ︎</flux:button>
+                                <flux:popover class="max-w-xs">
+                                    <flux:heading>{{ $metricData['description'] }}</flux:heading>
+                                    <flux:separator variant="subtle" class="my-2" />
+                                    <flux:text>La valeur ci-après est la dernière valeur enregistrée pour cette métrique sur la période sélectionnée.</flux:text>
+                                    <flux:separator variant="subtle" class="my-2" />
+                                    <flux:text>La valeur dans le badge indique comment les mesures changent, montrant si elles augmentent, diminuent, ou restent stables dans le temps.</flux:text>
+                                </flux:popover>
+                            </flux:dropdown>
+                        </div>
+                    @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
+                        <flux:badge size="xs" color="{{ $metricData['trend_color'] }}">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="{{ $metricData['trend_icon'] }}" variant="mini" class="-mr-0.5" />
+                                <span>{{ $metricData['trend_percentage'] }}</span>
+                            </div>
+                        </flux:badge>
+                    @endif
+                </div>
+                <flux:heading size="lg" level="2" class="mb-4 text-slate-600 dark:text-slate-400">
+                    {{ $metricData['formatted_last_value'] }}
+                </flux:heading>
+                <div class="mb-4">
+                    @if (!empty($metricData['chart_data']['labels_and_data']) && count(array_filter($metricData['chart_data']['data'], fn($val) => $val !== null)) >= 2)
+                        <flux:chart :value="$metricData['chart_data']['labels_and_data']" class="h-24">
+                            <flux:chart.svg>
+                                <flux:chart.line field="value" class="stroke-slate-500!" />
+                                <flux:chart.axis axis="x" field="label" class="text-xs text-zinc-400">
+                                    <flux:chart.axis.line />
+                                    <flux:chart.axis.tick />
+                                </flux:chart.axis>
+                                <flux:chart.axis axis="y" class="text-xs text-zinc-400">
+                                    <flux:chart.axis.grid stroke-dasharray="2 2" />
+                                    <flux:chart.axis.tick />
+                                </flux:chart.axis>
+                                <flux:chart.cursor />
+                            </flux:chart.svg>
+                            <flux:chart.tooltip>
+                                <flux:chart.tooltip.heading field="label" :format="['year' => 'numeric', 'month' => 'numeric', 'day' => 'numeric']" />
+                                <flux:chart.tooltip.value field="value" label="Valeur" />
+                            </flux:chart.tooltip>
+                        </flux:chart>
+                    @else
+                        <flux:card class="flex h-24 items-center justify-center border-2 border-dashed p-4 text-zinc-400">
+                            <flux:text class="text-center text-sm">Pas assez de données pour le graphique.</flux:text>
+                        </flux:card>
+                    @endif
+                </div>
+            </flux:card>
+        @endforeach
+    </div>
+
+    <flux:separator variant="subtle" class="my-8" />
 
     {{-- Section Graphique des métriques --}}
-    <flux:card class="my-6">
+    <flux:card class="my-6" id="metric-chart">
         <div class="flex items-center justify-between">
             <flux:heading size="lg" level="2">Historique des métriques</flux:heading>
             <form class="flex items-center space-x-2"
                 id="chart-filter-form"
-                action="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $athlete->id]) }}"
+                action="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $athlete->id]) }}#metric-chart"
                 method="GET">
                 <flux:select name="metric_type" onchange="document.getElementById('chart-filter-form').submit()">
                     @foreach ($available_metric_types_for_chart as $value => $label)
@@ -78,38 +211,40 @@
         </div>
     </flux:card>
 
-    <flux:separator variant="subtle" />
+    <flux:separator variant="subtle" class="my-8" />
 
-    {{-- Section Historique détaillé des métriques (tableau) --}}
-    <flux:card class="my-6">
-        <flux:heading size="lg" level="2">Historique détaillé des métriques</flux:heading>
-        <div class="overflow-x-auto p-0"> {{-- p-0 for table, overflow-x-auto for horizontal scroll --}}
-            <flux:table class="min-w-full"> {{-- min-w-full to ensure table takes full width in overflow context --}}
+    {{-- Section Tableau de toutes les données métriques brutes --}}
+    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
+        <flux:heading size="lg" level="2" class="mb-4 text-center">📋 Données Quotidiennes Détaillées</flux:heading>
+        <flux:text class="mb-4 text-zinc-600 dark:text-zinc-400 text-center">
+            Explore les entrées de métriques jour par jour.
+        </flux:text>
+
+        <div class="overflow-x-auto">
+            <flux:table class="min-w-full text-nowrap">
                 <flux:table.columns>
-                    <flux:table.column class="sticky left-0 z-10 w-48 bg-white dark:bg-zinc-900">Date</flux:table.column>
+                    <flux:table.column class="z-1 sticky left-0 bg-white dark:bg-zinc-900 w-32">Date</flux:table.column>
                     @foreach ($display_table_metric_types as $metricType)
-                        <flux:table.column class="w-fit text-center">
+                        <flux:table.column class="text-center">
                             {{ $metricType->getLabelShort() }}
                             <flux:tooltip content="{{ $metricType->getDescription() }}">
-                                <flux:icon class="ms-2 inline size-4"
-                                    size="sm"
-                                    icon="information-circle"></flux:icon>
+                                <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
                             </flux:tooltip>
                         </flux:table.column>
                     @endforeach
-                    <flux:table.column class="text-center">Actions</flux:table.column>
+                    <flux:table.column class="text-center w-24">Actions</flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
-                    @forelse ($daily_metrics_history as $rowData)
+                    {{-- Utilisation de $processed_daily_metrics_for_table --}}
+                    @forelse ($daily_metrics_grouped_by_date as $date => $rowData)
                         <flux:table.row>
-                            <flux:table.cell class="sticky left-0 z-10 bg-white dark:bg-zinc-900">
-                                {{ $rowData['date_formatted'] }}
-                                <div class="text-xs text-zinc-500">({{ $rowData['day_of_week'] }})</div>
+                            <flux:table.cell class="z-1 sticky left-0 bg-white dark:bg-zinc-900 font-semibold">
+                                {{ $rowData['date'] }}
                             </flux:table.cell>
                             @foreach ($display_table_metric_types as $metricType)
                                 <flux:table.cell class="text-center">
-                                    @if (isset($rowData['metrics'][$metricType->value]) && $rowData['metrics'][$metricType->value] !== 'N/A')
+                                    @if (isset($rowData['metrics'][$metricType->value]))
                                         <flux:badge size="xs" color="zinc">
                                             {{ $rowData['metrics'][$metricType->value] }}
                                         </flux:badge>
@@ -129,7 +264,7 @@
                     @empty
                         <flux:table.row>
                             <flux:table.cell class="py-4 text-center text-zinc-500" colspan="{{ count($display_table_metric_types) + 2 }}">
-                                Aucune entrée de métrique trouvée pour cet athlète sur la période sélectionnée.
+                                Aucune entrée de métrique trouvée pour cette période.
                             </flux:table.cell>
                         </flux:table.row>
                     @endforelse
