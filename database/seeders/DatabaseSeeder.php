@@ -2,10 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Metric;
-use App\Models\Athlete;
-use App\Models\Trainer;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder

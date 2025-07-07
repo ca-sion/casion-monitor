@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use Carbon\Carbon;
 use App\Models\Athlete;
 use App\Enums\MetricType;
-use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class Athlete1RealisticScenariosSeeder extends Seeder
@@ -18,8 +18,9 @@ class Athlete1RealisticScenariosSeeder extends Seeder
 
         $athlete = Athlete::find(1); // Athlète ID 1 (Arthur)
 
-        if (!$athlete) {
+        if (! $athlete) {
             $this->command->error("L'athlète ID 1 n'a pas été trouvé. Exécutez BaseDataSeeder d'abord.");
+
             return;
         }
 
@@ -48,16 +49,16 @@ class Athlete1RealisticScenariosSeeder extends Seeder
 
         // Simuler des phases d'entraînement (intensité, récupération)
         $trainingPhases = [
-            'high_intensity_1' => ['duration' => 60, 'fatigue_mod' => 1.8, 'hrv_mod' => -0.12, 'sleep_mod' => -0.7, 'subj_fatigue_mod' => 1.8, 'perf_mod' => -0.8, 'pain_prob' => 0.25],
-            'recovery_1'       => ['duration' => 30, 'fatigue_mod' => -1.2, 'hrv_mod' => 0.18, 'sleep_mod' => 1.0, 'subj_fatigue_mod' => -1.2, 'perf_mod' => 1.0, 'pain_prob' => 0.08],
+            'high_intensity_1'   => ['duration' => 60, 'fatigue_mod' => 1.8, 'hrv_mod' => -0.12, 'sleep_mod' => -0.7, 'subj_fatigue_mod' => 1.8, 'perf_mod' => -0.8, 'pain_prob' => 0.25],
+            'recovery_1'         => ['duration' => 30, 'fatigue_mod' => -1.2, 'hrv_mod' => 0.18, 'sleep_mod' => 1.0, 'subj_fatigue_mod' => -1.2, 'perf_mod' => 1.0, 'pain_prob' => 0.08],
             'medium_intensity_1' => ['duration' => 45, 'fatigue_mod' => 1.0, 'hrv_mod' => -0.08, 'sleep_mod' => -0.5, 'subj_fatigue_mod' => 1.0, 'perf_mod' => -0.5, 'pain_prob' => 0.15],
-            'peak_performance' => ['duration' => 30, 'fatigue_mod' => 0.3, 'hrv_mod' => 0.12, 'sleep_mod' => 0.7, 'subj_fatigue_mod' => 0.3, 'perf_mod' => 1.2, 'pain_prob' => 0.05],
-            'off_season'       => ['duration' => 60, 'fatigue_mod' => -1.8, 'hrv_mod' => 0.22, 'sleep_mod' => 1.2, 'subj_fatigue_mod' => -1.8, 'perf_mod' => 0.7, 'pain_prob' => 0.03],
-            'high_intensity_2' => ['duration' => 50, 'fatigue_mod' => 1.5, 'hrv_mod' => -0.10, 'sleep_mod' => -0.6, 'subj_fatigue_mod' => 1.5, 'perf_mod' => -0.6, 'pain_prob' => 0.20],
-            'recovery_2'       => ['duration' => 20, 'fatigue_mod' => -1.0, 'hrv_mod' => 0.15, 'sleep_mod' => 0.8, 'subj_fatigue_mod' => -1.0, 'perf_mod' => 0.8, 'pain_prob' => 0.06],
-            'competition_prep' => ['duration' => 40, 'fatigue_mod' => 0.7, 'hrv_mod' => 0.07, 'sleep_mod' => 0.3, 'subj_fatigue_mod' => 0.7, 'perf_mod' => 0.7, 'pain_prob' => 0.10],
-            'taper'            => ['duration' => 15, 'fatigue_mod' => -0.7, 'hrv_mod' => 0.12, 'sleep_mod' => 0.7, 'subj_fatigue_mod' => -0.7, 'perf_mod' => 1.0, 'pain_prob' => 0.04],
-            'post_competition' => ['duration' => 10, 'fatigue_mod' => 0.7, 'hrv_mod' => -0.07, 'sleep_mod' => -0.3, 'subj_fatigue_mod' => 0.7, 'perf_mod' => -0.3, 'pain_prob' => 0.12],
+            'peak_performance'   => ['duration' => 30, 'fatigue_mod' => 0.3, 'hrv_mod' => 0.12, 'sleep_mod' => 0.7, 'subj_fatigue_mod' => 0.3, 'perf_mod' => 1.2, 'pain_prob' => 0.05],
+            'off_season'         => ['duration' => 60, 'fatigue_mod' => -1.8, 'hrv_mod' => 0.22, 'sleep_mod' => 1.2, 'subj_fatigue_mod' => -1.8, 'perf_mod' => 0.7, 'pain_prob' => 0.03],
+            'high_intensity_2'   => ['duration' => 50, 'fatigue_mod' => 1.5, 'hrv_mod' => -0.10, 'sleep_mod' => -0.6, 'subj_fatigue_mod' => 1.5, 'perf_mod' => -0.6, 'pain_prob' => 0.20],
+            'recovery_2'         => ['duration' => 20, 'fatigue_mod' => -1.0, 'hrv_mod' => 0.15, 'sleep_mod' => 0.8, 'subj_fatigue_mod' => -1.0, 'perf_mod' => 0.8, 'pain_prob' => 0.06],
+            'competition_prep'   => ['duration' => 40, 'fatigue_mod' => 0.7, 'hrv_mod' => 0.07, 'sleep_mod' => 0.3, 'subj_fatigue_mod' => 0.7, 'perf_mod' => 0.7, 'pain_prob' => 0.10],
+            'taper'              => ['duration' => 15, 'fatigue_mod' => -0.7, 'hrv_mod' => 0.12, 'sleep_mod' => 0.7, 'subj_fatigue_mod' => -0.7, 'perf_mod' => 1.0, 'pain_prob' => 0.04],
+            'post_competition'   => ['duration' => 10, 'fatigue_mod' => 0.7, 'hrv_mod' => -0.07, 'sleep_mod' => -0.3, 'subj_fatigue_mod' => 0.7, 'perf_mod' => -0.3, 'pain_prob' => 0.12],
         ];
 
         $totalDays = $startDate->diffInDays($endDate);
@@ -84,7 +85,7 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                 // L'idée est de l'enregistrer au début de chaque mois simulé
                 // ou tous les ~30 jours de données générées.
                 if ($daysProcessed % 30 == 0 || $daysProcessed == 0) {
-                     // Ajustement mensuel du poids (petite variation sur le poids actuel)
+                    // Ajustement mensuel du poids (petite variation sur le poids actuel)
                     $currentBodyWeight = $currentBodyWeight + (rand(-30, 30) / 100); // +/- 0.3kg
                     $currentBodyWeight = max(70.0, min(80.0, $currentBodyWeight)); // Maintenir dans une plage réaliste
                     $this->insertMetric($athlete->id, MetricType::MORNING_BODY_WEIGHT_KG, $daysAgo, $currentBodyWeight);

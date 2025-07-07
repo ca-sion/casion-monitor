@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Athlete;
+use Illuminate\Database\Seeder;
 
 class Athlete1ScenariosSeeder extends Seeder
 {
@@ -14,8 +14,9 @@ class Athlete1ScenariosSeeder extends Seeder
     {
         $athlete = Athlete::find(1);
 
-        if (!$athlete) {
+        if (! $athlete) {
             $this->command->error("L'athlète Arthur n'a pas été trouvé. Exécutez BaseDataSeeder d'abord.");
+
             return;
         }
 

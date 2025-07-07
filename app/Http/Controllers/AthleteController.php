@@ -117,14 +117,14 @@ class AthleteController extends Controller
         ];
 
         $data = [
-            'athlete'                    => $athlete,
-            'dashboard_metrics_data'     => $metricsDataForDashboard,
-            'alerts'                     => $alerts,
-            'menstrualCycleInfo'         => $menstrualCycleInfo,
-            'period_label'               => $period,
-            'period_options'             => $periodOptions,
+            'athlete'                       => $athlete,
+            'dashboard_metrics_data'        => $metricsDataForDashboard,
+            'alerts'                        => $alerts,
+            'menstrualCycleInfo'            => $menstrualCycleInfo,
+            'period_label'                  => $period,
+            'period_options'                => $periodOptions,
             'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable, // Renommé et pré-traité
-            'display_table_metric_types' => $displayTableMetricTypes,
+            'display_table_metric_types'    => $displayTableMetricTypes,
         ];
 
         if ($request->expectsJson()) {

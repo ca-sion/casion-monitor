@@ -3,9 +3,8 @@
 namespace Database\Seeders;
 
 use Carbon\Carbon;
-use App\Models\Athlete;
 use App\Enums\MetricType;
-use Illuminate\Database\Seeder; // Garder si des méthodes self-contained sont nécessaires
+// Garder si des méthodes self-contained sont nécessaires
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -65,7 +64,7 @@ class MetricScenarioFactory
     {
         DB::table('metrics')
             ->where('athlete_id', $athleteId)
-            ->whereIn('metric_type', array_map(fn($type) => $type->value, $metricTypes))
+            ->whereIn('metric_type', array_map(fn ($type) => $type->value, $metricTypes))
             ->delete();
         $this->info("  - Nettoyage des métriques pour l'athlète ID : {$athleteId} pour les types spécifiés.");
     }

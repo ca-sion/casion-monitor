@@ -46,7 +46,7 @@ class BaseDataSeeder extends Seeder
         $merlin->athletes()->attach([$arthur->id, $guenievre->id]);
 
         $athlete3 = Athlete::find(3);
-        if (!$athlete3) {
+        if (! $athlete3) {
             $athlete3 = Athlete::factory()->create([
                 'id'         => 3,
                 'first_name' => 'Athlète 3',
@@ -57,9 +57,8 @@ class BaseDataSeeder extends Seeder
         }
         $merlin->athletes()->syncWithoutDetaching([$athlete3->id]);
 
-
         $athlete4 = Athlete::find(4);
-        if (!$athlete4) {
+        if (! $athlete4) {
             $athlete4 = Athlete::factory()->create([
                 'id'         => 4,
                 'first_name' => 'Athlète 4',
@@ -69,7 +68,6 @@ class BaseDataSeeder extends Seeder
             ]);
         }
         $merlin->athletes()->syncWithoutDetaching([$athlete4->id]);
-
 
         $this->command->info('Base data seeded: Admin, Arthur, Guenièvre, Athlete ID 3, Athlete ID 4, and Merlin trainer.');
     }

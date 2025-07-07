@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Livewire\AthleteMonthlyForm;
 use App\Livewire\TrainerFeedbackForm;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\AthleteDailyMetricForm;
@@ -9,7 +10,6 @@ use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
 use App\Http\Controllers\AthleteMetricController;
-use App\Livewire\AthleteMonthlyForm;
 
 Route::get('/', function () {
     return view('welcome');
