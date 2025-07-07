@@ -481,11 +481,12 @@ class MetricStatisticsService
         $daysSinceLastPeriod = null;
         $lastPeriodStart = null;
 
-        // Récupérer toutes les métriques J1 (Premier Jour des Règles) dans l'ordre chronologique inverse
+        // Récupérer toutes les métriques J1 (Premier Jour des Règles) dans l'ordre chronologique inverse des deux dernière années
         $j1Metrics = $athlete->metrics()
             ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
             ->where('value', 1) // Assurez-vous que la valeur est bien 1 pour un J1
             ->orderBy('date', 'desc') // Les plus récentes en premier
+            ->limit(26)
             ->get();
 
         // Déterminer le dernier J1 et les jours depuis le dernier J1

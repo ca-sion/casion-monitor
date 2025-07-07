@@ -93,16 +93,21 @@ class TrainerController extends Controller
             abort(403, 'Accès non autorisé à cet athlète.');
         }
 
-        $period = request()->input('period', 'last_60_days'); // Utilise la même période par défaut que le dashboard athlète
+        $period = request()->input('period', 'last_60_days');
         $selectedMetricType = request()->input('metric_type');
 
         // Définir les types de métriques pour le dashboard (cartes individuelles)
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
-            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
             MetricType::MORNING_BODY_WEIGHT_KG,
+            MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
         ];
 
         $dashboard_metrics_data = [];
