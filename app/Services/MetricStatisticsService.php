@@ -572,7 +572,8 @@ class MetricStatisticsService
      * Analyse les tendances des métriques et identifie des signaux d'alerte.
      * Cette fonction est générique pour tous les genres, mais aura des signaux spécifiques pour les femmes.
      *
-     * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months')
+     * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months').
+     * Par défaut à 'last_60_days' pour un bon équilibre entre réactivité et détection de tendances significatives.
      * @return array Des drapeaux et des messages d'alerte.
      */
     public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days'): array
@@ -583,9 +584,10 @@ class MetricStatisticsService
         // ** Alertes Générales (Hommes et Femmes) **
 
         // 1. Fatigue générale persistante (MORNING_GENERAL_FATIGUE)
-        $fatigueMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_GENERAL_FATIGUE);
-        $fatigueThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_GENERAL_FATIGUE->value];
-        if ($fatigueMetrics->count() > 5) { // Nécessite suffisamment de données
+        $fatigueType = MetricType::MORNING_GENERAL_FATIGUE;
+        $fatigueMetrics = $metrics->filter(fn ($m) => $m->metric_type === $fatigueType);
+        $fatigueThresholds = self::ALERT_THRESHOLDS[$fatigueType->value];
+        if ($fatigueMetrics->count() > 5 && $fatigueType->getValueColumn() !== 'note') {
             $averageFatigue7Days = $this->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 7 jours'] ?? null;
             $averageFatigue30Days = $this->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 30 jours'] ?? null;
 
@@ -707,11 +709,14 @@ class MetricStatisticsService
             }
         }
 
-        // Si aucune alerte mais suffisamment de données, on peut donner un statut "RAS"
-        if (empty($alerts) && $metrics->isNotEmpty()) {
-            $alerts[] = ['type' => 'success', 'message' => 'Aucune alerte détectée.'];
+        // Gérer les cas où aucune alerte spécifique n'a été détectée.
+        // On vérifie d'abord s'il y a suffisamment de données pour une analyse.
+        if ($metrics->isEmpty() || $metrics->count() < 5) {
+            $alerts[] = ['type' => 'info', 'message' => 'Pas encore suffisamment de données enregistrées pour une analyse complète sur la période : '.str_replace('_', ' ', $period).'.'];
         } elseif (empty($alerts)) {
-            $alerts[] = ['type' => 'info', 'message' => 'Pas encore suffisamment de données pour une analyse complète.'];
+            // Si $alerts est vide et qu'il y a suffisamment de données (vérifié par le else if précédent),
+            // cela signifie qu'aucune alerte préoccupante n'a été trouvée.
+            $alerts[] = ['type' => 'success', 'message' => 'Aucune alerte, tout va bien.'];
         }
 
         return $alerts;
