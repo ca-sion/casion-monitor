@@ -50,17 +50,16 @@ class TrainerController extends Controller
                 $metricsDataForDashboard[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
             }
             // Attache les données agrégées directement à l'objet Athlete pour un accès facile dans la vue
-            $athlete->metricsDataForDashboard = $metricsDataForDashboard;
+            // Pour éviter "Indirect modification of overloaded property", on utilise une variable temporaire
+            $tempMetricsData = $metricsDataForDashboard;
 
-            // Calcul des métriques supplémentaires pour le tableau
-            $weeklyMetricsSummary = $this->metricStatisticsService->getAthleteWeeklyMetricsSummary($athlete, $currentWeekStartDate);
-            $athlete->cih = $weeklyMetricsSummary['cih'];
-            $athlete->sbm = $weeklyMetricsSummary['sbm'];
-            $athlete->cph = $weeklyMetricsSummary['cph'];
-            $athlete->ratioCihCph = $weeklyMetricsSummary['ratio_cih_cph'];
+            // Calcul des métriques hebdomadaires (CIH, SBM, CPH, Ratio CIH/CPH)
+            $tempMetricsData['cih'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'cih', $period);
+            $tempMetricsData['sbm'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'sbm', $period);
+            $tempMetricsData['cph'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'cph', $period);
+            $tempMetricsData['ratio_cih_cph'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'ratio_cih_cph', $period);
 
-            // Données de graphique pour les métriques hebdomadaires
-            $athlete->weeklyMetricsChartData = $this->metricStatisticsService->getWeeklyMetricsChartData($athlete, $period);
+            $athlete->metricsDataForDashboard = $tempMetricsData;
 
             // Alertes et le cycle menstruel
             $athlete->alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, 'last_60_days');

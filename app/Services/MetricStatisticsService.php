@@ -599,14 +599,11 @@ class MetricStatisticsService
      * @param  string  $period  (e.g., 'last_60_days')
      * @return array ['cih' => chartData, 'sbm' => chartData, 'cph' => chartData, 'ratio_cih_cph' => chartData]
      */
-    public function getWeeklyMetricsChartData(Athlete $athlete, string $period): array
+    public function getWeeklyMetricsChartData(Athlete $athlete, string $period, string $metricKey): array
     {
-        $chartData = [
-            'cih'           => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'CIH'],
-            'sbm'           => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'SBM'],
-            'cph'           => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'CPH'],
-            'ratio_cih_cph' => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'Ratio CIH/CPH'],
-        ];
+        $labels = [];
+        $data = [];
+        $labelsAndData = [];
 
         $now = Carbon::now();
         $startDate = match ($period) {
@@ -627,23 +624,169 @@ class MetricStatisticsService
         while ($currentWeek->lessThanOrEqualTo($endWeek)) {
             $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeek);
             $weekLabel = $currentWeek->format('W Y'); // Week number and year
+            $value = $summary[$metricKey];
 
-            $chartData['cih']['labels'][] = $weekLabel;
-            $chartData['cih']['data'][] = $summary['cih'];
-
-            $chartData['sbm']['labels'][] = $weekLabel;
-            $chartData['sbm']['data'][] = is_numeric($summary['sbm']) ? (float) $summary['sbm'] : null;
-
-            $chartData['cph']['labels'][] = $weekLabel;
-            $chartData['cph']['data'][] = $summary['cph'];
-
-            $chartData['ratio_cih_cph']['labels'][] = $weekLabel;
-            $chartData['ratio_cih_cph']['data'][] = is_numeric($summary['ratio_cih_cph']) ? (float) $summary['ratio_cih_cph'] : null;
+            $labels[] = $weekLabel;
+            $numericValue = is_numeric($value) ? (float) $value : null;
+            $data[] = $numericValue;
+            $labelsAndData[] = [
+                'label' => $weekLabel,
+                'value' => $numericValue,
+                'unit'  => null, // No specific unit for these aggregated metrics
+            ];
 
             $currentWeek->addWeek();
         }
 
-        return $chartData;
+        return [
+            'labels'          => $labels,
+            'data'            => $data,
+            'labels_and_data' => $labelsAndData,
+            'unit'            => null,
+            'label'           => match ($metricKey) {
+                'cih'           => 'CIH',
+                'sbm'           => 'SBM',
+                'cph'           => 'CPH',
+                'ratio_cih_cph' => 'Ratio CIH/CPH',
+                default         => '',
+            },
+        ];
+    }
+
+    /**
+     * Prépare toutes les données agrégées pour le tableau de bord d'une métrique hebdomadaire spécifique (CIH, SBM, CPH, Ratio CIH/CPH).
+     */
+    public function getDashboardWeeklyMetricData(Athlete $athlete, string $metricKey, string $period): array
+    {
+        $now = Carbon::now();
+        $currentWeekStartDate = $now->startOfWeek(Carbon::MONDAY);
+
+        $metricData = [
+            'label'                     => match ($metricKey) {
+                'cih'           => 'Charge Interne Hebdomadaire',
+                'sbm'           => 'Score de Bien-être Matinal',
+                'cph'           => 'Charge Planifiée Hebdomadaire',
+                'ratio_cih_cph' => 'Ratio CIH/CPH',
+                default         => '',
+            },
+            'short_label'               => match ($metricKey) {
+                'cih'           => 'CIH',
+                'sbm'           => 'SBM',
+                'cph'           => 'CPH',
+                'ratio_cih_cph' => 'Ratio CIH/CPH',
+                default         => '',
+            },
+            'description'               => match ($metricKey) {
+                'cih'           => 'Somme des Charges Subjectives Réelles par Séance (CSR-S) pour la semaine.',
+                'sbm'           => 'Score agrégé des métriques de bien-être matinal (Qualité du sommeil, Fatigue générale, Douleur, Humeur).',
+                'cph'           => 'Charge d\'entraînement planifiée pour la semaine, basée sur le volume et l\'intensité.',
+                'ratio_cih_cph' => 'Ratio entre la Charge Interne Hebdomadaire (CIH) et la Charge Planifiée Hebdomadaire (CPH).',
+                default         => '',
+            },
+            'unit'                      => null, // Pas d'unité spécifique pour ces métriques agrégées
+            'last_value'                => null,
+            'formatted_last_value'      => 'N/A',
+            'average_7_days'            => null,
+            'formatted_average_7_days'  => 'N/A',
+            'average_30_days'           => null,
+            'formatted_average_30_days' => 'N/A',
+            'trend_icon'                => 'ellipsis-horizontal', // default
+            'trend_color'               => 'zinc', // default
+            'trend_percentage'          => 'N/A',
+            'chart_data'                => [],
+            'is_numerical'              => true, // Ces métriques sont numériques
+        ];
+
+        // Get current week's value
+        $weeklySummary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeekStartDate);
+        $currentValue = $weeklySummary[$metricKey];
+        $metricData['last_value'] = $currentValue;
+        $metricData['formatted_last_value'] = is_numeric($currentValue) ? number_format($currentValue, 1) : 'N/A';
+
+        // Prepare chart data
+        $metricData['chart_data'] = $this->getWeeklyMetricsChartData($athlete, $period, $metricKey);
+
+        // Calculate averages and trends over the period
+        $allWeeklyData = new Collection();
+        $startDateForAverages = match ($period) {
+            'last_7_days'   => $now->copy()->subDays(7)->startOfWeek(Carbon::MONDAY),
+            'last_14_days'  => $now->copy()->subDays(14)->startOfWeek(Carbon::MONDAY),
+            'last_30_days'  => $now->copy()->subDays(30)->startOfWeek(Carbon::MONDAY),
+            'last_60_days'  => $now->copy()->subDays(60)->startOfWeek(Carbon::MONDAY),
+            'last_90_days'  => $now->copy()->subDays(90)->startOfWeek(Carbon::MONDAY),
+            'last_6_months' => $now->copy()->subMonths(6)->startOfWeek(Carbon::MONDAY),
+            'last_year'     => $now->copy()->subYear()->startOfWeek(Carbon::MONDAY),
+            default         => $now->copy()->subDays(60)->startOfWeek(Carbon::MONDAY),
+        };
+
+        $tempWeek = $startDateForAverages->copy();
+        while ($tempWeek->lessThanOrEqualTo($now->endOfWeek(Carbon::SUNDAY))) {
+            $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $tempWeek);
+            if (is_numeric($summary[$metricKey])) {
+                $allWeeklyData->push((object)['date' => $tempWeek->copy(), 'value' => $summary[$metricKey]]);
+            }
+            $tempWeek->addWeek();
+        }
+
+        // Calculate 7-day and 30-day averages based on weekly data
+        $average7Days = null;
+        $average30Days = null;
+
+        $relevantDataFor7Days = $allWeeklyData->filter(fn ($item) => $item->date->greaterThanOrEqualTo($now->copy()->subDays(7)->startOfWeek(Carbon::MONDAY)));
+        if ($relevantDataFor7Days->count() > 0) {
+            $average7Days = $relevantDataFor7Days->avg('value');
+        }
+
+        $relevantDataFor30Days = $allWeeklyData->filter(fn ($item) => $item->date->greaterThanOrEqualTo($now->copy()->subDays(30)->startOfWeek(Carbon::MONDAY)));
+        if ($relevantDataFor30Days->count() > 0) {
+            $average30Days = $relevantDataFor30Days->avg('value');
+        }
+
+        $metricData['average_7_days'] = $average7Days;
+        $metricData['formatted_average_7_days'] = is_numeric($average7Days) ? number_format($average7Days, 1) : 'N/A';
+        $metricData['average_30_days'] = $average30Days;
+        $metricData['formatted_average_30_days'] = is_numeric($average30Days) ? number_format($average30Days, 1) : 'N/A';
+
+        // Calculate trend
+        $evolutionTrendData = $this->calculateTrendFromNumericCollection($allWeeklyData);
+
+        if ($metricData['average_7_days'] !== null && $evolutionTrendData && isset($evolutionTrendData['trend'])) {
+            switch ($evolutionTrendData['trend']) {
+                case 'increasing':
+                    $metricData['trend_icon'] = 'arrow-trending-up';
+                    $metricData['trend_color'] = 'lime';
+                    break;
+                case 'decreasing':
+                    $metricData['trend_icon'] = 'arrow-trending-down';
+                    $metricData['trend_color'] = 'rose';
+                    break;
+                case 'stable':
+                    $metricData['trend_icon'] = 'minus';
+                    $metricData['trend_color'] = 'zinc';
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Trend percentage
+        if (is_numeric($metricData['average_7_days']) && is_numeric($metricData['average_30_days'])) {
+            if ($metricData['average_30_days'] !== 0.0) { // Utiliser 0.0 pour une comparaison flottante stricte
+                $change = (($metricData['average_7_days'] - $metricData['average_30_days']) / $metricData['average_30_days']) * 100;
+                $metricData['trend_percentage'] = ($change > 0 ? '+' : '').number_format($change, 1).'%';
+            } else {
+                // Gérer le cas où average_30_days est 0.0.
+                // Si average_7_days est aussi 0.0, le changement est 0%.
+                // Si average_7_days est non nul, c'est une augmentation infinie, on peut le représenter comme +INF% ou un message spécifique.
+                $metricData['trend_percentage'] = ($metricData['average_7_days'] == 0.0) ? '0%' : '+INF%';
+            }
+        } elseif (is_numeric($metricData['average_7_days'])) {
+            $metricData['trend_percentage'] = number_format($metricData['average_7_days'], 1);
+        } else {
+            $metricData['trend_percentage'] = 'N/A'; // Si aucune des moyennes n'est numérique
+        }
+
+        return $metricData;
     }
 
     /**
