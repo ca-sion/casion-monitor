@@ -39,6 +39,17 @@ class MetricStatisticsService
         MetricType::MORNING_BODY_WEIGHT_KG->value => [
             'trend_decrease_percent' => -3, // Perte significative < -3%
         ],
+        // Seuils pour la charge (CIH/CPH)
+        'CHARGE_LOAD' => [
+            'ratio_underload_threshold' => 0.7, // Ratio CIH/CPH < 0.7 pour sous-charge
+            'ratio_overload_threshold'  => 1.3, // Ratio CIH/CPH > 1.3 pour surcharge
+        ],
+        // Seuils pour le Score de Bien-être Matinal (SBM)
+        'SBM' => [
+            'average_low_threshold'  => 20, // Moyenne SBM < 20 pour alerte warning
+            'average_high_threshold' => 35, // Moyenne SBM > 35 pour alerte info
+            'trend_decrease_percent' => -10, // Diminution significative < -10%
+        ],
         // Seuils pour le cycle menstruel
         'MENSTRUAL_CYCLE' => [
             'amenorrhea_days_beyond_avg'    => 60, // Jours au-delà de la moyenne pour Aménorrhée
@@ -547,25 +558,93 @@ class MetricStatisticsService
 
     /**
      * Détecte les alertes liées à la charge (CIH/CPH) et au bien-être (SBM) pour une semaine donnée.
+     *
+     * @param  Athlete  $athlete
+     * @param  Carbon  $weekStartDate
+     * @return array
      */
     public function getChargeAlerts(Athlete $athlete, Carbon $weekStartDate): array
     {
         $alerts = [];
 
-        // 1. Calcul des métriques de charge et de bien-être pour la semaine
-        $cih = $this->calculateCih($athlete, $weekStartDate);
-
         // Récupérer la TrainingPlanWeek correspondante pour la CPH
+        $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
+
+        // Analyse des métriques de charge (CIH/CPH)
+        $alerts = array_merge($alerts, $this->analyzeChargeMetrics($athlete, $weekStartDate, $trainingPlanWeek));
+
+        // Analyse des métriques SBM
+        $alerts = array_merge($alerts, $this->analyzeSbmMetrics($athlete, $weekStartDate));
+
+        // Analyse des tendances SBM et VFC sur plusieurs semaines
+        $alerts = array_merge($alerts, $this->analyzeMultiWeekTrends($athlete, $weekStartDate));
+
+        return $alerts;
+    }
+
+    /**
+     * Récupère la TrainingPlanWeek pour un athlète et une date de début de semaine donnés.
+     *
+     * @param  Athlete  $athlete
+     * @param  Carbon  $weekStartDate
+     * @return TrainingPlanWeek|null
+     */
+    private function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
+    {
         $assignedPlan = $athlete->assignedTrainingPlans->first();
-        $trainingPlanWeek = null;
-        if ($assignedPlan) {
-            $trainingPlanWeek = TrainingPlanWeek::where('training_plan_id', $assignedPlan->training_plan_id)
-                                                ->where('start_date', $weekStartDate->toDateString())
-                                                ->first();
+
+        if (! $assignedPlan) {
+            return null;
         }
+
+        return TrainingPlanWeek::where('training_plan_id', $assignedPlan->training_plan_id)
+            ->where('start_date', $weekStartDate->toDateString())
+            ->first();
+    }
+
+    /**
+     * Analyse les métriques de charge (CIH/CPH) et génère des alertes.
+     *
+     * @param  Athlete  $athlete
+     * @param  Carbon  $weekStartDate
+     * @param  TrainingPlanWeek|null  $trainingPlanWeek
+     * @return array
+     */
+    private function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek): array
+    {
+        $alerts = [];
+        $cih = $this->calculateCih($athlete, $weekStartDate);
         $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
 
-        // Calcul du SBM moyen pour la semaine
+        $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
+
+        if ($cph > 0) {
+            $ratio = $this->calculateRatio($cih, $cph);
+
+            if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
+                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle : Charge réelle ({$cih}) significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+            } elseif ($ratio > $chargeThresholds['ratio_overload_threshold']) {
+                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle : Charge réelle ({$cih}) significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+            } else {
+                $alerts[] = ['type' => 'success', 'message' => "Charge réelle ({$cih}) en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+            }
+        } else {
+            $alerts[] = ['type' => 'info', 'message' => "Pas de charge planifiée pour cette semaine ou CPH est zéro. CIH: {$cih}."];
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Analyse les métriques SBM et génère des alertes.
+     *
+     * @param  Athlete  $athlete
+     * @param  Carbon  $weekStartDate
+     * @return array
+     */
+    private function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate): array
+    {
+        $alerts = [];
         $sbmSum = 0;
         $sbmCount = 0;
         $period = CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
@@ -578,37 +657,79 @@ class MetricStatisticsService
         }
         $averageSbm = $sbmCount > 0 ? $sbmSum / $sbmCount : null;
 
-        // 2. Détection des alertes basées sur le Ratio CIH/CPH
-        if ($cph > 0) { // Éviter la division par zéro
-            $ratio = $this->calculateRatio($cih, $cph);
-
-            // Seuils d'alerte (à définir plus précisément dans ALERT_THRESHOLDS si nécessaire)
-            if ($ratio < 0.7) {
-                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle : Charge réelle ({$cih}) significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
-            } elseif ($ratio > 1.3) {
-                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle : Charge réelle ({$cih}) significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
-            } else {
-                $alerts[] = ['type' => 'success', 'message' => "Charge réelle ({$cih}) en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
-            }
-        } else {
-            $alerts[] = ['type' => 'info', 'message' => "Pas de charge planifiée pour cette semaine ou CPH est zéro. CIH: {$cih}."];
-        }
-
-        // 3. Détection des alertes basées sur le SBM
         if ($averageSbm !== null) {
-            // Exemple de seuil pour SBM (à affiner)
-            if ($averageSbm < 20) { // SBM max est 40, donc < 20 est faible
+            $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
+            if ($averageSbm < $sbmThresholds['average_low_threshold']) {
                 $alerts[] = ['type' => 'warning', 'message' => "Score de Bien-être Matinal faible pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Surveiller la récupération."];
-            } elseif ($averageSbm > 35) { // SBM max est 40, donc > 35 est très bon
+            } elseif ($averageSbm > $sbmThresholds['average_high_threshold']) {
                 $alerts[] = ['type' => 'info', 'message' => "Score de Bien-être Matinal élevé pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Bonne récupération."];
             }
         } else {
             $alerts[] = ['type' => 'info', 'message' => "Pas de données SBM pour cette semaine."];
         }
 
-        // 4. Tendances SBM et VFC (à implémenter si nécessaire, réutilise getEvolutionTrendForCollection)
-        // Pour les tendances, il faudrait récupérer les données sur plusieurs semaines.
-        // Par exemple, comparer la moyenne SBM de cette semaine avec la moyenne des 3 dernières semaines.
+        return $alerts;
+    }
+
+    /**
+     * Analyse les tendances SBM et VFC sur plusieurs semaines et génère des alertes.
+     *
+     * @param  Athlete  $athlete
+     * @param  Carbon  $currentWeekStartDate
+     * @return array
+     */
+    private function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate): array
+    {
+        $alerts = [];
+
+        // Période d'analyse pour les tendances (ex: 30 jours)
+        $period = 'last_30_days';
+        $startDate = Carbon::now()->subDays(30)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        // Récupérer les métriques nécessaires pour le calcul du SBM sur la période
+        $sbmRelatedMetricTypes = [
+            MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::MORNING_PAIN,
+            MetricType::MORNING_MOOD_WELLBEING,
+        ];
+
+        $sbmMetricsCollection = new Collection();
+        $currentDate = $startDate->copy();
+        while ($currentDate->lessThanOrEqualTo($endDate)) {
+            $sbmValue = $this->calculateSbm($athlete, $currentDate);
+            if ($sbmValue !== null) {
+                // Créer une métrique synthétique pour le SBM
+                $syntheticMetric = new Metric([
+                    'date'        => $currentDate->copy(),
+                    'metric_type' => 'SBM_SYNTHETIC', // Un type fictif pour la collection
+                    'value'       => $sbmValue,
+                ]);
+                $sbmMetricsCollection->push($syntheticMetric);
+            }
+            $currentDate->addDay();
+        }
+
+        // Tendance SBM
+        if ($sbmMetricsCollection->count() > 5) {
+            // Utiliser un MetricType existant avec une colonne 'value' pour la compatibilité
+            $sbmTrend = $this->getEvolutionTrendForCollection($sbmMetricsCollection, MetricType::MORNING_GENERAL_FATIGUE);
+            $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
+            if ($sbmTrend['trend'] === 'decreasing' && $sbmTrend['change'] < $sbmThresholds['trend_decrease_percent']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Baisse significative du Score de Bien-être Matinal ('.number_format($sbmTrend['change'], 1).'%) sur les 30 derniers jours.'];
+            }
+        }
+
+        // Tendance VFC
+        $hrvMetrics = $this->getAthleteMetrics($athlete, ['metric_type' => MetricType::MORNING_HRV->value, 'period' => $period]);
+        if ($hrvMetrics->count() > 5) {
+            $hrvTrend = $this->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
+            $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
+            if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < $hrvThresholds['trend_decrease_percent']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%) sur les 30 derniers jours.'];
+            }
+        }
 
         return $alerts;
     }
