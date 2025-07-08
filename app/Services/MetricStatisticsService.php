@@ -557,6 +557,96 @@ class MetricStatisticsService
     }
 
     /**
+     * Récupère un résumé des métriques hebdomadaires (CIH, SBM, CPH, Ratio CIH/CPH) pour un athlète.
+     *
+     * @param  Athlete  $athlete
+     * @param  Carbon  $weekStartDate
+     * @return array ['cih' => float, 'sbm' => float|string, 'cph' => float, 'ratio_cih_cph' => float|string]
+     */
+    public function getAthleteWeeklyMetricsSummary(Athlete $athlete, Carbon $weekStartDate): array
+    {
+        $cih = $this->calculateCih($athlete, $weekStartDate);
+
+        $sbmSum = 0;
+        $sbmCount = 0;
+        $periodCarbon = \Carbon\CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
+        foreach ($periodCarbon as $date) {
+            $sbmValue = $this->calculateSbm($athlete, $date);
+            if ($sbmValue !== null) {
+                $sbmSum += $sbmValue;
+                $sbmCount++;
+            }
+        }
+        $sbm = $sbmCount > 0 ? round($sbmSum / $sbmCount, 1) : 'N/A';
+
+        $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
+        $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
+
+        $ratioCihCph = ($cih > 0 && $cph > 0) ? round($this->calculateRatio($cih, $cph), 2) : 'N/A';
+
+        return [
+            'cih'           => $cih,
+            'sbm'           => $sbm,
+            'cph'           => $cph,
+            'ratio_cih_cph' => $ratioCihCph,
+        ];
+    }
+
+    /**
+     * Prépare les données de graphique pour les métriques hebdomadaires (CIH, SBM, CPH, Ratio CIH/CPH) sur une période donnée.
+     *
+     * @param  Athlete  $athlete
+     * @param  string  $period  (e.g., 'last_60_days')
+     * @return array ['cih' => chartData, 'sbm' => chartData, 'cph' => chartData, 'ratio_cih_cph' => chartData]
+     */
+    public function getWeeklyMetricsChartData(Athlete $athlete, string $period): array
+    {
+        $chartData = [
+            'cih'           => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'CIH'],
+            'sbm'           => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'SBM'],
+            'cph'           => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'CPH'],
+            'ratio_cih_cph' => ['labels' => [], 'data' => [], 'unit' => null, 'label' => 'Ratio CIH/CPH'],
+        ];
+
+        $now = Carbon::now();
+        $startDate = match ($period) {
+            'last_7_days'   => $now->copy()->subDays(7)->startOfDay(),
+            'last_14_days'  => $now->copy()->subDays(14)->startOfDay(),
+            'last_30_days'  => $now->copy()->subDays(30)->startOfDay(),
+            'last_60_days'  => $now->copy()->subDays(60)->startOfDay(),
+            'last_90_days'  => $now->copy()->subDays(90)->startOfDay(),
+            'last_6_months' => $now->copy()->subMonths(6)->startOfDay(),
+            'last_year'     => $now->copy()->subYear()->startOfDay(),
+            default         => $now->copy()->subDays(60)->startOfDay(), // Default to 60 days
+        };
+
+        // Ensure we start from the beginning of the week for weekly calculations
+        $currentWeek = $startDate->startOfWeek(Carbon::MONDAY);
+        $endWeek = $now->endOfWeek(Carbon::SUNDAY);
+
+        while ($currentWeek->lessThanOrEqualTo($endWeek)) {
+            $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeek);
+            $weekLabel = $currentWeek->format('W Y'); // Week number and year
+
+            $chartData['cih']['labels'][] = $weekLabel;
+            $chartData['cih']['data'][] = $summary['cih'];
+
+            $chartData['sbm']['labels'][] = $weekLabel;
+            $chartData['sbm']['data'][] = is_numeric($summary['sbm']) ? (float) $summary['sbm'] : null;
+
+            $chartData['cph']['labels'][] = $weekLabel;
+            $chartData['cph']['data'][] = $summary['cph'];
+
+            $chartData['ratio_cih_cph']['labels'][] = $weekLabel;
+            $chartData['ratio_cih_cph']['data'][] = is_numeric($summary['ratio_cih_cph']) ? (float) $summary['ratio_cih_cph'] : null;
+
+            $currentWeek->addWeek();
+        }
+
+        return $chartData;
+    }
+
+    /**
      * Détecte les alertes liées à la charge (CIH/CPH) et au bien-être (SBM) pour une semaine donnée.
      *
      * @param  Athlete  $athlete
