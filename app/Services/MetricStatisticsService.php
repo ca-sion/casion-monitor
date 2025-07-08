@@ -475,6 +475,11 @@ class MetricStatisticsService
      */
     public function calculateCsrS(Metric $rpeMetric): float
     {
+        // S'assurer que la métrique est du bon type et que la valeur est numérique
+        if ($rpeMetric->metric_type !== MetricType::POST_SESSION_SESSION_LOAD || ! is_numeric($rpeMetric->value)) {
+            return 0.0;
+        }
+
         return (float) $rpeMetric->value;
     }
 
@@ -551,9 +556,13 @@ class MetricStatisticsService
         $cih = $this->calculateCih($athlete, $weekStartDate);
 
         // Récupérer la TrainingPlanWeek correspondante pour la CPH
-        $trainingPlanWeek = TrainingPlanWeek::where('training_plan_id', $athlete->assignedTrainingPlans->first()->training_plan_id ?? null) // Assumer un plan assigné
-                                            ->where('start_date', $weekStartDate->toDateString())
-                                            ->first();
+        $assignedPlan = $athlete->assignedTrainingPlans->first();
+        $trainingPlanWeek = null;
+        if ($assignedPlan) {
+            $trainingPlanWeek = TrainingPlanWeek::where('training_plan_id', $assignedPlan->training_plan_id)
+                                                ->where('start_date', $weekStartDate->toDateString())
+                                                ->first();
+        }
         $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
 
         // Calcul du SBM moyen pour la semaine
