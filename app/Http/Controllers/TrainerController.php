@@ -39,6 +39,7 @@ class TrainerController extends Controller
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
+            MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,

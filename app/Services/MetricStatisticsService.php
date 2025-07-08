@@ -94,6 +94,7 @@ private const ALERT_THRESHOLDS = [
 
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
+            MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
@@ -322,19 +323,40 @@ public function getStartDateFromPeriod(string $period): Carbon
     /**
      * Calcule le Score de Bien-être Matinal (SBM) pour un seul jour à partir d'une collection de métriques.
      */
-public function calculateSbmForCollection(Collection $dailyMetrics): float
+public function calculateSbmForCollection(Collection $dailyMetrics): ?float
     {
-        $sleepQuality = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY)?->value ?? 0;
-        $generalFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value ?? 0;
-        $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN)?->value ?? 0;
-        $moodWellbeing = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING)?->value ?? 0;
-
-        if($sleepQuality == 0 && $generalFatigue == 0 && $pain == 0 && $moodWellbeing == 0) {
-            // Si toutes les métriques sont à 0, cela indique probablement une absence de saisie pour ce jour.
-            return 0.0;
+        $sbmSum = 0;
+        $maxPossibleSbm = 0;
+    
+        $sleepQuality = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY)?->value;
+        if ($sleepQuality !== null) {
+            $sbmSum += $sleepQuality;
+            $maxPossibleSbm += 10;
         }
-
-        return (float) ($sleepQuality + (10 - $generalFatigue) + (10 - $pain) + $moodWellbeing);
+    
+        $generalFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value;
+        if ($generalFatigue !== null) {
+            $sbmSum += (10 - $generalFatigue);
+            $maxPossibleSbm += 10;
+        }
+    
+        $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN)?->value;
+        if ($pain !== null) {
+            $sbmSum += (10 - $pain);
+            $maxPossibleSbm += 10;
+        }
+    
+        $moodWellbeing = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING)?->value;
+        if ($moodWellbeing !== null) {
+            $sbmSum += $moodWellbeing;
+            $maxPossibleSbm += 10;
+        }
+    
+        if ($maxPossibleSbm === 0) {
+            return null; // Toutes les métriques sont manquantes
+        }
+    
+        return (float) (($sbmSum / $maxPossibleSbm) * 40);
     }
 
     /**
@@ -784,19 +806,40 @@ public function calculateSbmForCollection(Collection $dailyMetrics): float
      * @param  Carbon  $date La date pour laquelle calculer le SBM.
      * @return float Le Score de Bien-être Matinal (SBM).
      */
-    public function calculateSbm(Athlete $athlete, Carbon $date): float
+    public function calculateSbm(Athlete $athlete, Carbon $date): ?float
     {
-        $sleepQuality = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)->first()?->value ?? 0;
-        $generalFatigue = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_GENERAL_FATIGUE->value)->first()?->value ?? 0;
-        $pain = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_PAIN->value)->first()?->value ?? 0;
-        $moodWellbeing = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)->first()?->value ?? 0;
-
-        if($sleepQuality == 0 && $generalFatigue == 0 && $pain == 0 && $moodWellbeing == 0) {
-            // Si toutes les métriques sont à 0, cela indique probablement une absence de saisie pour ce jour.
-            return 0.0;
+        $sbmSum = 0;
+        $maxPossibleSbm = 0;
+    
+        $sleepQuality = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)->first()?->value;
+        if ($sleepQuality !== null) {
+            $sbmSum += $sleepQuality;
+            $maxPossibleSbm += 10;
         }
-
-        return (float) ($sleepQuality + (10 - $generalFatigue) + (10 - $pain) + $moodWellbeing);
+    
+        $generalFatigue = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_GENERAL_FATIGUE->value)->first()?->value;
+        if ($generalFatigue !== null) {
+            $sbmSum += (10 - $generalFatigue);
+            $maxPossibleSbm += 10;
+        }
+    
+        $pain = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_PAIN->value)->first()?->value;
+        if ($pain !== null) {
+            $sbmSum += (10 - $pain);
+            $maxPossibleSbm += 10;
+        }
+    
+        $moodWellbeing = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)->first()?->value;
+        if ($moodWellbeing !== null) {
+            $sbmSum += $moodWellbeing;
+            $maxPossibleSbm += 10;
+        }
+    
+        if ($maxPossibleSbm === 0) {
+            return null; // Toutes les métriques sont manquantes
+        }
+    
+        return (float) (($sbmSum / $maxPossibleSbm) * 40);
     }
 
     /**

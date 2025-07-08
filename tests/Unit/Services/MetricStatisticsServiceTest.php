@@ -34,14 +34,51 @@ it('can calculate SBM for a collection of daily metrics', function () {
     assertEquals(32.0, $sbm);
 });
 
-it('returns 0 SBM if no relevant metrics are present', function () {
+it('returns null SBM if no relevant metrics are present', function () {
     $dailyMetrics = new Collection([
         (object)['metric_type' => MetricType::POST_SESSION_SESSION_LOAD, 'value' => 50],
     ]);
 
     $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
 
-    assertEquals(0.0, $sbm);
+    assertNull($sbm);
+});
+
+it('can calculate SBM with partial daily metrics', function () {
+    // Scenario 1: MORNING_PAIN is missing
+    $dailyMetrics = new Collection([
+        (object)['metric_type' => MetricType::MORNING_SLEEP_QUALITY, 'value' => 8],
+        (object)['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 2],
+        // MORNING_PAIN is missing
+        (object)['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 7],
+    ]);
+
+    $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
+    // sbmSum = 8 + (10-2) + 7 = 23
+    // maxPossibleSbm = 10 + 10 + 10 = 30
+    // SBM = (23 / 30) * 40 = 30.666...
+    assertEquals(30.67, round($sbm, 2));
+
+    // Scenario 2: All SBM related metrics are missing
+    $dailyMetrics = new Collection([
+        (object)['metric_type' => MetricType::POST_SESSION_SESSION_LOAD, 'value' => 50],
+        (object)['metric_type' => MetricType::MORNING_BODY_WEIGHT_KG, 'value' => 70],
+    ]);
+
+    $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
+    assertNull($sbm);
+
+    // Scenario 3: MORNING_SLEEP_QUALITY and MORNING_PAIN are missing
+    $dailyMetrics = new Collection([
+        (object)['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 5], // contribution 5
+        (object)['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 5], // contribution 5
+    ]);
+
+    $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
+    // sbmSum = (10-5) + 5 = 10
+    // maxPossibleSbm = 10 + 10 = 20
+    // SBM = (10 / 20) * 40 = 20
+    assertEquals(20.0, $sbm);
 });
 
 it('can get start date from period', function () {
