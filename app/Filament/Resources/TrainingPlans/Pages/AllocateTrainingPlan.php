@@ -6,6 +6,8 @@ use App\Models\TrainingPlanWeek;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
+use App\Services\MetricStatisticsService;
+use Carbon\Carbon;
 
 class AllocateTrainingPlan extends Page
 {
@@ -37,12 +39,15 @@ class AllocateTrainingPlan extends Page
             while ($currentWeekStart->lte($endDate)) {
                 $weekNumber = $currentWeekStart->weekOfYear;
                 $year = $currentWeekStart->year;
-                $weekIdentifier = "{$year}-W{$weekNumber}"; // Identifiant unique pour la semaine
+                $weekIdentifier = "{$year}-W{$weekNumber}";
 
                 // Récupérer les données de la semaine si elles existent
                 $weekData = TrainingPlanWeek::where('training_plan_id', $this->record->id)
-                    ->where('week_number', $weekNumber)
+                    ->where('start_date', $currentWeekStart->toDateString())
                     ->first();
+
+                // Calcul des métriques de charge pour la semaine
+                $cph = resolve(MetricStatisticsService::class)->calculateCph($weekData ?? new TrainingPlanWeek());
 
                 $this->weeks[] = [
                     'start_date'        => $currentWeekStart->toDateString(),
@@ -54,9 +59,10 @@ class AllocateTrainingPlan extends Page
                     'intensity_planned' => $weekData->intensity_planned ?? null,
                     'exists'            => ($weekData?->volume_planned !== null || $weekData?->intensity_planned !== null),
                     'id'                => $weekData?->id ?? null,
+                    'cph'               => $cph,
                 ];
 
-                $currentWeekStart->addWeek();
+                $currentWeekStart->addWeek()->startOfWeek();
             }
         } else {
             $this->weeks = [];
@@ -64,29 +70,12 @@ class AllocateTrainingPlan extends Page
 
         \Filament\Notifications\Notification::make()
             ->title('Plan d\'entraînement chargé')
-            ->body("Le plan d'entraînement : ".$trainingPlan->name.' a été chargé.')
             ->success()
             ->send();
     }
 
-    public function createNewTrainingPlan(): void
-    {
-        // Rediriger vers la page de création d'un nouveau plan d'entraînement
-        $this->redirect(TrainingPlanResource::getUrl('create'));
-    }
-
     public function selectWeekForDailyRefinement(string $date): void
     {
-        if (! $this->record) {
-            \Filament\Notifications\Notification::make()
-                ->title('Erreur')
-                ->body('Aucun plan d\'entraînement sélectionné.')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
         // Convertir la date pour obtenir le début de la semaine (lundi)
         $startOfWeek = \Carbon\Carbon::parse($date)->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
 
@@ -101,23 +90,13 @@ class AllocateTrainingPlan extends Page
 
     public function updateWeekData(string $startDate, string $field, $value): void
     {
-        if (! $this->record) {
-            \Filament\Notifications\Notification::make()
-                ->title('Erreur')
-                ->body('Aucun plan d\'entraînement sélectionné.')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
         $startOfWeek = \Carbon\Carbon::parse($startDate)->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
         $weekNumber = \Carbon\Carbon::parse($startOfWeek)->weekOfYear;
 
         $weekData = TrainingPlanWeek::updateOrCreate(
             [
                 'training_plan_id' => $this->record->id,
-                'week_number'      => $weekNumber,
+                'start_date'       => $startOfWeek,
             ],
             [
                 $field => $value,
@@ -126,7 +105,7 @@ class AllocateTrainingPlan extends Page
 
         // Mettre à jour la propriété $weeks pour refléter le changement dans l'interface
         foreach ($this->weeks as $key => $week) {
-            if ($week['week_number'] === $weekNumber) {
+            if ($week['start_date'] === $startOfWeek) {
                 $this->weeks[$key][$field] = $value;
                 break;
             }

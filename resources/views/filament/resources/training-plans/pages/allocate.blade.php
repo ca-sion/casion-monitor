@@ -18,7 +18,8 @@
 
                             <div class="font-semibold text-center mb-2">S{{ $week['week_number'] }}</div>
                             <div class="text-xs text-center text-gray-500">{{ \Carbon\Carbon::parse($week['start_date'])->isoFormat('DD.MM') }}</div>
-                            
+                            <div class="text-xs text-center text-gray-500">CPH: {{ number_format($week['cph'] ?? 0, 0) }}</div>
+
                             {{-- Bouton pour affiner les jours (sera un modal plus tard) --}}
                             <button class="mt-2 px-2 py-1 text-white rounded-md text-xs hover:bg-gray-50 mb-2"
                                     wire:click="selectWeekForDailyRefinement('{{ $week['start_date'] }}')">
