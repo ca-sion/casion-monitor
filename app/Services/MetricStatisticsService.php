@@ -77,7 +77,7 @@ private const ALERT_THRESHOLDS = [
         ->get()
         ->groupBy('athlete_id');
     
-    $athletesTrainingPlansIds = $athletes->load('trainingPlans')->pluck('trainingPlans.0.id');
+    $athletesTrainingPlansIds = $athletes->loadMissing('trainingPlans')->pluck('trainingPlans.0.id');
 
     $allTrainingPlanWeeksByAthleteTrainingPlanId = TrainingPlanWeek::whereIn('training_plan_id', $athletesTrainingPlansIds)
         ->where('start_date', '>=', $startDate->copy()->subWeek())
@@ -791,9 +791,12 @@ private const ALERT_THRESHOLDS = [
         $pain = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_PAIN->value)->first()?->value ?? 0;
         $moodWellbeing = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)->first()?->value ?? 0;
 
-        $sbm = $sleepQuality + (10 - $generalFatigue) + (10 - $pain) + $moodWellbeing;
+        if($sleepQuality == 0 && $generalFatigue == 0 && $pain == 0 && $moodWellbeing == 0) {
+            // Si toutes les métriques sont à 0, cela indique probablement une absence de saisie pour ce jour.
+            return 0.0;
+        }
 
-        return (float) $sbm;
+        return (float) ($sleepQuality + (10 - $generalFatigue) + (10 - $pain) + $moodWellbeing);
     }
 
     /**
@@ -845,7 +848,7 @@ private const ALERT_THRESHOLDS = [
         $periodCarbon = \Carbon\CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
         foreach ($periodCarbon as $date) {
             $sbmValue = $this->calculateSbm($athlete, $date);
-            if ($sbmValue !== null) {
+            if ($sbmValue > 0) {
                 $sbmSum += $sbmValue;
                 $sbmCount++;
             }
@@ -1094,7 +1097,7 @@ private const ALERT_THRESHOLDS = [
      * @param  Carbon  $weekStartDate
      * @return TrainingPlanWeek|null
      */
-    private function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
+    protected function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
     {
         $assignedPlan = $athlete->trainingPlans?->first();
 
@@ -1116,7 +1119,7 @@ private const ALERT_THRESHOLDS = [
      * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
      * @return array Un tableau d'alertes liées à la charge.
      */
-    private function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
+    protected function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
     {
         $alerts = [];
         if (is_null($allMetrics)) {
@@ -1157,7 +1160,7 @@ private const ALERT_THRESHOLDS = [
      * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
      * @return array Un tableau d'alertes liées au SBM.
      */
-    private function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
+    protected function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
     {
         $alerts = [];
         $sbmSum = 0;
@@ -1200,7 +1203,7 @@ private const ALERT_THRESHOLDS = [
      * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
      * @return array Un tableau d'alertes liées aux tendances SBM et VFC.
      */
-    private function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
+    protected function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
     {
         $alerts = [];
 
