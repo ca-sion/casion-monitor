@@ -45,7 +45,7 @@
     <flux:table class="my-4">
         <flux:table.columns>
             <flux:table.column class="z-1 sticky left-0 max-w-36 bg-white dark:bg-zinc-900">Athlète</flux:table.column>
-            <flux:table.column class="max-w-36 text-center">Alertes & Cycle</flux:table.column>
+            <flux:table.column class="max-w-48 text-center">Alertes & Cycle</flux:table.column>
             
             {{-- Colonnes pour les métriques calculées (générées par boucle) --}}
             @foreach ($calculated_metric_types as $metric)
@@ -89,7 +89,7 @@
 
                     {{-- Cellule Alertes & Cycle --}}
                     <flux:table.cell>
-                        <div class="flex flex-col gap-2">
+                        <div class="flex flex-col gap-2 w-48">
                             {{-- Alertes --}}
                             <div class="flex flex-col gap-2">
                                 @foreach (array_merge($athlete->alerts, $athlete->chargeAlerts) as $alert)
