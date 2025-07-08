@@ -36,8 +36,6 @@ class TrainingPlan extends Model
 
     /**
      * Getter for name attribute
-     *
-     * @return string
      */
     public function getName(): string
     {
@@ -46,9 +44,6 @@ class TrainingPlan extends Model
 
     /**
      * Setter for name attribute
-     *
-     * @param string $name
-     * @return void
      */
     public function setName(string $name): void
     {
@@ -57,8 +52,6 @@ class TrainingPlan extends Model
 
     /**
      * Getter for description attribute
-     *
-     * @return string
      */
     public function getDescription(): string
     {
@@ -67,9 +60,6 @@ class TrainingPlan extends Model
 
     /**
      * Setter for description attribute
-     *
-     * @param string $description
-     * @return void
      */
     public function setDescription(string $description): void
     {
@@ -78,8 +68,6 @@ class TrainingPlan extends Model
 
     /**
      * Getter for trainer_id attribute
-     *
-     * @return int
      */
     public function getTrainerId(): int
     {
@@ -88,9 +76,6 @@ class TrainingPlan extends Model
 
     /**
      * Setter for trainer_id attribute
-     *
-     * @param int $trainerId
-     * @return void
      */
     public function setTrainerId(int $trainerId): void
     {

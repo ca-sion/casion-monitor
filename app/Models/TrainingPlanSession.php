@@ -19,8 +19,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Getter for training_plan_day_id attribute
-     *
-     * @return int
      */
     public function getTrainingPlanDayId(): int
     {
@@ -29,9 +27,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Setter for training_plan_day_id attribute
-     *
-     * @param int $trainingPlanDayId
-     * @return void
      */
     public function setTrainingPlanDayId(int $trainingPlanDayId): void
     {
@@ -40,8 +35,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Getter for session_type attribute
-     *
-     * @return string
      */
     public function getSessionType(): string
     {
@@ -50,9 +43,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Setter for session_type attribute
-     *
-     * @param string $sessionType
-     * @return void
      */
     public function setSessionType(string $sessionType): void
     {
@@ -61,8 +51,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Getter for volume_planned attribute
-     *
-     * @return int
      */
     public function getVolumePlanned(): int
     {
@@ -71,9 +59,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Setter for volume_planned attribute
-     *
-     * @param int $volumePlanned
-     * @return void
      */
     public function setVolumePlanned(int $volumePlanned): void
     {
@@ -82,8 +67,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Getter for intensity_planned attribute
-     *
-     * @return int
      */
     public function getIntensityPlanned(): int
     {
@@ -92,9 +75,6 @@ class TrainingPlanSession extends Model
 
     /**
      * Setter for intensity_planned attribute
-     *
-     * @param int $intensityPlanned
-     * @return void
      */
     public function setIntensityPlanned(int $intensityPlanned): void
     {

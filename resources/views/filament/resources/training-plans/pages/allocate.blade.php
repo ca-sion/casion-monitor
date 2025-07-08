@@ -1,24 +1,10 @@
 <x-filament-panels::page>
-    <div x-data="trainingCalendar({ initialTrainingPlans: @js($this->getTrainingPlans()) })" x-init="init()">
-        <h2 class="text-2xl font-bold mb-4">Planification des Entraînements</h2>
-
-        <div class="mb-6">
-            <label for="trainingPlanSelect" class="block text-sm font-medium text-gray-700">Sélectionner un Plan d'Entraînement :</label>
-            <select id="trainingPlanSelect"
-                    wire:model.live="selectedTrainingPlanId"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                <option value="">-- Sélectionner un plan --</option>
-                @foreach($this->getTrainingPlans() as $plan)
-                    <option value="{{ $plan['id'] }}">{{ $plan['name'] }}</option>
-                @endforeach
-            </select>
-            <button wire:click="createNewTrainingPlan()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Créer un nouveau plan</button>
-        </div>
+    <div x-data="trainingCalendar()" x-init="init()">
 
         {{-- Nouveau Tableau Horizontal des Semaines --}}
-        @if($this->selectedTrainingPlanId && count($this->weeks) > 0)
+        @if(count($this->weeks) > 0)
             <div class="overflow-x-auto">
-                <div class="flex space-x-4 p-4 bg-gray-50 rounded-lg shadow-inner">
+                <div class="flex space-x-2">
                     @foreach($this->weeks as $week)
                         <div class="flex-none w-fit p-3 border rounded-lg shadow-sm bg-white {{ $week['exists'] ? 'border-blue-400' : '' }} flex flex-col items-center justify-between">
                             {{-- Barres de Volume (1-5) - Vertical --}}
@@ -53,36 +39,19 @@
                     @endforeach
                 </div>
             </div>
-        @elseif($this->selectedTrainingPlanId)
-            <p class="mt-4 text-gray-600">Aucune semaine générée pour ce plan d'entraînement. Assurez-vous que les dates de début et de fin sont définies.</p>
         @else
-            <p class="mt-4 text-gray-600">Sélectionnez un plan d'entraînement pour commencer la planification.</p>
+            <p class="mt-4 text-gray-600">Aucune semaine générée pour ce plan d'entraînement. Assurez-vous que les dates de début et de fin sont définies.</p>
         @endif
 
     </div>
 
     <script>
 
-        function trainingCalendar(config) {
+        function trainingCalendar() {
             return {
-                trainingPlans: config.initialTrainingPlans || [], // Initialized from Livewire
-                selectedTrainingPlanId: @entangle('selectedTrainingPlanId'), // Bind directly to Livewire property
-                selectedWeek: @entangle('selectedWeek'), // Bind selectedWeek from Livewire
-
-                // Watch for changes in selectedTrainingPlanId
-                init() {
-                    this.$watch('selectedTrainingPlanId', (value) => {
-                        console.log('selectedTrainingPlanId changed to:', value);
-                    });
-                },
-
                 init() {
                     // Pas de génération de calendrier annuel ici
                 },
-
-                // selectDay et generateCalendar ne sont plus nécessaires
-                // selectDay(day) { ... }
-                // generateCalendar() { ... }
 
                 selectWeek(startDate) {
                     console.log('Selected week starting:', startDate);

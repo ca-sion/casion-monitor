@@ -140,9 +140,9 @@ class TrainerController extends Controller
         // Traiter l'historique des métriques pour la préparation du tableau
         $processedDailyMetrics = $dailyMetricsGroupedByDate->map(function ($metricDates, $date) use ($displayTableMetricTypes) {
             $rowData = [
-                'date'           => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'), // Renommé pour correspondre à la vue dashboard
-                'metrics'        => [],
-                'edit_link'      => null,
+                'date'      => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'), // Renommé pour correspondre à la vue dashboard
+                'metrics'   => [],
+                'edit_link' => null,
             ];
 
             foreach ($displayTableMetricTypes as $metricType) {

@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\TrainingPlans\Pages;
 
-use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
 
 class EditTrainingPlan extends EditRecord
 {

@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\TrainingPlans\Pages;
 
-use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
 
 class ListTrainingPlans extends ListRecords
 {

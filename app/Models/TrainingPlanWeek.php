@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TrainingPlanWeek extends Model
 {
@@ -28,8 +28,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Getter for training_plan_id attribute
-     *
-     * @return int
      */
     public function getTrainingPlanId(): int
     {
@@ -38,9 +36,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Setter for training_plan_id attribute
-     *
-     * @param int $trainingPlanId
-     * @return void
      */
     public function setTrainingPlanId(int $trainingPlanId): void
     {
@@ -49,8 +44,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Getter for week_number attribute
-     *
-     * @return int
      */
     public function getWeekNumber(): int
     {
@@ -59,9 +52,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Setter for week_number attribute
-     *
-     * @param int $weekNumber
-     * @return void
      */
     public function setWeekNumber(int $weekNumber): void
     {
@@ -70,8 +60,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Getter for volume_planned attribute
-     *
-     * @return int
      */
     public function getVolumePlanned(): int
     {
@@ -80,9 +68,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Setter for volume_planned attribute
-     *
-     * @param int $volumePlanned
-     * @return void
      */
     public function setVolumePlanned(int $volumePlanned): void
     {
@@ -91,8 +76,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Getter for intensity_planned attribute
-     *
-     * @return int
      */
     public function getIntensityPlanned(): int
     {
@@ -101,9 +84,6 @@ class TrainingPlanWeek extends Model
 
     /**
      * Setter for intensity_planned attribute
-     *
-     * @param int $intensityPlanned
-     * @return void
      */
     public function setIntensityPlanned(int $intensityPlanned): void
     {

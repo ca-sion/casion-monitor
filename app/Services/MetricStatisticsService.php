@@ -573,7 +573,7 @@ class MetricStatisticsService
      * Cette fonction est générique pour tous les genres, mais aura des signaux spécifiques pour les femmes.
      *
      * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months').
-     * Par défaut à 'last_60_days' pour un bon équilibre entre réactivité et détection de tendances significatives.
+     *                          Par défaut à 'last_60_days' pour un bon équilibre entre réactivité et détection de tendances significatives.
      * @return array Des drapeaux et des messages d'alerte.
      */
     public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days'): array

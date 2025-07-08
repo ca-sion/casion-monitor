@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\TrainingPlans\Schemas;
 
-use Filament\Forms\Components\DatePicker;
+use Filament\Schemas\Schema;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
+use Filament\Forms\Components\DatePicker;
 
 class TrainingPlanForm
 {

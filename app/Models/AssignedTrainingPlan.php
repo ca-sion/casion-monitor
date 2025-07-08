@@ -27,8 +27,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Getter for athlete_id attribute
-     *
-     * @return int
      */
     public function getAthleteId(): int
     {
@@ -37,9 +35,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Setter for athlete_id attribute
-     *
-     * @param int $athleteId
-     * @return void
      */
     public function setAthleteId(int $athleteId): void
     {
@@ -48,8 +43,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Getter for training_plan_id attribute
-     *
-     * @return int
      */
     public function getTrainingPlanId(): int
     {
@@ -58,9 +51,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Setter for training_plan_id attribute
-     *
-     * @param int $trainingPlanId
-     * @return void
      */
     public function setTrainingPlanId(int $trainingPlanId): void
     {
@@ -69,8 +59,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Getter for start_date attribute
-     *
-     * @return \Illuminate\Support\Carbon
      */
     public function getStartDate(): \Illuminate\Support\Carbon
     {
@@ -79,9 +67,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Setter for start_date attribute
-     *
-     * @param \Illuminate\Support\Carbon $startDate
-     * @return void
      */
     public function setStartDate(\Illuminate\Support\Carbon $startDate): void
     {
@@ -90,8 +75,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Getter for is_customized attribute
-     *
-     * @return bool
      */
     public function getIsCustomized(): bool
     {
@@ -100,9 +83,6 @@ class AssignedTrainingPlan extends Model
 
     /**
      * Setter for is_customized attribute
-     *
-     * @param bool $isCustomized
-     * @return void
      */
     public function setIsCustomized(bool $isCustomized): void
     {
