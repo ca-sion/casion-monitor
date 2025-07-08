@@ -12,32 +12,31 @@ use Carbon\CarbonPeriod;
 
 class MetricStatisticsService
 {
-    // --- Seuils de Configuration des Alertes ---
-    private const ALERT_THRESHOLDS = [
+private const ALERT_THRESHOLDS = [
         MetricType::MORNING_GENERAL_FATIGUE->value => [
-            'persistent_high_7d_min'  => 7, // Moyenne 7j >= 7 pour alerte warning "très élevée"
-            'persistent_high_30d_min' => 6, // Moyenne 30j >= 6 pour alerte warning "très élevée"
-            'elevated_7d_min'         => 5, // Moyenne 7j >= 5 pour alerte info "élevée"
-            'elevated_30d_min'        => 5, // Moyenne 30j >= 5 pour alerte info "élevée"
-            'trend_increase_percent'  => 15, // Augmentation significative > 15%
+            'persistent_high_7d_min'  => 7,
+            'persistent_high_30d_min' => 6,
+            'elevated_7d_min'         => 5,
+            'elevated_30d_min'        => 5,
+            'trend_increase_percent'  => 15,
         ],
         MetricType::MORNING_SLEEP_QUALITY->value => [
-            'persistent_low_7d_max'  => 4, // Moyenne 7j <= 4 pour alerte warning "très faible"
-            'persistent_low_30d_max' => 5, // Moyenne 30j <= 5 pour alerte warning "très faible"
-            'trend_decrease_percent' => -15, // Diminution significative < -15%
+            'persistent_low_7d_max'  => 4,
+            'persistent_low_30d_max' => 5,
+            'trend_decrease_percent' => -15,
         ],
         MetricType::MORNING_PAIN->value => [
-            'persistent_high_7d_min' => 5, // Moyenne 7j >= 5 pour alerte warning "persistantes"
-            'trend_increase_percent' => 20, // Augmentation significative > 20%
+            'persistent_high_7d_min' => 5,
+            'trend_increase_percent' => 20,
         ],
         MetricType::MORNING_HRV->value => [
-            'trend_decrease_percent' => -10, // Diminution significative < -10%
+            'trend_decrease_percent' => -10,
         ],
         MetricType::POST_SESSION_PERFORMANCE_FEEL->value => [
-            'trend_decrease_percent' => -15, // Diminution significative < -15%
+            'trend_decrease_percent' => -15,
         ],
         MetricType::MORNING_BODY_WEIGHT_KG->value => [
-            'trend_decrease_percent' => -3, // Perte significative < -3%
+            'trend_decrease_percent' => -3,
         ],
         'CHARGE_LOAD' => [
             'ratio_underload_threshold' => 0.7,
@@ -59,12 +58,7 @@ class MetricStatisticsService
         ],
     ];
 
-    //================================================================================
-    // NOUVELLES MÉTHODES DE TRAITEMENT PAR LOT (BULK PROCESSING)
-    //================================================================================
-
     /**
-     * NOUVELLE MÉTHODE PRINCIPALE
      * Prépare les données du tableau de bord pour une collection d'athlètes en optimisant les requêtes.
      */
     public function getBulkAthletesDashboardData(Collection $athletes, string $period): Collection
@@ -74,7 +68,7 @@ class MetricStatisticsService
         return collect();
     }
 
-    // --- ÉTAPE 1: Récupération de toutes les données en une fois ---
+    // Récupération de toutes les données nécessaires en une seule fois
     $startDate = $this->getStartDateFromPeriod($period);
 
     $allMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
@@ -90,13 +84,12 @@ class MetricStatisticsService
         ->get()
         ->groupBy('training_plan_id');
 
-    // --- ÉTAPE 2: Itérer sur les athlètes et calculer les données en PHP ---
+    // Itération sur les athlètes pour calculer les données spécifiques à chacun
     return $athletes->map(function ($athlete) use ($allMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $period) {
         $athleteMetrics = $allMetricsByAthlete->get($athlete->id) ?? collect();
         $athleteTrainingPlansId = data_get(collect($athlete), 'training_plans.0.id');
         $athletePlanWeeks = $allTrainingPlanWeeksByAthleteTrainingPlanId->get($athleteTrainingPlansId) ?? collect();
 
-        // Initialiser un tableau temporaire pour collecter les données de métriques
         $metricsDataForDashboard = [];
 
         $dashboardMetricTypes = [
@@ -109,17 +102,14 @@ class MetricStatisticsService
 
         foreach ($dashboardMetricTypes as $metricType) {
             $metricsForType = $athleteMetrics->where('metric_type', $metricType->value);
-            // Assigner à la variable temporaire
             $metricsDataForDashboard[$metricType->value] = $this->getDashboardMetricDataForCollection($metricsForType, $metricType, $period);
         }
 
-        // Assigner aussi les autres métriques au tableau temporaire
         $metricsDataForDashboard['cih'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'cih', $period, $athletePlanWeeks);
         $metricsDataForDashboard['sbm'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'sbm', $period, $athletePlanWeeks);
-        $metricsDataForDashboard['cph'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'cph', 'period', $athletePlanWeeks); // Correction: 'period' au lieu de $period
+        $metricsDataForDashboard['cph'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'cph', 'period', $athletePlanWeeks);
         $metricsDataForDashboard['ratio_cih_cph'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'ratio_cih_cph', $period, $athletePlanWeeks);
 
-        // Assigner le tableau temporaire complet à la propriété de l'athlète UNE SEULE FOIS
         $athlete->metricsDataForDashboard = $metricsDataForDashboard;
 
         $athlete->alerts = $this->getAthleteAlertsForCollection($athlete, $athleteMetrics, $period);
@@ -131,7 +121,7 @@ class MetricStatisticsService
 }
 
     /**
-     * Version "ForCollection" de getDashboardMetricData
+     * Prépare les données d'une métrique pour le tableau de bord à partir d'une collection pré-filtrée.
      */
     private function getDashboardMetricDataForCollection(Collection $metricsForPeriod, MetricType $metricType, string $period): array
     {
@@ -195,7 +185,7 @@ class MetricStatisticsService
     }
     
     /**
-     * Version "ForCollection" de getDashboardWeeklyMetricData (logique complétée)
+     * Prépare les données hebdomadaires d'une métrique pour le tableau de bord à partir de collections pré-filtrées.
      */
     private function getDashboardWeeklyMetricDataForCollection(Collection $allAthleteMetrics, string $metricKey, string $period, Collection $athletePlanWeeks): array
     {
@@ -206,7 +196,7 @@ class MetricStatisticsService
         $allWeeklyData = new Collection();
         $weekPeriod = CarbonPeriod::create($startDate, '1 week', $endDate);
 
-        // 1. Calculer les valeurs hebdomadaires pour toute la période
+        // Calcule les valeurs hebdomadaires pour toute la période
         foreach ($weekPeriod as $weekStartDate) {
             $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
             $metricsForWeek = $allAthleteMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
@@ -227,7 +217,7 @@ class MetricStatisticsService
                 $dateStr = $date->format('Y-m-d');
                 if ($sbmMetricsForWeek->has($dateStr)) {
                     $sbmValue = $this->calculateSbmForCollection($sbmMetricsForWeek->get($dateStr));
-                    if($sbmValue > 0) { // Un SBM de 0 signifie généralement des données manquantes
+                    if($sbmValue > 0) {
                        $sbmSum += $sbmValue;
                        $sbmCount++;
                     }
@@ -253,7 +243,7 @@ class MetricStatisticsService
             }
         }
 
-        // 2. Calculer les statistiques pour le dashboard à partir des données hebdomadaires
+        // Calcule les statistiques pour le tableau de bord à partir des données hebdomadaires
         $lastValue = $allWeeklyData->last()->value ?? null;
         
         $dataFor7Days = $allWeeklyData->where('date', '>=', $now->copy()->subDays(7)->startOfDay());
@@ -269,7 +259,7 @@ class MetricStatisticsService
             $changePercentage = ($change > 0 ? '+' : '') . number_format($change, 1) . '%';
         }
 
-        // 3. Préparer les données pour le retour
+        // Prépare les données pour le retour
         return [
             'label'                     => $metricKey,
             'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'N/A',
@@ -287,34 +277,31 @@ class MetricStatisticsService
     }
     
     /**
-     * Version "ForCollection" de getAthleteAlerts
+     * Récupère les alertes pour un athlète à partir d'une collection de métriques pré-chargée.
      */
     private function getAthleteAlertsForCollection(Athlete $athlete, Collection $metrics, string $period = 'last_60_days'): array
     {
-        // Appelle la méthode getAthleteAlerts centralisée en lui passant la collection de métriques pré-chargée
         return $this->getAthleteAlerts($athlete, $period, $metrics);
     }
     
     /**
-     * Version "ForCollection" de deduceMenstrualCyclePhase
+     * Déduit la phase du cycle menstruel d'un athlète féminin à partir d'une collection de métriques pré-chargée.
      */
     private function deduceMenstrualCyclePhaseForCollection(Athlete $athlete, Collection $allMetrics): array
     {
-        // Appelle la méthode deduceMenstrualCyclePhase centralisée en lui passant la collection de métriques pré-chargée
         return $this->deduceMenstrualCyclePhase($athlete, $allMetrics);
     }
     
     /**
-     * Version "ForCollection" de getChargeAlerts
+     * Récupère les alertes de charge pour un athlète à partir de collections pré-chargées.
      */
     private function getChargeAlertsForCollection(Athlete $athlete, Collection $allMetrics, Collection $planWeeks, Carbon $weekStartDate): array
     {
-        // Appelle la méthode getChargeAlerts centralisée en lui passant les collections pré-chargées
         return $this->getChargeAlerts($athlete, $weekStartDate, $allMetrics, $planWeeks);
     }
     
     /**
-     * Méthode Helper pour obtenir la date de début à partir d'une chaîne de période.
+     * Obtient la date de début d'une période donnée.
      */
     private function getStartDateFromPeriod(string $period): Carbon
     {
@@ -333,7 +320,7 @@ class MetricStatisticsService
     }
 
     /**
-     * Calcule le SBM à partir d'une collection de métriques pour un seul jour.
+     * Calcule le Score de Bien-être Matinal (SBM) pour un seul jour à partir d'une collection de métriques.
      */
     private function calculateSbmForCollection(Collection $dailyMetrics): float
     {
@@ -342,8 +329,10 @@ class MetricStatisticsService
         $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN)?->value ?? 0;
         $moodWellbeing = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING)?->value ?? 0;
 
-        // Si toutes les métriques sont à 0, il est probable qu'aucune n'ait été saisie ce jour-là.
-        if($sleepQuality == 0 && $generalFatigue == 0 && $pain == 0 && $moodWellbeing == 0) return 0.0;
+        if($sleepQuality == 0 && $generalFatigue == 0 && $pain == 0 && $moodWellbeing == 0) {
+            // Si toutes les métriques sont à 0, cela indique probablement une absence de saisie pour ce jour.
+            return 0.0;
+        }
 
         return (float) ($sleepQuality + (10 - $generalFatigue) + (10 - $pain) + $moodWellbeing);
     }
@@ -404,7 +393,6 @@ class MetricStatisticsService
                 $query->where('date', '>=', $now->copy()->subYear()->startOfDay());
                 break;
             case 'all_time':
-                // Pas de filtre de date spécifique
                 break;
             default:
                 if (str_starts_with($period, 'custom:')) {
@@ -434,7 +422,6 @@ class MetricStatisticsService
         $valueColumn = $metricType->getValueColumn();
         $unit = $metricType->getUnit();
 
-        // Ensure metrics are sorted by date for chronological chart display
         $sortedMetrics = $metrics->sortBy('date');
 
         foreach ($sortedMetrics as $metric) {
@@ -484,11 +471,9 @@ class MetricStatisticsService
 
             $data = [];
             foreach ($allLabels as $dateLabel) {
-                // Prenez la première valeur numérique pour ce jour, ou null si aucune métrique ou valeur non numérique pour ce jour
                 $value = $groupedMetrics->has($dateLabel) ? $groupedMetrics[$dateLabel]->first()->{$valueColumn} : null;
                 $data[] = is_numeric($value) ? (float) $value : null;
 
-                // Ajout pour labels_and_data
                 $labelsAndData[$metricType->value][] = [
                     'label' => $dateLabel,
                     'value' => is_numeric($value) ? (float) $value : null,
@@ -533,10 +518,9 @@ class MetricStatisticsService
     }
 
     /**
-     * Version de getMetricTrends qui prend une collection déjà filtrée.
-     * Utile pour éviter des requêtes supplémentaires.
+     * Calcule les tendances des métriques sur différentes périodes à partir d'une collection déjà filtrée.
      *
-     * @param  Collection<Metric>  $metrics
+     * @param  Collection<Metric>  $metrics La collection de métriques à analyser.
      */
     public function getMetricTrendsForCollection(Collection $metrics, MetricType $metricType): array
     {
@@ -597,11 +581,11 @@ class MetricStatisticsService
             return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
         }
 
-        // Calculate average of the first third and last third of the data points for a smoother trend
         $totalCount = $numericMetrics->count();
-        $segmentSize = floor($totalCount / 3);
+        $segmentSize = floor($totalCount / 3); // Utilise le premier et le dernier tiers des points de données pour une tendance plus lisse.
 
-        if ($segmentSize === 0) { // If less than 3 data points, compare first and last
+        if ($segmentSize === 0) {
+            // Si moins de 3 points de données, compare la première et la dernière valeur.
             $firstValue = $numericMetrics->first()->{$valueColumn};
             $lastValue = $numericMetrics->last()->{$valueColumn};
         } else {
@@ -616,17 +600,16 @@ class MetricStatisticsService
             return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
         }
 
-        // Handle division by zero for percentage change
         if ($firstValue == 0 && $lastValue != 0) {
-            $change = 100; // Represents a significant increase from zero
+            $change = 100; // Augmentation significative à partir de zéro.
         } elseif ($firstValue == 0 && $lastValue == 0) {
-            $change = 0; // No change if both are zero
+            $change = 0; // Aucun changement si les deux sont zéro.
         } else {
             $change = (($lastValue - $firstValue) / $firstValue) * 100;
         }
 
         $trend = 'stable';
-        // Define a small threshold to consider it stable, avoiding micro-fluctuations
+        // Définit un petit seuil pour considérer la tendance comme stable, afin d'éviter les micro-fluctuations.
         if ($change > 0.5) {
             $trend = 'increasing';
         } elseif ($change < -0.5) {
@@ -642,23 +625,19 @@ class MetricStatisticsService
     /**
      * Récupère les métriques les plus récentes groupées par date.
      *
+     * Récupère les métriques les plus récentes groupées par date pour un athlète.
+     *
      * @param  int  $limit  Le nombre maximum de métriques brutes à récupérer.
-     * @return Collection<string, Collection<Metric>> Une collection de métriques groupées par date (format Y-m-d).
+     * @return Collection<string, Collection<Metric>> Une collection de métriques groupées par date (format Y-m-d), triées de la plus récente à la plus ancienne.
      */
     public function getLatestMetricsGroupedByDate(Athlete $athlete, int $limit = 50): Collection
     {
-        // On récupère toutes les métriques pour cet athlète, limitées par date distincte.
-        // Puis on les groupe par date en PHP.
-        // Le `limit` ici s'applique au nombre de métriques brutes, pas au nombre de jours.
-        // Pour limiter par jour, il faut une approche légèrement différente, par exemple:
-        // Sélectionner les métriques des 50 derniers jours uniques.
         $metrics = $athlete->metrics()
-            ->whereNotNull('date') // S'assurer que la date n'est pas nulle
+            ->whereNotNull('date')
             ->orderByDesc('date')
-            ->limit($limit * count(MetricType::cases())) // Multiplier la limite pour être sûr d'avoir des données pour plusieurs types sur plusieurs jours
+            ->limit($limit * count(MetricType::cases()))
             ->get();
 
-        // Regrouper par date et s'assurer que les dates sont triées de la plus récente à la plus ancienne
         return $metrics->groupBy(fn ($metric) => $metric->date->format('Y-m-d'))
             ->sortByDesc(fn ($metrics, $date) => $date);
     }
@@ -683,18 +662,15 @@ class MetricStatisticsService
             'formatted_average_7_days'  => 'N/A',
             'average_30_days'           => null,
             'formatted_average_30_days' => 'N/A',
-            'trend_icon'                => 'ellipsis-horizontal', // default
-            'trend_color'               => 'zinc', // default
+            'trend_icon'                => 'ellipsis-horizontal',
+            'trend_color'               => 'zinc',
             'trend_percentage'          => 'N/A',
             'chart_data'                => [],
             'is_numerical'              => ($valueColumn !== 'note'),
         ];
 
-        // Prepare chart data
         $metricData['chart_data'] = $this->prepareChartDataForSingleMetric($metricsForPeriod, $metricType);
 
-        // Get last value
-        // Use the metrics from the current period for the last value, if available
         $lastMetric = $metricsForPeriod->sortByDesc('date')->first();
         if ($lastMetric) {
             $metricValue = $lastMetric->{$valueColumn};
@@ -702,7 +678,6 @@ class MetricStatisticsService
             $metricData['formatted_last_value'] = $this->formatMetricValue($metricValue, $metricType);
         }
 
-        // Only calculate trends and evolution for numerical metrics
         if ($metricData['is_numerical']) {
             $trends = $this->getMetricTrendsForCollection($metricsForPeriod, $metricType);
 
@@ -734,12 +709,10 @@ class MetricStatisticsService
                 }
             }
 
-            // Trend percentage - calculate change from 30 days to 7 days if applicable
             if ($metricData['average_7_days'] !== null && $metricData['average_30_days'] !== null && $metricData['average_30_days'] !== 0) {
                 $change = (($metricData['average_7_days'] - $metricData['average_30_days']) / $metricData['average_30_days']) * 100;
                 $metricData['trend_percentage'] = ($change > 0 ? '+' : '').number_format($change, 1).'%';
             } elseif ($metricData['average_7_days'] !== null && $metricType->getValueColumn() !== 'note') {
-                // If only 7-day average exists and it's numerical, format its value for percentage
                 $metricData['trend_percentage'] = $this->formatMetricValue($metricData['average_7_days'], $metricType);
             }
         }
@@ -768,11 +741,12 @@ class MetricStatisticsService
 
     /**
      * Calcule la Charge Subjective Réelle par Séance (CSR-S) pour une métrique de RPE donnée.
-     * CSR-S est simplement la valeur du RPE (POST_SESSION_SESSION_LOAD).
+     *
+     * @param  Metric  $rpeMetric  La métrique de RPE (Rate of Perceived Exertion).
+     * @return float La Charge Subjective Réelle par Séance (CSR-S).
      */
     public function calculateCsrS(Metric $rpeMetric): float
     {
-        // S'assurer que la métrique est du bon type et que la valeur est numérique
         if ($rpeMetric->metric_type !== MetricType::POST_SESSION_SESSION_LOAD || ! is_numeric($rpeMetric->value)) {
             return 0.0;
         }
@@ -782,7 +756,11 @@ class MetricStatisticsService
 
     /**
      * Calcule la Charge Interne Hebdomadaire (CIH) pour une semaine donnée et un athlète.
-     * CIH = Somme des CSR-S pour chaque séance de la semaine.
+     * CIH est la somme des Charges Subjectives Réelles par Séance (CSR-S) pour chaque séance de la semaine.
+     *
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  Carbon  $weekStartDate La date de début de la semaine.
+     * @return float La Charge Interne Hebdomadaire (CIH).
      */
     public function calculateCih(Athlete $athlete, Carbon $weekStartDate): float
     {
@@ -800,7 +778,11 @@ class MetricStatisticsService
 
     /**
      * Calcule le Score de Bien-être Matinal (SBM) pour un jour donné et un athlète.
-     * SBM = MORNING_SLEEP_QUALITY + (10 - MORNING_GENERAL_FATIGUE) + (10 - MORNING_PAIN) + MORNING_MOOD_WELLBEING
+     * SBM est calculé comme suit : MORNING_SLEEP_QUALITY + (10 - MORNING_GENERAL_FATIGUE) + (10 - MORNING_PAIN) + MORNING_MOOD_WELLBEING.
+     *
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  Carbon  $date La date pour laquelle calculer le SBM.
+     * @return float Le Score de Bien-être Matinal (SBM).
      */
     public function calculateSbm(Athlete $athlete, Carbon $date): float
     {
@@ -816,14 +798,15 @@ class MetricStatisticsService
 
     /**
      * Calcule la Charge Planifiée Hebdomadaire (CPH) pour une semaine donnée.
-     * CPH = volume_planned * (intensity_planned / 10)
+     * CPH est calculée comme : volume_planned * (intensity_planned / 10).
+     *
+     * @param  TrainingPlanWeek  $planWeek La semaine du plan d'entraînement.
+     * @return float La Charge Planifiée Hebdomadaire (CPH).
      */
     public function calculateCph(TrainingPlanWeek $planWeek): float
     {
         $volumePlanned = $planWeek->volume_planned ?? 0;
         $intensityPlanned = $planWeek->intensity_planned ?? 0;
-
-        // Normaliser l'intensité de 0-100 à 0-10
         $normalizedIntensity = $intensityPlanned / 10;
 
         $cph = $volumePlanned * $normalizedIntensity;
@@ -833,11 +816,15 @@ class MetricStatisticsService
 
     /**
      * Calcule le Ratio CIH / CPH.
+     *
+     * @param  float  $cih  Charge Interne Hebdomadaire.
+     * @param  float  $cph  Charge Planifiée Hebdomadaire.
+     * @return float Le ratio CIH/CPH. Retourne 0.0 si CPH est zéro pour éviter une division par zéro.
      */
     public function calculateRatio(float $cih, float $cph): float
     {
         if ($cph === 0.0) {
-            return 0.0; // Éviter la division par zéro, ou gérer comme une alerte spécifique
+            return 0.0;
         }
         return $cih / $cph;
     }
@@ -881,9 +868,10 @@ class MetricStatisticsService
     /**
      * Prépare les données de graphique pour les métriques hebdomadaires (CIH, SBM, CPH, Ratio CIH/CPH) sur une période donnée.
      *
-     * @param  Athlete  $athlete
-     * @param  string  $period  (e.g., 'last_60_days')
-     * @return array ['cih' => chartData, 'sbm' => chartData, 'cph' => chartData, 'ratio_cih_cph' => chartData]
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  string  $period  La période pour laquelle récupérer les données (ex: 'last_60_days').
+     * @param  string  $metricKey La clé de la métrique hebdomadaire (ex: 'cih', 'sbm').
+     * @return array Les données formatées pour un graphique.
      */
     public function getWeeklyMetricsChartData(Athlete $athlete, string $period, string $metricKey): array
     {
@@ -900,16 +888,15 @@ class MetricStatisticsService
             'last_90_days'  => $now->copy()->subDays(90)->startOfDay(),
             'last_6_months' => $now->copy()->subMonths(6)->startOfDay(),
             'last_year'     => $now->copy()->subYear()->startOfDay(),
-            default         => $now->copy()->subDays(60)->startOfDay(), // Default to 60 days
+            default         => $now->copy()->subDays(60)->startOfDay(),
         };
 
-        // Ensure we start from the beginning of the week for weekly calculations
         $currentWeek = $startDate->startOfWeek(Carbon::MONDAY);
         $endWeek = $now->endOfWeek(Carbon::SUNDAY);
 
         while ($currentWeek->lessThanOrEqualTo($endWeek)) {
             $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeek);
-            $weekLabel = $currentWeek->format('W Y'); // Week number and year
+            $weekLabel = $currentWeek->format('W Y');
             $value = $summary[$metricKey];
 
             $labels[] = $weekLabel;
@@ -918,7 +905,7 @@ class MetricStatisticsService
             $labelsAndData[] = [
                 'label' => $weekLabel,
                 'value' => $numericValue,
-                'unit'  => null, // No specific unit for these aggregated metrics
+                'unit'  => null,
             ];
 
             $currentWeek->addWeek();
@@ -940,7 +927,12 @@ class MetricStatisticsService
     }
 
     /**
-     * Prépare toutes les données agrégées pour le tableau de bord d'une métrique hebdomadaire spécifique (CIH, SBM, CPH, Ratio CIH/CPH).
+     * Prépare toutes les données agrégées pour le tableau de bord d'une métrique hebdomadaire spécifique.
+     *
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  string  $metricKey La clé de la métrique hebdomadaire (ex: 'cih', 'sbm').
+     * @param  string  $period  La période pour laquelle récupérer les données.
+     * @return array Les données formatées pour le tableau de bord.
      */
     public function getDashboardWeeklyMetricData(Athlete $athlete, string $metricKey, string $period): array
     {
@@ -969,30 +961,27 @@ class MetricStatisticsService
                 'ratio_cih_cph' => 'Ratio entre la Charge Interne Hebdomadaire (CIH) et la Charge Planifiée Hebdomadaire (CPH).',
                 default         => '',
             },
-            'unit'                      => null, // Pas d'unité spécifique pour ces métriques agrégées
+            'unit'                      => null,
             'last_value'                => null,
             'formatted_last_value'      => 'N/A',
             'average_7_days'            => null,
             'formatted_average_7_days'  => 'N/A',
             'average_30_days'           => null,
             'formatted_average_30_days' => 'N/A',
-            'trend_icon'                => 'ellipsis-horizontal', // default
-            'trend_color'               => 'zinc', // default
+            'trend_icon'                => 'ellipsis-horizontal',
+            'trend_color'               => 'zinc',
             'trend_percentage'          => 'N/A',
             'chart_data'                => [],
-            'is_numerical'              => true, // Ces métriques sont numériques
+            'is_numerical'              => true,
         ];
 
-        // Get current week's value
         $weeklySummary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeekStartDate);
         $currentValue = $weeklySummary[$metricKey];
         $metricData['last_value'] = $currentValue;
         $metricData['formatted_last_value'] = is_numeric($currentValue) ? number_format($currentValue, 1) : 'N/A';
 
-        // Prepare chart data
         $metricData['chart_data'] = $this->getWeeklyMetricsChartData($athlete, $period, $metricKey);
 
-        // Calculate averages and trends over the period
         $allWeeklyData = new Collection();
         $startDateForAverages = match ($period) {
             'last_7_days'   => $now->copy()->subDays(7)->startOfWeek(Carbon::MONDAY),
@@ -1014,7 +1003,6 @@ class MetricStatisticsService
             $tempWeek->addWeek();
         }
 
-        // Calculate 7-day and 30-day averages based on weekly data
         $average7Days = null;
         $average30Days = null;
 
@@ -1033,7 +1021,6 @@ class MetricStatisticsService
         $metricData['average_30_days'] = $average30Days;
         $metricData['formatted_average_30_days'] = is_numeric($average30Days) ? number_format($average30Days, 1) : 'N/A';
 
-        // Calculate trend
         $evolutionTrendData = $this->calculateTrendFromNumericCollection($allWeeklyData);
 
         if ($metricData['average_7_days'] !== null && $evolutionTrendData && isset($evolutionTrendData['trend'])) {
@@ -1055,21 +1042,17 @@ class MetricStatisticsService
             }
         }
 
-        // Trend percentage
         if (is_numeric($metricData['average_7_days']) && is_numeric($metricData['average_30_days'])) {
-            if ($metricData['average_30_days'] !== 0.0) { // Utiliser 0.0 pour une comparaison flottante stricte
+            if ($metricData['average_30_days'] !== 0.0) {
                 $change = (($metricData['average_7_days'] - $metricData['average_30_days']) / $metricData['average_30_days']) * 100;
                 $metricData['trend_percentage'] = ($change > 0 ? '+' : '').number_format($change, 1).'%';
             } else {
-                // Gérer le cas où average_30_days est 0.0.
-                // Si average_7_days est aussi 0.0, le changement est 0%.
-                // Si average_7_days est non nul, c'est une augmentation infinie, on peut le représenter comme +INF% ou un message spécifique.
                 $metricData['trend_percentage'] = ($metricData['average_7_days'] == 0.0) ? '0%' : '+INF%';
             }
         } elseif (is_numeric($metricData['average_7_days'])) {
             $metricData['trend_percentage'] = number_format($metricData['average_7_days'], 1);
         } else {
-            $metricData['trend_percentage'] = 'N/A'; // Si aucune des moyennes n'est numérique
+            $metricData['trend_percentage'] = 'N/A';
         }
 
         return $metricData;
@@ -1078,16 +1061,16 @@ class MetricStatisticsService
     /**
      * Détecte les alertes liées à la charge (CIH/CPH) et au bien-être (SBM) pour une semaine donnée.
      *
-     * @param  Athlete  $athlete
-     * @param  Carbon  $weekStartDate
-     * @return array
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  Carbon  $weekStartDate La date de début de la semaine.
+     * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
+     * @param  Collection|null  $planWeeks Collection des semaines de plan d'entraînement (optionnel, pour optimisation).
+     * @return array Un tableau d'alertes.
      */
     public function getChargeAlerts(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null, ?Collection $planWeeks = null): array
     {
         $alerts = [];
 
-        // Récupérer la TrainingPlanWeek correspondante pour la CPH
-        // Si planWeeks est fourni, chercher dedans, sinon faire une requête DB
         if (is_null($planWeeks)) {
             $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
         } else {
@@ -1095,13 +1078,10 @@ class MetricStatisticsService
             $trainingPlanWeek = $planWeeks->firstWhere('start_date', $weekStartDate->toDateString());
         }
 
-        // Analyse des métriques de charge (CIH/CPH)
         $alerts = array_merge($alerts, $this->analyzeChargeMetrics($athlete, $weekStartDate, $trainingPlanWeek, $allMetrics));
 
-        // Analyse des métriques SBM
         $alerts = array_merge($alerts, $this->analyzeSbmMetrics($athlete, $weekStartDate, $allMetrics));
 
-        // Analyse des tendances SBM et VFC sur plusieurs semaines
         $alerts = array_merge($alerts, $this->analyzeMultiWeekTrends($athlete, $weekStartDate, $allMetrics));
 
         return $alerts;
@@ -1130,15 +1110,15 @@ class MetricStatisticsService
     /**
      * Analyse les métriques de charge (CIH/CPH) et génère des alertes.
      *
-     * @param  Athlete  $athlete
-     * @param  Carbon  $weekStartDate
-     * @param  TrainingPlanWeek|null  $trainingPlanWeek
-     * @return array
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  Carbon  $weekStartDate La date de début de la semaine.
+     * @param  TrainingPlanWeek|null  $trainingPlanWeek La semaine du plan d'entraînement.
+     * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
+     * @return array Un tableau d'alertes liées à la charge.
      */
     private function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
     {
         $alerts = [];
-        // Si allMetrics est fourni, calculer CIH à partir de la collection, sinon faire une requête DB
         if (is_null($allMetrics)) {
             $cih = $this->calculateCih($athlete, $weekStartDate);
         } else {
@@ -1172,9 +1152,10 @@ class MetricStatisticsService
     /**
      * Analyse les métriques SBM et génère des alertes.
      *
-     * @param  Athlete  $athlete
-     * @param  Carbon  $weekStartDate
-     * @return array
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  Carbon  $weekStartDate La date de début de la semaine.
+     * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
+     * @return array Un tableau d'alertes liées au SBM.
      */
     private function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
     {
@@ -1183,7 +1164,6 @@ class MetricStatisticsService
         $sbmCount = 0;
         $period = CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
         foreach ($period as $date) {
-            // Si allMetrics est fourni, calculer SBM à partir de la collection, sinon faire une requête DB
             if (is_null($allMetrics)) {
                 $sbmValue = $this->calculateSbm($athlete, $date);
             } else {
@@ -1215,15 +1195,15 @@ class MetricStatisticsService
     /**
      * Analyse les tendances SBM et VFC sur plusieurs semaines et génère des alertes.
      *
-     * @param  Athlete  $athlete
-     * @param  Carbon  $currentWeekStartDate
-     * @return array
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  Carbon  $currentWeekStartDate La date de début de la semaine actuelle.
+     * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
+     * @return array Un tableau d'alertes liées aux tendances SBM et VFC.
      */
     private function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
     {
         $alerts = [];
 
-        // Période d'analyse pour les tendances (ex: 30 jours)
         $period = 'last_30_days';
         $startDate = Carbon::now()->subDays(30)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
@@ -1231,7 +1211,6 @@ class MetricStatisticsService
         $sbmDataCollection = new Collection();
         $currentDate = $startDate->copy();
         while ($currentDate->lessThanOrEqualTo($endDate)) {
-            // Si allMetrics est fourni, calculer SBM à partir de la collection, sinon faire une requête DB
             if (is_null($allMetrics)) {
                 $sbmValue = $this->calculateSbm($athlete, $currentDate);
             } else {
@@ -1239,14 +1218,12 @@ class MetricStatisticsService
                 $sbmValue = $this->calculateSbmForCollection($dailyMetrics);
             }
 
-            // Seulement ajouter si la valeur SBM n'est pas nulle (c'est-à-dire que les métriques ont été trouvées pour le jour)
-            if ($sbmValue !== null && $sbmValue !== 0.0) { // S'assurer que 0 n'est pas interprété comme une absence de données si c'est une valeur valide
+            if ($sbmValue !== null && $sbmValue !== 0.0) {
                 $sbmDataCollection->push((object)['date' => $currentDate->copy(), 'value' => $sbmValue]);
             }
             $currentDate->addDay();
         }
 
-        // Tendance SBM
         if ($sbmDataCollection->count() > 5) {
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
             $sbmTrend = $this->calculateTrendFromNumericCollection($sbmDataCollection);
@@ -1255,8 +1232,6 @@ class MetricStatisticsService
             }
         }
 
-        // Tendance VFC
-        // Si allMetrics est fourni, filtrer la collection, sinon faire une requête DB
         if (is_null($allMetrics)) {
             $hrvMetrics = $this->getAthleteMetrics($athlete, ['metric_type' => MetricType::MORNING_HRV->value, 'period' => $period]);
         } else {
@@ -1283,7 +1258,6 @@ class MetricStatisticsService
      */
     private function calculateTrendFromNumericCollection(Collection $dataCollection): array
     {
-        // Filtrer pour s'assurer que les valeurs sont numériques et trier par date
         $numericData = $dataCollection->filter(fn ($item) => is_numeric($item->value ?? $item['value'] ?? null))
                                       ->sortBy(fn ($item) => $item->date ?? $item['date']);
 
@@ -1294,7 +1268,7 @@ class MetricStatisticsService
         $totalCount = $numericData->count();
         $segmentSize = floor($totalCount / 3);
 
-        if ($segmentSize === 0) { // Si moins de 3 points de données, comparer le premier et le dernier
+        if ($segmentSize === 0) {
             $firstValue = $numericData->first()->value ?? $numericData->first()['value'];
             $lastValue = $numericData->last()->value ?? $numericData->last()['value'];
         } else {
@@ -1308,18 +1282,16 @@ class MetricStatisticsService
         if ($firstValue === null || $lastValue === null) {
             return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
         }
-
-        // Gérer la division par zéro pour le changement en pourcentage
+ 
         if ($firstValue == 0 && $lastValue != 0) {
-            $change = 100; // Représente une augmentation significative à partir de zéro
+            $change = 100;
         } elseif ($firstValue == 0 && $lastValue == 0) {
-            $change = 0; // Aucun changement si les deux sont zéro
+            $change = 0;
         } else {
             $change = (($lastValue - $firstValue) / $firstValue) * 100;
         }
 
         $trend = 'stable';
-        // Définir un petit seuil pour le considérer stable, évitant les micro-fluctuations
         if ($change > 0.5) {
             $trend = 'increasing';
         } elseif ($change < -0.5) {
@@ -1334,12 +1306,15 @@ class MetricStatisticsService
 
     /**
      * Déduit la phase du cycle menstruel d'un athlète féminin.
+     *
+     * @param  Athlete  $athlete L'athlète féminin concerné.
+     * @param  Collection|null  $allMetrics Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
+     * @return array Un tableau contenant la phase du cycle menstruel et des informations associées.
      */
     public function deduceMenstrualCyclePhase(Athlete $athlete, ?Collection $allMetrics = null): array
     {
         $menstrualThresholds = self::ALERT_THRESHOLDS['MENSTRUAL_CYCLE'];
 
-        // Initialiser les valeurs par défaut
         $phase = 'Inconnue';
         $reason = 'Données de cycle non disponibles.';
         $averageCycleLength = null;
@@ -1350,15 +1325,15 @@ class MetricStatisticsService
         if (is_null($allMetrics)) {
             $j1Metrics = $athlete->metrics()
                 ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
-                ->where('value', 1) // Assurez-vous que la valeur est bien 1 pour un J1
-                ->orderBy('date', 'desc') // Les plus récentes en premier
+                ->where('value', 1)
+                ->orderBy('date', 'desc')
                 ->limit(26)
                 ->get();
         } else {
             $j1Metrics = $allMetrics->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
                 ->where('value', 1)
                 ->sortByDesc('date')
-                ->values(); // Réindexer la collection numériquement
+                ->values();
         }
 
         // Déterminer le dernier J1 et les jours depuis le dernier J1
@@ -1370,18 +1345,15 @@ class MetricStatisticsService
         // Calculer les longueurs des cycles précédents et la moyenne
         $cycleLengths = [];
         if ($j1Metrics->count() >= 2) {
-            // Parcourir les métriques pour calculer la durée de chaque cycle
             for ($i = 0; $i < $j1Metrics->count() - 1; $i++) {
-                $start = Carbon::parse($j1Metrics[$i + 1]->date); // J1 précédent
-                $end = Carbon::parse($j1Metrics[$i]->date);       // J1 actuel
+                $start = Carbon::parse($j1Metrics[$i + 1]->date);
+                $end = Carbon::parse($j1Metrics[$i]->date);
                 $cycleLengths[] = $end->diffInDays($start, true);
             }
-            // Calculer la longueur moyenne du cycle
             $averageCycleLength = count($cycleLengths) > 0 ? array_sum($cycleLengths) / count($cycleLengths) : null;
         }
 
         // --- DÉDUCTION DE LA PHASE DU CYCLE MENSTRUEL PAR ORDRE DE PRIORITÉ ---
-
         // 1. Cas : Données insuffisantes pour établir un historique de cycle
         if ($j1Metrics->count() < 2 || $averageCycleLength === null) {
             $phase = 'Inconnue';
@@ -1435,23 +1407,22 @@ class MetricStatisticsService
             'phase'             => $phase,
             'reason'            => $reason,
             'days_in_phase'     => $daysSinceLastPeriod,
-            'cycle_length_avg'  => $averageCycleLength !== null ? round($averageCycleLength) : null, // Arrondi pour l'affichage
+            'cycle_length_avg'  => $averageCycleLength !== null ? round($averageCycleLength) : null,
             'last_period_start' => $lastPeriodStart ? $lastPeriodStart->format('d.m.Y') : null,
         ];
     }
 
     /**
-     * Analyse les tendances des métriques et identifie des signaux d'alerte.
-     * Cette fonction est générique pour tous les genres, mais aura des signaux spécifiques pour les femmes.
+     * Analyse les tendances des métriques et identifie des signaux d'alerte pour un athlète.
      *
-     * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months').
-     * Par défaut à 'last_60_days' pour un bon équilibre entre réactivité et détection de tendances significatives.
+     * @param  Athlete  $athlete L'athlète pour lequel analyser les alertes.
+     * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months'). Par défaut à 'last_60_days'.
+     * @param  Collection|null  $metrics  Collection de métriques pré-chargée pour éviter des requêtes supplémentaires.
      * @return array Des drapeaux et des messages d'alerte.
      */
     public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days', ?Collection $metrics = null): array
     {
         $alerts = [];
-        // Si les métriques ne sont pas fournies, les récupérer de la base de données
         if (is_null($metrics)) {
             $metrics = $this->getAthleteMetrics($athlete, ['period' => $period]);
         }

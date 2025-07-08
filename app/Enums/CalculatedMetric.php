@@ -14,9 +14,9 @@ enum CalculatedMetric: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::CIH           => 'Charge Interne Hebdomadaire',
-            self::SBM           => 'Score de Bien-être Matinal',
-            self::CPH           => 'Charge Planifiée Hebdomadaire',
+            self::CIH           => 'Charge interne hebdomadaire',
+            self::SBM           => 'Score de bien-être matinal',
+            self::CPH           => 'Charge planifiée hebdomadaire',
             self::RATIO_CIH_CPH => 'Ratio CIH/CPH',
         };
     }
@@ -34,10 +34,10 @@ enum CalculatedMetric: string implements HasLabel
     public function getDescription(): string
     {
         return match ($this) {
-            self::CIH           => 'Somme des Charges Subjectives Réelles par Séance (CSR-S) pour la semaine.',
+            self::CIH           => 'Somme des Charges subjectives réelles par séance (CSR-S) pour la semaine.',
             self::SBM           => 'Score agrégé des métriques de bien-être matinal.',
             self::CPH           => 'Charge d\'entraînement planifiée pour la semaine.',
-            self::RATIO_CIH_CPH => 'Ratio entre la Charge Interne Hebdomadaire (CIH) et la Charge Planifiée Hebdomadaire (CPH).',
+            self::RATIO_CIH_CPH => 'Ratio entre la Charge interne hebdomadaire (CIH) et la Charge planifiée hebdomadaire (CPH).',
         };
     }
 }
