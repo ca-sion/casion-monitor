@@ -7,18 +7,37 @@
         <strong>{{ $period_options[$period_label] ?? 'données sélectionnées' }}</strong>.
     </flux:text>
 
-    {{-- Sélecteur de période --}}
-    <form class="my-4 flex items-center space-x-2"
+    {{-- Sélecteur de période et options d'affichage --}}
+    <form class="my-4 flex flex-wrap items-center gap-4"
         action="{{ route('trainers.dashboard', ['hash' => $trainer->hash]) }}"
-        method="GET">
-        <flux:text class="whitespace-nowrap text-base">Voir les données des:</flux:text>
-        <flux:select name="period" onchange="this.form.submit()">
-            @foreach ($period_options as $value => $label)
-                <option value="{{ $value }}" @selected($period_label === $value)>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </flux:select>
+        method="GET" id="dashboard-filter-form">
+        <div class="flex items-center space-x-2">
+            <flux:text class="whitespace-nowrap text-base">Voir les données des:</flux:text>
+            <flux:select name="period" onchange="document.getElementById('dashboard-filter-form').submit()">
+                @foreach ($period_options as $value => $label)
+                    <option value="{{ $value }}" @selected($period_label === $value)>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </flux:select>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <input type="hidden" name="period" value="{{ $period_label }}"> {{-- Keep period value --}}
+            <input type="hidden" name="show_info_alerts" id="hidden_show_info_alerts" value="{{ $show_info_alerts ? '1' : '0' }}">
+            <flux:field variant="inline">
+                <flux:label>Afficher alertes info</flux:label>
+                <flux:switch id="show_info_alerts_switch" :checked="$show_info_alerts" onchange="document.getElementById('hidden_show_info_alerts').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
+            </flux:field>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <input type="hidden" name="show_menstrual_cycle" id="hidden_show_menstrual_cycle" value="{{ $show_menstrual_cycle ? '1' : '0' }}">
+            <flux:field variant="inline">
+                <flux:label>Afficher cycle menstruel</flux:label>
+                <flux:switch id="show_menstrual_cycle_switch" :checked="$show_menstrual_cycle" onchange="document.getElementById('hidden_show_menstrual_cycle').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
+            </flux:field>
+        </div>
     </form>
 
     <flux:separator variant="subtle" />
@@ -74,23 +93,25 @@
                             {{-- Alertes --}}
                             <div class="flex flex-col gap-2">
                                 @foreach (array_merge($athlete->alerts, $athlete->chargeAlerts) as $alert)
-                                <div>
-                                    <flux:badge size="sm" inset="top bottom" class="whitespace-normal!"
-                                        color="{{ match($alert['type']) {
-                                            'danger' => 'rose',
-                                            'warning' => 'amber',
-                                            'info' => 'sky',
-                                            'success' => 'emerald',
-                                            default => 'zinc'
-                                        } }}">
-                                        {{ $alert['message'] }}
-                                    </flux:badge>
-                                </div>
+                                    @if ($show_info_alerts || $alert['type'] !== 'info')
+                                    <div>
+                                        <flux:badge size="sm" inset="top bottom" class="whitespace-normal!"
+                                            color="{{ match($alert['type']) {
+                                                'danger' => 'rose',
+                                                'warning' => 'amber',
+                                                'info' => 'sky',
+                                                'success' => 'emerald',
+                                                default => 'zinc'
+                                            } }}">
+                                            {{ $alert['message'] }}
+                                        </flux:badge>
+                                    </div>
+                                    @endif
                                 @endforeach
                             </div>
 
                             {{-- Cycle Menstruel --}}
-                            @if ($athlete->gender === 'w' && $athlete->menstrualCycleInfo)
+                            @if ($show_menstrual_cycle && $athlete->gender === 'w' && $athlete->menstrualCycleInfo)
                                 @php
                                     $info = $athlete->menstrualCycleInfo;
                                     $borderColor = match($info['phase']) {

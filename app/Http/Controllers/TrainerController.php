@@ -31,10 +31,23 @@ class TrainerController extends Controller
         }
 
         $period = request()->input('period', 'last_60_days');
+        $showInfoAlerts = filter_var(request()->input('show_info_alerts', false), FILTER_VALIDATE_BOOLEAN);
+        $showMenstrualCycle = filter_var(request()->input('show_menstrual_cycle', false), FILTER_VALIDATE_BOOLEAN);
 
         // Appel unique à la nouvelle méthode de service qui fait tout le travail en une fois
         $athletesOverviewData = $this->metricStatisticsService
                                      ->getBulkAthletesDashboardData($trainer->athletes, $period);
+
+        // Filtrer les alertes "info" et le cycle menstruel si les paramètres sont désactivés
+        foreach ($athletesOverviewData as $athlete) {
+            if (! $showInfoAlerts) {
+                $athlete->alerts = array_filter($athlete->alerts, fn($alert) => $alert['type'] !== 'info');
+                $athlete->chargeAlerts = array_filter($athlete->chargeAlerts, fn($alert) => $alert['type'] !== 'info');
+            }
+            if (! $showMenstrualCycle) {
+                $athlete->menstrualCycleInfo = null;
+            }
+        }
 
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
@@ -67,6 +80,8 @@ class TrainerController extends Controller
             'calculated_metric_types' => $calculatedMetricTypes, // Passer le nouvel Enum à la vue
             'period_label'            => $period,
             'period_options'          => $periodOptions,
+            'show_info_alerts'        => $showInfoAlerts,
+            'show_menstrual_cycle'    => $showMenstrualCycle,
         ];
 
         if (request()->expectsJson()) {
