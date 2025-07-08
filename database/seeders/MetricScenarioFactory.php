@@ -134,7 +134,8 @@ class MetricScenarioFactory
     {
         $this->cleanMetrics($athleteId, [MetricType::MORNING_FIRST_DAY_PERIOD, MetricType::MORNING_GENERAL_FATIGUE]);
         $this->info('  - Scénario: Fatigue Élevée en phase Menstruelle pour Athlète ID: '.$athleteId);
-        $this->insertMetric($athleteId, MetricType::MORNING_FIRST_DAY_PERIOD, 3, 1.0);
+        $this->insertMetric($athleteId, MetricType::MORNING_FIRST_DAY_PERIOD, 31, 1.0); // Ancien J1 pour calculer la moyenne
+        $this->insertMetric($athleteId, MetricType::MORNING_FIRST_DAY_PERIOD, 3, 1.0); // J1 actuel pour être en phase menstruelle
         $this->insertMetric($athleteId, MetricType::MORNING_GENERAL_FATIGUE, 0, 7.0);
         $this->info('    -> Attendu: Alerte INFO pour fatigue élevée durant la phase menstruelle.');
         $this->newLine();
@@ -144,7 +145,8 @@ class MetricScenarioFactory
     {
         $this->cleanMetrics($athleteId, [MetricType::MORNING_FIRST_DAY_PERIOD, MetricType::POST_SESSION_PERFORMANCE_FEEL]);
         $this->info('  - Scénario: Performance Faible en phase Menstruelle pour Athlète ID: '.$athleteId);
-        $this->insertMetric($athleteId, MetricType::MORNING_FIRST_DAY_PERIOD, 3, 1.0);
+        $this->insertMetric($athleteId, MetricType::MORNING_FIRST_DAY_PERIOD, 31, 1.0); // Ancien J1 pour calculer la moyenne
+        $this->insertMetric($athleteId, MetricType::MORNING_FIRST_DAY_PERIOD, 3, 1.0); // J1 actuel pour être en phase menstruelle
         $this->insertMetric($athleteId, MetricType::POST_SESSION_PERFORMANCE_FEEL, 0, 4.0);
         $this->info('    -> Attendu: Alerte INFO pour performance ressentie faible durant la phase menstruelle.');
         $this->newLine();

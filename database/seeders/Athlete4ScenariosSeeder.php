@@ -44,5 +44,7 @@ class Athlete4ScenariosSeeder extends Seeder
         // $scenarioFactory->seedProlongedAbsenceOfPeriodAlert($athlete->id); // Si un seul J1 très ancien
         // $scenarioFactory->seedFatigueDuringMenstrualPhaseInfo($athlete->id);
         // $scenarioFactory->seedLowPerformanceDuringMenstrualPhaseInfo($athlete->id);
+        // $scenarioFactory->seedFatigueDuringPeriodScenario($athlete->id);
+        // $scenarioFactory->seedLowPerformanceDuringPeriodScenario($athlete->id);
     }
 }

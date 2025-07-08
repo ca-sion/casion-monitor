@@ -27,8 +27,6 @@ class Athlete3ScenariosSeeder extends Seeder
 
         // Choisissez UN scénario à exécuter pour l'athlète 3 à la fois
         // Ces scénarios sont principalement axés sur les tendances générales
-        // $scenarioFactory->seedFatigueDuringPeriodScenario($athlete->id); // Si l'athlète est féminine et on veut tester cette alerte
-        // $scenarioFactory->seedLowPerformanceDuringPeriodScenario($athlete->id); // Si l'athlète est féminine
         // $scenarioFactory->seedGeneralFatigueTrendScenario($athlete->id);
         // $scenarioFactory->seedHrvTrendScenario($athlete->id);
         // $scenarioFactory->seedSleepQualityTrendScenario($athlete->id);
@@ -36,9 +34,9 @@ class Athlete3ScenariosSeeder extends Seeder
         // $scenarioFactory->seedNoAlertsScenario($athlete->id);
 
         // Scénarios d'alertes spécifiques (pour tester getAthleteAlerts)
-        // $scenarioFactory->seedPersistentHighFatigueAlert($athlete->id);
+        $scenarioFactory->seedPersistentHighFatigueAlert($athlete->id);
         // $scenarioFactory->seedIncreasingFatigueTrendAlert($athlete->id);
-        // $scenarioFactory->seedPersistentLowSleepQualityAlert($athlete->id);
+        $scenarioFactory->seedPersistentLowSleepQualityAlert($athlete->id);
         $scenarioFactory->seedDecreasingSleepQualityTrendAlert($athlete->id);
         // $scenarioFactory->seedPersistentPainAlert($athlete->id);
         // $scenarioFactory->seedIncreasingPainTrendAlert($athlete->id);
