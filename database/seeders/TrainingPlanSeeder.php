@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Athlete;
 use App\Models\TrainingPlan;
 use Illuminate\Database\Seeder;
 use App\Models\TrainingPlanWeek;
@@ -56,6 +57,11 @@ class TrainingPlanSeeder extends Seeder
                 ];
             })->toArray()
         );
+
+        $athletes = Athlete::all();
+        if ($athletes) {
+            $plan1->athletes()->attach($athletes);
+        }
 
         $this->command->info('Training plan data seeded: Plan A, Plan B.');
     }

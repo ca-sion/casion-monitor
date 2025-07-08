@@ -76,6 +76,15 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
+     * The training plans that belong to the athlete.
+     */
+    public function trainingPlans(): BelongsToMany
+    {
+        return $this->belongsToMany(TrainingPlan::class, 'assigned_training_plans', 'athlete_id', 'training_plan_id')
+                    ->withPivot('start_date', 'is_customized');
+    }
+
+    /**
      * The feedbacks that belong to the athlete.
      */
     public function feedbacks(): HasMany

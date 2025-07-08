@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TrainingPlan extends Model
@@ -32,11 +33,12 @@ class TrainingPlan extends Model
     }
 
     /**
-     * Get the assigned training plans for the TrainingPlan.
+     * The athletes that are assigned to the TrainingPlan.
      */
-    public function assignedTrainingPlans(): HasMany
+    public function athletes(): BelongsToMany
     {
-        return $this->hasMany(AssignedTrainingPlan::class);
+        return $this->belongsToMany(Athlete::class, 'assigned_training_plans', 'training_plan_id', 'athlete_id')
+                    ->withPivot('start_date', 'is_customized');
     }
 
     /**
