@@ -38,17 +38,6 @@ class TrainerController extends Controller
         $athletesOverviewData = $this->metricStatisticsService
                                      ->getBulkAthletesDashboardData($trainer->athletes, $period);
 
-        // Filtrer les alertes "info" et le cycle menstruel si les paramètres sont désactivés
-        foreach ($athletesOverviewData as $athlete) {
-            if (! $showInfoAlerts) {
-                $athlete->alerts = array_filter($athlete->alerts, fn($alert) => $alert['type'] !== 'info');
-                $athlete->chargeAlerts = array_filter($athlete->chargeAlerts, fn($alert) => $alert['type'] !== 'info');
-            }
-            if (! $showMenstrualCycle) {
-                $athlete->menstrualCycleInfo = null;
-            }
-        }
-
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
