@@ -123,7 +123,7 @@ private const ALERT_THRESHOLDS = [
     /**
      * Prépare les données d'une métrique pour le tableau de bord à partir d'une collection pré-filtrée.
      */
-    private function getDashboardMetricDataForCollection(Collection $metricsForPeriod, MetricType $metricType, string $period): array
+protected function getDashboardMetricDataForCollection(Collection $metricsForPeriod, MetricType $metricType, string $period): array
     {
         $valueColumn = $metricType->getValueColumn();
         $metricData = [
@@ -187,7 +187,7 @@ private const ALERT_THRESHOLDS = [
     /**
      * Prépare les données hebdomadaires d'une métrique pour le tableau de bord à partir de collections pré-filtrées.
      */
-    private function getDashboardWeeklyMetricDataForCollection(Collection $allAthleteMetrics, string $metricKey, string $period, Collection $athletePlanWeeks): array
+protected function getDashboardWeeklyMetricDataForCollection(Collection $allAthleteMetrics, string $metricKey, string $period, Collection $athletePlanWeeks): array
     {
         $now = Carbon::now();
         $startDate = $this->getStartDateFromPeriod($period)->startOfWeek(Carbon::MONDAY);
@@ -279,7 +279,7 @@ private const ALERT_THRESHOLDS = [
     /**
      * Récupère les alertes pour un athlète à partir d'une collection de métriques pré-chargée.
      */
-    private function getAthleteAlertsForCollection(Athlete $athlete, Collection $metrics, string $period = 'last_60_days'): array
+protected function getAthleteAlertsForCollection(Athlete $athlete, Collection $metrics, string $period = 'last_60_days'): array
     {
         return $this->getAthleteAlerts($athlete, $period, $metrics);
     }
@@ -287,7 +287,7 @@ private const ALERT_THRESHOLDS = [
     /**
      * Déduit la phase du cycle menstruel d'un athlète féminin à partir d'une collection de métriques pré-chargée.
      */
-    private function deduceMenstrualCyclePhaseForCollection(Athlete $athlete, Collection $allMetrics): array
+protected function deduceMenstrualCyclePhaseForCollection(Athlete $athlete, Collection $allMetrics): array
     {
         return $this->deduceMenstrualCyclePhase($athlete, $allMetrics);
     }
@@ -295,7 +295,7 @@ private const ALERT_THRESHOLDS = [
     /**
      * Récupère les alertes de charge pour un athlète à partir de collections pré-chargées.
      */
-    private function getChargeAlertsForCollection(Athlete $athlete, Collection $allMetrics, Collection $planWeeks, Carbon $weekStartDate): array
+protected function getChargeAlertsForCollection(Athlete $athlete, Collection $allMetrics, Collection $planWeeks, Carbon $weekStartDate): array
     {
         return $this->getChargeAlerts($athlete, $weekStartDate, $allMetrics, $planWeeks);
     }
@@ -303,7 +303,7 @@ private const ALERT_THRESHOLDS = [
     /**
      * Obtient la date de début d'une période donnée.
      */
-    private function getStartDateFromPeriod(string $period): Carbon
+public function getStartDateFromPeriod(string $period): Carbon
     {
         $now = Carbon::now();
         return match ($period) {
@@ -322,7 +322,7 @@ private const ALERT_THRESHOLDS = [
     /**
      * Calcule le Score de Bien-être Matinal (SBM) pour un seul jour à partir d'une collection de métriques.
      */
-    private function calculateSbmForCollection(Collection $dailyMetrics): float
+public function calculateSbmForCollection(Collection $dailyMetrics): float
     {
         $sleepQuality = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY)?->value ?? 0;
         $generalFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value ?? 0;
@@ -1259,7 +1259,7 @@ private const ALERT_THRESHOLDS = [
      * @param  Collection<object|array>  $dataCollection  Collection d'objets/tableaux avec 'date' et 'value'.
      * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
      */
-    private function calculateTrendFromNumericCollection(Collection $dataCollection): array
+public function calculateTrendFromNumericCollection(Collection $dataCollection): array
     {
         $numericData = $dataCollection->filter(fn ($item) => is_numeric($item->value ?? $item['value'] ?? null))
                                       ->sortBy(fn ($item) => $item->date ?? $item['date']);
