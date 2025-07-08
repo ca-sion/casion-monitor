@@ -19,12 +19,14 @@ class DatabaseSeeder extends Seeder
         // Metric::factory(100)->create();
 
         // Appeler les seeders de scénarios spécifiques à chaque athlète
-        // Vous pouvez commenter/décommenter ces lignes pour choisir quels athlètes recevront des données de scénario.
         $this->call(Athlete1RealisticScenariosSeeder::class);
         // $this->call(Athlete1ScenariosSeeder::class);
         $this->call(Athlete2ScenariosSeeder::class);
         $this->call(Athlete3ScenariosSeeder::class);
         $this->call(Athlete4ScenariosSeeder::class);
+
+        // Appeler les autres seeders
+        $this->call(TrainingPlanSeeder::class);
 
         $this->command->info('Tous les seeders ont été exécutés.');
     }
