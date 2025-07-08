@@ -291,30 +291,8 @@ class MetricStatisticsService
      */
     private function getAthleteAlertsForCollection(Athlete $athlete, Collection $metrics, string $period = 'last_60_days'): array
     {
-        $alerts = [];
-        if ($metrics->isEmpty() || $metrics->count() < 5) {
-            return [['type' => 'info', 'message' => 'Pas encore suffisamment de données pour une analyse complète.']];
-        }
-
-        // La logique existante de getAthleteAlerts est copiée ici, mais elle opère sur la collection `$metrics`
-        // au lieu d'appeler `getAthleteMetrics()` en interne.
-        // Exemple pour la fatigue :
-        $fatigueType = MetricType::MORNING_GENERAL_FATIGUE;
-        $fatigueMetrics = $metrics->filter(fn ($m) => $m->metric_type === $fatigueType);
-        $fatigueThresholds = self::ALERT_THRESHOLDS[$fatigueType->value];
-        if ($fatigueMetrics->count() > 5) {
-            $averageFatigue7Days = $this->getMetricTrendsForCollection($fatigueMetrics, $fatigueType)['averages']['Derniers 7 jours'] ?? null;
-            if ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['persistent_high_7d_min']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Fatigue générale très élevée persistante.'];
-            }
-        }
-        
-        // ... Ajouter les autres logiques d'alerte ici ...
-
-        if (empty($alerts)) {
-            $alerts[] = ['type' => 'success', 'message' => 'Aucune alerte, tout va bien.'];
-        }
-        return $alerts;
+        // Appelle la méthode getAthleteAlerts centralisée en lui passant la collection de métriques pré-chargée
+        return $this->getAthleteAlerts($athlete, $period, $metrics);
     }
     
     /**
@@ -322,20 +300,8 @@ class MetricStatisticsService
      */
     private function deduceMenstrualCyclePhaseForCollection(Athlete $athlete, Collection $allMetrics): array
     {
-        if ($athlete->gender !== 'w') return [];
-
-        $j1Metrics = $allMetrics->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
-            ->where('value', 1)
-            ->sortByDesc('date');
-        
-        // La logique existante de deduceMenstrualCyclePhase est copiée ici...
-        // ...
-        
-        // Valeur de retour par défaut
-        return [
-            'phase' => 'Inconnue', 'reason' => 'Données insuffisantes.', 'days_in_phase' => null, 
-            'cycle_length_avg' => null, 'last_period_start' => null
-        ];
+        // Appelle la méthode deduceMenstrualCyclePhase centralisée en lui passant la collection de métriques pré-chargée
+        return $this->deduceMenstrualCyclePhase($athlete, $allMetrics);
     }
     
     /**
@@ -343,26 +309,8 @@ class MetricStatisticsService
      */
     private function getChargeAlertsForCollection(Athlete $athlete, Collection $allMetrics, Collection $planWeeks, Carbon $weekStartDate): array
     {
-        $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
-        $metricsForWeek = $allMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
-        
-        $cih = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
-
-        $planWeek = $planWeeks->firstWhere('start_date', $weekStartDate->toDateString());
-        $cph = $planWeek ? $this->calculateCph($planWeek) : 0.0;
-        
-        $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
-        $alerts = [];
-
-        if ($cih > 0 && $cph > 0) {
-            $ratio = $cih / $cph;
-            if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle cette semaine."];
-            } elseif ($ratio > $chargeThresholds['ratio_overload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle cette semaine."];
-            }
-        }
-        return $alerts;
+        // Appelle la méthode getChargeAlerts centralisée en lui passant les collections pré-chargées
+        return $this->getChargeAlerts($athlete, $weekStartDate, $allMetrics, $planWeeks);
     }
     
     /**
@@ -1134,21 +1082,27 @@ class MetricStatisticsService
      * @param  Carbon  $weekStartDate
      * @return array
      */
-    public function getChargeAlerts(Athlete $athlete, Carbon $weekStartDate): array
+    public function getChargeAlerts(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null, ?Collection $planWeeks = null): array
     {
         $alerts = [];
 
         // Récupérer la TrainingPlanWeek correspondante pour la CPH
-        $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
+        // Si planWeeks est fourni, chercher dedans, sinon faire une requête DB
+        if (is_null($planWeeks)) {
+            $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
+        } else {
+            $assignedPlan = $athlete->trainingPlans?->first();
+            $trainingPlanWeek = $planWeeks->firstWhere('start_date', $weekStartDate->toDateString());
+        }
 
         // Analyse des métriques de charge (CIH/CPH)
-        $alerts = array_merge($alerts, $this->analyzeChargeMetrics($athlete, $weekStartDate, $trainingPlanWeek));
+        $alerts = array_merge($alerts, $this->analyzeChargeMetrics($athlete, $weekStartDate, $trainingPlanWeek, $allMetrics));
 
         // Analyse des métriques SBM
-        $alerts = array_merge($alerts, $this->analyzeSbmMetrics($athlete, $weekStartDate));
+        $alerts = array_merge($alerts, $this->analyzeSbmMetrics($athlete, $weekStartDate, $allMetrics));
 
         // Analyse des tendances SBM et VFC sur plusieurs semaines
-        $alerts = array_merge($alerts, $this->analyzeMultiWeekTrends($athlete, $weekStartDate));
+        $alerts = array_merge($alerts, $this->analyzeMultiWeekTrends($athlete, $weekStartDate, $allMetrics));
 
         return $alerts;
     }
@@ -1181,10 +1135,17 @@ class MetricStatisticsService
      * @param  TrainingPlanWeek|null  $trainingPlanWeek
      * @return array
      */
-    private function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek): array
+    private function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
     {
         $alerts = [];
-        $cih = $this->calculateCih($athlete, $weekStartDate);
+        // Si allMetrics est fourni, calculer CIH à partir de la collection, sinon faire une requête DB
+        if (is_null($allMetrics)) {
+            $cih = $this->calculateCih($athlete, $weekStartDate);
+        } else {
+            $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
+            $metricsForWeek = $allMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
+            $cih = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
+        }
         $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
@@ -1215,14 +1176,21 @@ class MetricStatisticsService
      * @param  Carbon  $weekStartDate
      * @return array
      */
-    private function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate): array
+    private function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
     {
         $alerts = [];
         $sbmSum = 0;
         $sbmCount = 0;
         $period = CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
         foreach ($period as $date) {
-            $sbmValue = $this->calculateSbm($athlete, $date);
+            // Si allMetrics est fourni, calculer SBM à partir de la collection, sinon faire une requête DB
+            if (is_null($allMetrics)) {
+                $sbmValue = $this->calculateSbm($athlete, $date);
+            } else {
+                $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $date->format('Y-m-d'));
+                $sbmValue = $this->calculateSbmForCollection($dailyMetrics);
+            }
+
             if ($sbmValue !== null) {
                 $sbmSum += $sbmValue;
                 $sbmCount++;
@@ -1233,9 +1201,9 @@ class MetricStatisticsService
         if ($averageSbm !== null) {
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
             if ($averageSbm < $sbmThresholds['average_low_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => "Score de Bien-être Matinal faible pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Surveiller la récupération."];
+                $alerts[] = ['type' => 'warning', 'message' => "SBM faible pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Surveiller la récupération."];
             } elseif ($averageSbm > $sbmThresholds['average_high_threshold']) {
-                $alerts[] = ['type' => 'info', 'message' => "Score de Bien-être Matinal élevé pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Bonne récupération."];
+                $alerts[] = ['type' => 'info', 'message' => "SBM élevé pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Bonne récupération."];
             }
         } else {
             $alerts[] = ['type' => 'info', 'message' => "Pas de données SBM pour cette semaine."];
@@ -1251,7 +1219,7 @@ class MetricStatisticsService
      * @param  Carbon  $currentWeekStartDate
      * @return array
      */
-    private function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate): array
+    private function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
     {
         $alerts = [];
 
@@ -1263,7 +1231,14 @@ class MetricStatisticsService
         $sbmDataCollection = new Collection();
         $currentDate = $startDate->copy();
         while ($currentDate->lessThanOrEqualTo($endDate)) {
-            $sbmValue = $this->calculateSbm($athlete, $currentDate);
+            // Si allMetrics est fourni, calculer SBM à partir de la collection, sinon faire une requête DB
+            if (is_null($allMetrics)) {
+                $sbmValue = $this->calculateSbm($athlete, $currentDate);
+            } else {
+                $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $currentDate->format('Y-m-d'));
+                $sbmValue = $this->calculateSbmForCollection($dailyMetrics);
+            }
+
             // Seulement ajouter si la valeur SBM n'est pas nulle (c'est-à-dire que les métriques ont été trouvées pour le jour)
             if ($sbmValue !== null && $sbmValue !== 0.0) { // S'assurer que 0 n'est pas interprété comme une absence de données si c'est une valeur valide
                 $sbmDataCollection->push((object)['date' => $currentDate->copy(), 'value' => $sbmValue]);
@@ -1276,12 +1251,18 @@ class MetricStatisticsService
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
             $sbmTrend = $this->calculateTrendFromNumericCollection($sbmDataCollection);
             if ($sbmTrend['trend'] === 'decreasing' && $sbmTrend['change'] < $sbmThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Baisse significative du Score de Bien-être Matinal ('.number_format($sbmTrend['change'], 1).'%) sur les 30 derniers jours.'];
+                $alerts[] = ['type' => 'warning', 'message' => 'Baisse significative du SBM ('.number_format($sbmTrend['change'], 1).'%) sur les 30 derniers jours.'];
             }
         }
 
         // Tendance VFC
-        $hrvMetrics = $this->getAthleteMetrics($athlete, ['metric_type' => MetricType::MORNING_HRV->value, 'period' => $period]);
+        // Si allMetrics est fourni, filtrer la collection, sinon faire une requête DB
+        if (is_null($allMetrics)) {
+            $hrvMetrics = $this->getAthleteMetrics($athlete, ['metric_type' => MetricType::MORNING_HRV->value, 'period' => $period]);
+        } else {
+            $hrvMetrics = $allMetrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_HRV);
+        }
+
         if ($hrvMetrics->count() > 5) {
             $hrvTrend = $this->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
             $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
@@ -1354,7 +1335,7 @@ class MetricStatisticsService
     /**
      * Déduit la phase du cycle menstruel d'un athlète féminin.
      */
-    public function deduceMenstrualCyclePhase(Athlete $athlete): array
+    public function deduceMenstrualCyclePhase(Athlete $athlete, ?Collection $allMetrics = null): array
     {
         $menstrualThresholds = self::ALERT_THRESHOLDS['MENSTRUAL_CYCLE'];
 
@@ -1366,12 +1347,19 @@ class MetricStatisticsService
         $lastPeriodStart = null;
 
         // Récupérer toutes les métriques J1 (Premier Jour des Règles) dans l'ordre chronologique inverse des deux dernière années
-        $j1Metrics = $athlete->metrics()
-            ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
-            ->where('value', 1) // Assurez-vous que la valeur est bien 1 pour un J1
-            ->orderBy('date', 'desc') // Les plus récentes en premier
-            ->limit(26)
-            ->get();
+        if (is_null($allMetrics)) {
+            $j1Metrics = $athlete->metrics()
+                ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
+                ->where('value', 1) // Assurez-vous que la valeur est bien 1 pour un J1
+                ->orderBy('date', 'desc') // Les plus récentes en premier
+                ->limit(26)
+                ->get();
+        } else {
+            $j1Metrics = $allMetrics->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
+                ->where('value', 1)
+                ->sortByDesc('date')
+                ->values(); // Réindexer la collection numériquement
+        }
 
         // Déterminer le dernier J1 et les jours depuis le dernier J1
         if ($j1Metrics->isNotEmpty()) {
@@ -1460,10 +1448,13 @@ class MetricStatisticsService
      * Par défaut à 'last_60_days' pour un bon équilibre entre réactivité et détection de tendances significatives.
      * @return array Des drapeaux et des messages d'alerte.
      */
-    public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days'): array
+    public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days', ?Collection $metrics = null): array
     {
         $alerts = [];
-        $metrics = $this->getAthleteMetrics($athlete, ['period' => $period]);
+        // Si les métriques ne sont pas fournies, les récupérer de la base de données
+        if (is_null($metrics)) {
+            $metrics = $this->getAthleteMetrics($athlete, ['period' => $period]);
+        }
 
         // ** Alertes Générales (Hommes et Femmes) **
 
