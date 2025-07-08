@@ -116,6 +116,10 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                 $subjectiveFatigue = max(1.0, min(10.0, $baseSubjectiveFatigue + $phaseParams['subj_fatigue_mod'] + (rand(-5, 5) / 10)));
                 $this->insertMetric($athlete->id, MetricType::POST_SESSION_SUBJECTIVE_FATIGUE, $daysAgo, $subjectiveFatigue);
 
+                // Charge de la Séance Post-Séance (POST_SESSION_SESSION_LOAD)
+                $sessionLoad = max(1.0, min(10.0, (rand(10, 100) / 10))); // Valeur entre 1.0 et 10.0
+                $this->insertMetric($athlete->id, MetricType::POST_SESSION_SESSION_LOAD, $daysAgo, $sessionLoad);
+
                 // Douleur (MORNING_PAIN) - sporadiquement et généralement basse
                 if (mt_rand() / mt_getrandmax() < $phaseParams['pain_prob']) {
                     $pain = rand(2, 6); // Douleur légère à modérée

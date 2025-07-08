@@ -64,7 +64,7 @@
                         <div class="flex flex-col gap-2">
                             {{-- Alertes --}}
                             <div class="flex flex-col gap-2">
-                                @foreach ($athlete->alerts as $alert)
+                                @foreach (array_merge($athlete->alerts, $athlete->chargeAlerts) as $alert)
                                 <div>
                                     <flux:badge size="sm" inset="top bottom" class="whitespace-normal!"
                                         color="{{ match($alert['type']) {

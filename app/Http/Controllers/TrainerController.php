@@ -40,8 +40,10 @@ class TrainerController extends Controller
         ];
 
         $period = request()->input('period', 'last_60_days');
+        // Définir la date de début de la semaine actuelle pour les alertes de charge
+        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
-        $athletesOverviewData = $athletes->map(function ($athlete) use ($dashboardMetricTypes, $period) {
+        $athletesOverviewData = $athletes->map(function ($athlete) use ($dashboardMetricTypes, $period, $currentWeekStartDate) {
             $metricsDataForDashboard = [];
             foreach ($dashboardMetricTypes as $metricType) {
                 // Utilise le même service pour les données de résumé de chaque athlète
@@ -53,6 +55,9 @@ class TrainerController extends Controller
             // Alertes et le cycle menstruel
             $athlete->alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, 'last_60_days');
             $athlete->menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
+
+            // Alertes de charge pour la semaine en cours
+            $athlete->chargeAlerts = $this->metricStatisticsService->getChargeAlerts($athlete, $currentWeekStartDate);
 
             return $athlete;
         });
@@ -118,6 +123,10 @@ class TrainerController extends Controller
         // Alertes et le cycle menstruel
         $alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, $period);
         $menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
+
+        // Alertes de charge pour la semaine en cours de l'athlète spécifique
+        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $chargeAlerts = $this->metricStatisticsService->getChargeAlerts($athlete, $currentWeekStartDate);
 
         // Définir les types de métriques à afficher dans le tableau
         $displayTableMetricTypes = [
@@ -199,6 +208,7 @@ class TrainerController extends Controller
             'dashboard_metrics_data'           => $dashboard_metrics_data, // Ajouté pour les cartes de métriques
             'alerts'                           => $alerts, // Ajouté pour la section alertes
             'menstrualCycleInfo'               => $menstrualCycleInfo, // Ajouté pour le cycle menstruel
+            'chargeAlerts'                     => $chargeAlerts, // Ajouté pour les alertes de charge
             'daily_metrics_grouped_by_date'    => $processedDailyMetrics, // Renommé pour correspondre à la vue dashboard
             'display_table_metric_types'       => $displayTableMetricTypes,
             'chart_data'                       => $chartData,

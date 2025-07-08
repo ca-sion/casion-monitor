@@ -591,13 +591,13 @@ class MetricStatisticsService
      */
     private function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
     {
-        $assignedPlan = $athlete->assignedTrainingPlans->first();
+        $assignedPlan = $athlete->trainingPlans?->first();
 
         if (! $assignedPlan) {
             return null;
         }
 
-        return TrainingPlanWeek::where('training_plan_id', $assignedPlan->training_plan_id)
+        return TrainingPlanWeek::where('training_plan_id', $assignedPlan->id)
             ->where('start_date', $weekStartDate->toDateString())
             ->first();
     }
@@ -618,7 +618,7 @@ class MetricStatisticsService
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
 
-        if ($cph > 0) {
+        if ($cih > 0 && $cph > 0) {
             $ratio = $this->calculateRatio($cih, $cph);
 
             if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
@@ -628,8 +628,10 @@ class MetricStatisticsService
             } else {
                 $alerts[] = ['type' => 'success', 'message' => "Charge réelle ({$cih}) en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
             }
-        } else {
-            $alerts[] = ['type' => 'info', 'message' => "Pas de charge planifiée pour cette semaine ou CPH est zéro. CIH: {$cih}."];
+        } elseif ($cih == 0) {
+            $alerts[] = ['type' => 'info', 'message' => 'Pas suffisamment de données "'.MetricType::POST_SESSION_SESSION_LOAD->getLabelShort().'" enregistrées cette semaine pour calculer le CIH.'];
+        } elseif ($cph == 0) {
+            $alerts[] = ['type' => 'info', 'message' => "Pas de volume/intensité planifiés pour cette semaine ou CPH est à zéro. CPH: {$cph}."];
         }
 
         return $alerts;
@@ -687,35 +689,21 @@ class MetricStatisticsService
         $startDate = Carbon::now()->subDays(30)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 
-        // Récupérer les métriques nécessaires pour le calcul du SBM sur la période
-        $sbmRelatedMetricTypes = [
-            MetricType::MORNING_SLEEP_QUALITY,
-            MetricType::MORNING_GENERAL_FATIGUE,
-            MetricType::MORNING_PAIN,
-            MetricType::MORNING_MOOD_WELLBEING,
-        ];
-
-        $sbmMetricsCollection = new Collection();
+        $sbmDataCollection = new Collection();
         $currentDate = $startDate->copy();
         while ($currentDate->lessThanOrEqualTo($endDate)) {
             $sbmValue = $this->calculateSbm($athlete, $currentDate);
-            if ($sbmValue !== null) {
-                // Créer une métrique synthétique pour le SBM
-                $syntheticMetric = new Metric([
-                    'date'        => $currentDate->copy(),
-                    'metric_type' => 'SBM_SYNTHETIC', // Un type fictif pour la collection
-                    'value'       => $sbmValue,
-                ]);
-                $sbmMetricsCollection->push($syntheticMetric);
+            // Seulement ajouter si la valeur SBM n'est pas nulle (c'est-à-dire que les métriques ont été trouvées pour le jour)
+            if ($sbmValue !== null && $sbmValue !== 0.0) { // S'assurer que 0 n'est pas interprété comme une absence de données si c'est une valeur valide
+                $sbmDataCollection->push((object)['date' => $currentDate->copy(), 'value' => $sbmValue]);
             }
             $currentDate->addDay();
         }
 
         // Tendance SBM
-        if ($sbmMetricsCollection->count() > 5) {
-            // Utiliser un MetricType existant avec une colonne 'value' pour la compatibilité
-            $sbmTrend = $this->getEvolutionTrendForCollection($sbmMetricsCollection, MetricType::MORNING_GENERAL_FATIGUE);
+        if ($sbmDataCollection->count() > 5) {
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
+            $sbmTrend = $this->calculateTrendFromNumericCollection($sbmDataCollection);
             if ($sbmTrend['trend'] === 'decreasing' && $sbmTrend['change'] < $sbmThresholds['trend_decrease_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Baisse significative du Score de Bien-être Matinal ('.number_format($sbmTrend['change'], 1).'%) sur les 30 derniers jours.'];
             }
@@ -732,6 +720,64 @@ class MetricStatisticsService
         }
 
         return $alerts;
+    }
+
+    /**
+     * Calcule la tendance d'évolution pour une collection de valeurs numériques et de dates.
+     * Cette méthode est utilisée pour les métriques synthétiques comme le SBM qui ne sont pas directement des "MetricType".
+     *
+     * @param  Collection<object|array>  $dataCollection  Collection d'objets/tableaux avec 'date' et 'value'.
+     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
+     */
+    private function calculateTrendFromNumericCollection(Collection $dataCollection): array
+    {
+        // Filtrer pour s'assurer que les valeurs sont numériques et trier par date
+        $numericData = $dataCollection->filter(fn ($item) => is_numeric($item->value ?? $item['value'] ?? null))
+                                      ->sortBy(fn ($item) => $item->date ?? $item['date']);
+
+        if ($numericData->count() < 2) {
+            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
+        }
+
+        $totalCount = $numericData->count();
+        $segmentSize = floor($totalCount / 3);
+
+        if ($segmentSize === 0) { // Si moins de 3 points de données, comparer le premier et le dernier
+            $firstValue = $numericData->first()->value ?? $numericData->first()['value'];
+            $lastValue = $numericData->last()->value ?? $numericData->last()['value'];
+        } else {
+            $firstSegment = $numericData->take($segmentSize);
+            $lastSegment = $numericData->slice($totalCount - $segmentSize);
+
+            $firstValue = $firstSegment->avg(fn ($item) => $item->value ?? $item['value']);
+            $lastValue = $lastSegment->avg(fn ($item) => $item->value ?? $item['value']);
+        }
+
+        if ($firstValue === null || $lastValue === null) {
+            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
+        }
+
+        // Gérer la division par zéro pour le changement en pourcentage
+        if ($firstValue == 0 && $lastValue != 0) {
+            $change = 100; // Représente une augmentation significative à partir de zéro
+        } elseif ($firstValue == 0 && $lastValue == 0) {
+            $change = 0; // Aucun changement si les deux sont zéro
+        } else {
+            $change = (($lastValue - $firstValue) / $firstValue) * 100;
+        }
+
+        $trend = 'stable';
+        // Définir un petit seuil pour le considérer stable, évitant les micro-fluctuations
+        if ($change > 0.5) {
+            $trend = 'increasing';
+        } elseif ($change < -0.5) {
+            $trend = 'decreasing';
+        }
+
+        return [
+            'trend'  => $trend,
+            'change' => $change,
+        ];
     }
 
     /**
@@ -840,7 +886,7 @@ class MetricStatisticsService
      * Cette fonction est générique pour tous les genres, mais aura des signaux spécifiques pour les femmes.
      *
      * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months').
-     *                          Par défaut à 'last_60_days' pour un bon équilibre entre réactivité et détection de tendances significatives.
+     * Par défaut à 'last_60_days' pour un bon équilibre entre réactivité et détection de tendances significatives.
      * @return array Des drapeaux et des messages d'alerte.
      */
     public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days'): array
