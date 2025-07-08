@@ -6,7 +6,9 @@ use Carbon\Carbon;
 use App\Models\Metric;
 use App\Models\Athlete;
 use App\Enums\MetricType;
+use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
+use Carbon\CarbonPeriod;
 
 class MetricStatisticsService
 {
@@ -465,6 +467,141 @@ class MetricStatisticsService
         $scale = $metricType->getScale();
 
         return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
+    }
+
+    /**
+     * Calcule la Charge Subjective Réelle par Séance (CSR-S) pour une métrique de RPE donnée.
+     * CSR-S est simplement la valeur du RPE (POST_SESSION_SESSION_LOAD).
+     */
+    public function calculateCsrS(Metric $rpeMetric): float
+    {
+        return (float) $rpeMetric->value;
+    }
+
+    /**
+     * Calcule la Charge Interne Hebdomadaire (CIH) pour une semaine donnée et un athlète.
+     * CIH = Somme des CSR-S pour chaque séance de la semaine.
+     */
+    public function calculateCih(Athlete $athlete, Carbon $weekStartDate): float
+    {
+        $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $rpeMetrics = $athlete->metrics()
+            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
+            ->whereBetween('date', [$weekStartDate->toDateString(), $weekEndDate->toDateString()])
+            ->get();
+
+        $cih = $rpeMetrics->sum('value');
+
+        return (float) $cih;
+    }
+
+    /**
+     * Calcule le Score de Bien-être Matinal (SBM) pour un jour donné et un athlète.
+     * SBM = MORNING_SLEEP_QUALITY + (10 - MORNING_GENERAL_FATIGUE) + (10 - MORNING_PAIN) + MORNING_MOOD_WELLBEING
+     */
+    public function calculateSbm(Athlete $athlete, Carbon $date): float
+    {
+        $sleepQuality = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)->first()?->value ?? 0;
+        $generalFatigue = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_GENERAL_FATIGUE->value)->first()?->value ?? 0;
+        $pain = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_PAIN->value)->first()?->value ?? 0;
+        $moodWellbeing = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)->first()?->value ?? 0;
+
+        $sbm = $sleepQuality + (10 - $generalFatigue) + (10 - $pain) + $moodWellbeing;
+
+        return (float) $sbm;
+    }
+
+    /**
+     * Calcule la Charge Planifiée Hebdomadaire (CPH) pour une semaine donnée.
+     * CPH = volume_planned * (intensity_planned / 10)
+     */
+    public function calculateCph(TrainingPlanWeek $planWeek): float
+    {
+        $volumePlanned = $planWeek->volume_planned ?? 0;
+        $intensityPlanned = $planWeek->intensity_planned ?? 0;
+
+        // Normaliser l'intensité de 0-100 à 0-10
+        $normalizedIntensity = $intensityPlanned / 10;
+
+        $cph = $volumePlanned * $normalizedIntensity;
+
+        return (float) $cph;
+    }
+
+    /**
+     * Calcule le Ratio CIH / CPH.
+     */
+    public function calculateRatio(float $cih, float $cph): float
+    {
+        if ($cph === 0.0) {
+            return 0.0; // Éviter la division par zéro, ou gérer comme une alerte spécifique
+        }
+        return $cih / $cph;
+    }
+
+    /**
+     * Détecte les alertes liées à la charge (CIH/CPH) et au bien-être (SBM) pour une semaine donnée.
+     */
+    public function getChargeAlerts(Athlete $athlete, Carbon $weekStartDate): array
+    {
+        $alerts = [];
+
+        // 1. Calcul des métriques de charge et de bien-être pour la semaine
+        $cih = $this->calculateCih($athlete, $weekStartDate);
+
+        // Récupérer la TrainingPlanWeek correspondante pour la CPH
+        $trainingPlanWeek = TrainingPlanWeek::where('training_plan_id', $athlete->assignedTrainingPlans->first()->training_plan_id ?? null) // Assumer un plan assigné
+                                            ->where('start_date', $weekStartDate->toDateString())
+                                            ->first();
+        $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
+
+        // Calcul du SBM moyen pour la semaine
+        $sbmSum = 0;
+        $sbmCount = 0;
+        $period = CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
+        foreach ($period as $date) {
+            $sbmValue = $this->calculateSbm($athlete, $date);
+            if ($sbmValue !== null) {
+                $sbmSum += $sbmValue;
+                $sbmCount++;
+            }
+        }
+        $averageSbm = $sbmCount > 0 ? $sbmSum / $sbmCount : null;
+
+        // 2. Détection des alertes basées sur le Ratio CIH/CPH
+        if ($cph > 0) { // Éviter la division par zéro
+            $ratio = $this->calculateRatio($cih, $cph);
+
+            // Seuils d'alerte (à définir plus précisément dans ALERT_THRESHOLDS si nécessaire)
+            if ($ratio < 0.7) {
+                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle : Charge réelle ({$cih}) significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+            } elseif ($ratio > 1.3) {
+                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle : Charge réelle ({$cih}) significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+            } else {
+                $alerts[] = ['type' => 'success', 'message' => "Charge réelle ({$cih}) en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+            }
+        } else {
+            $alerts[] = ['type' => 'info', 'message' => "Pas de charge planifiée pour cette semaine ou CPH est zéro. CIH: {$cih}."];
+        }
+
+        // 3. Détection des alertes basées sur le SBM
+        if ($averageSbm !== null) {
+            // Exemple de seuil pour SBM (à affiner)
+            if ($averageSbm < 20) { // SBM max est 40, donc < 20 est faible
+                $alerts[] = ['type' => 'warning', 'message' => "Score de Bien-être Matinal faible pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Surveiller la récupération."];
+            } elseif ($averageSbm > 35) { // SBM max est 40, donc > 35 est très bon
+                $alerts[] = ['type' => 'info', 'message' => "Score de Bien-être Matinal élevé pour la semaine (moy: ".number_format($averageSbm, 1)."/40). Bonne récupération."];
+            }
+        } else {
+            $alerts[] = ['type' => 'info', 'message' => "Pas de données SBM pour cette semaine."];
+        }
+
+        // 4. Tendances SBM et VFC (à implémenter si nécessaire, réutilise getEvolutionTrendForCollection)
+        // Pour les tendances, il faudrait récupérer les données sur plusieurs semaines.
+        // Par exemple, comparer la moyenne SBM de cette semaine avec la moyenne des 3 dernières semaines.
+
+        return $alerts;
     }
 
     /**
