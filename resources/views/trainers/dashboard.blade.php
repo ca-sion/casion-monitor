@@ -27,37 +27,23 @@
         <flux:table.columns>
             <flux:table.column class="z-1 sticky left-0 max-w-36 bg-white dark:bg-zinc-900">Athlète</flux:table.column>
             <flux:table.column class="max-w-36 text-center">Alertes & Cycle</flux:table.column>
-            <flux:table.column class="w-fit text-center">
-                CIH
-                <flux:tooltip content="Charge Interne Hebdomadaire : Somme des Charges Subjectives Réelles par Séance (CSR-S) pour la semaine.">
-                    <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
-                </flux:tooltip>
-            </flux:table.column>
-            <flux:table.column class="w-fit text-center">
-                SBM
-                <flux:tooltip content="Score de Bien-être Matinal : Score agrégé des métriques de bien-être matinal (Qualité du sommeil, Fatigue générale, Douleur, Humeur).">
-                    <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
-                </flux:tooltip>
-            </flux:table.column>
-            <flux:table.column class="w-fit text-center">
-                CPH
-                <flux:tooltip content="Charge Planifiée Hebdomadaire : Charge d'entraînement planifiée pour la semaine, basée sur le volume et l'intensité.">
-                    <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
-                </flux:tooltip>
-            </flux:table.column>
-            <flux:table.column class="w-fit text-center">
-                Ratio CIH/CPH
-                <flux:tooltip content="Ratio entre la Charge Interne Hebdomadaire (CIH) et la Charge Planifiée Hebdomadaire (CPH).">
-                    <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
-                </flux:tooltip>
-            </flux:table.column>
+            
+            {{-- Colonnes pour les métriques calculées (générées par boucle) --}}
+            @foreach ($calculated_metric_types as $metric)
+                <flux:table.column class="w-fit text-center">
+                    {{ $metric->getLabelShort() }}
+                    <flux:tooltip content="{{ $metric->getDescription() }}">
+                        <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
+                    </flux:tooltip>
+                </flux:table.column>
+            @endforeach
+            
+            {{-- Colonnes pour les métriques de la base de données (générées par boucle) --}}
             @foreach ($dashboard_metric_types as $metricType)
                 <flux:table.column class="w-fit text-center">
                     {{ $metricType->getLabelShort() }}
                     <flux:tooltip content="{{ $metricType->getDescription() }}">
-                        <flux:icon class="ms-2 inline size-4"
-                            size="sm"
-                            icon="information-circle"></flux:icon>
+                        <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
                     </flux:tooltip>
                 </flux:table.column>
             @endforeach
@@ -70,7 +56,6 @@
                     <flux:table.cell class="z-1 sticky left-0 bg-white dark:bg-zinc-900">
                         <a href="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $athlete->id]) }}">
                             <div class="flex items-start flex-col gap-0">
-                                {{-- <flux:avatar src="https://unavatar.io/{{ $athlete->email }}?fallback=https://api.dicebear.com/9.x/lorelei/svg?seed={{ $athlete->first_name }}" class="size-6" /> --}}
                                 <div>{{ $athlete->first_name }}</div>
                                 <div>{{ $athlete->last_name }}</div>
                             </div>
@@ -83,7 +68,7 @@
                         </a>
                     </flux:table.cell>
 
-                    {{-- Alertes & Cycle --}}
+                    {{-- Cellule Alertes & Cycle --}}
                     <flux:table.cell>
                         <div class="flex flex-col gap-2">
                             {{-- Alertes --}}
@@ -104,34 +89,34 @@
                                 @endforeach
                             </div>
 
-                            {{-- Cycle Menstruel (uniquement pour les filles) --}}
+                            {{-- Cycle Menstruel --}}
                             @if ($athlete->gender === 'w' && $athlete->menstrualCycleInfo)
                                 @php
-                                    $menstrualCycleBoxBorderColor = 'border-emerald-400';
-                                    $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';
-
-                                    if ($athlete->menstrualCycleInfo['phase'] === 'Aménorrhée' || $athlete->menstrualCycleInfo['phase'] === 'Oligoménorrhée') {
-                                        $menstrualCycleBoxBorderColor = 'border-rose-400';
-                                        $menstrualCycleBoxBgColor = 'bg-rose-50/50 dark:bg-rose-950/50';
-                                    } elseif ($athlete->menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long') {
-                                        $menstrualCycleBoxBorderColor = 'border-amber-400';
-                                        $menstrualCycleBoxBgColor = 'bg-amber-50/50 dark:bg-amber-950/50';
-                                    } elseif ($athlete->menstrualCycleInfo['phase'] === 'Inconnue') {
-                                        $menstrualCycleBoxBorderColor = 'border-sky-400';
-                                        $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
-                                    }
+                                    $info = $athlete->menstrualCycleInfo;
+                                    $borderColor = match($info['phase']) {
+                                        'Aménorrhée', 'Oligoménorrhée' => 'border-rose-400',
+                                        'Potentiel retard ou cycle long' => 'border-amber-400',
+                                        'Inconnue' => 'border-sky-400',
+                                        default => 'border-emerald-400',
+                                    };
+                                    $bgColor = match($info['phase']) {
+                                        'Aménorrhée', 'Oligoménorrhée' => 'bg-rose-50/50 dark:bg-rose-950/50',
+                                        'Potentiel retard ou cycle long' => 'bg-amber-50/50 dark:bg-amber-950/50',
+                                        'Inconnue' => 'bg-sky-50/50 dark:bg-sky-950/50',
+                                        default => 'bg-emerald-50/50 dark:bg-emerald-950/50',
+                                    };
                                 @endphp
-                                <div class="p-2 border rounded-md {{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }}">
+                                <div class="p-2 border rounded-md {{ $borderColor }} {{ $bgColor }}">
                                     <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
                                     <flux:text class="text-xs">
-                                        Phase: <span class="font-medium">{{ $athlete->menstrualCycleInfo['phase'] }}</span><br>
-                                        Jours dans la phase: <span class="font-medium">{{ intval($athlete->menstrualCycleInfo['days_in_phase']) ?? 'N/A' }}</span><br>
-                                        Longueur moy. cycle: <span class="font-medium">{{ $athlete->menstrualCycleInfo['cycle_length_avg'] ?? 'N/A' }} jours</span>
-                                        @if($athlete->menstrualCycleInfo['last_period_start'])
-                                            <br>Dernier J1: <span class="font-medium">{{ $athlete->menstrualCycleInfo['last_period_start'] }}</span>
+                                        Phase: <span class="font-medium">{{ $info['phase'] }}</span><br>
+                                        Jours dans la phase: <span class="font-medium">{{ intval($info['days_in_phase']) ?? 'N/A' }}</span><br>
+                                        Longueur moy. cycle: <span class="font-medium">{{ $info['cycle_length_avg'] ?? 'N/A' }} jours</span>
+                                        @if($info['last_period_start'])
+                                            <br>Dernier J1: <span class="font-medium">{{ $info['last_period_start'] }}</span>
                                         @endif
-                                        @if($athlete->menstrualCycleInfo['reason'])
-                                            <br><span class="text-zinc-500 text-xs italic whitespace-normal!">{{ $athlete->menstrualCycleInfo['reason'] }}</span>
+                                        @if($info['reason'])
+                                            <br><span class="text-zinc-500 text-xs italic whitespace-normal!">{{ $info['reason'] }}</span>
                                         @endif
                                     </flux:text>
                                 </div>
@@ -139,213 +124,16 @@
                         </div>
                     </flux:table.cell>
 
+                    {{-- Boucle pour les cellules de métriques (calculées + brutes) --}}
                     @php
-                        $cihData = $athlete->metricsDataForDashboard['cih'];
-                        $sbmData = $athlete->metricsDataForDashboard['sbm'];
-                        $cphData = $athlete->metricsDataForDashboard['cph'];
-                        $ratioCihCphData = $athlete->metricsDataForDashboard['ratio_cih_cph'];
+                        $allMetricsToDisplay = collect($calculated_metric_types)->map(fn($m) => ['key' => $m->value, 'is_enum' => false])
+                            ->merge(collect($dashboard_metric_types)->map(fn($m) => ['key' => $m->value, 'is_enum' => true]));
                     @endphp
 
-                    {{-- CIH --}}
-                    <flux:table.cell>
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center justify-between">
-                                <flux:tooltip content="Dernière valeur enregistrée pour cette métrique sur la période sélectionnée.">
-                                    <flux:text class="text-xs font-semibold uppercase text-zinc-500 underline decoration-zinc-500/30 decoration-dotted">Valeur:</flux:text>
-                                </flux:tooltip>
-                                <flux:text class="ms-1 font-bold">{{ $cihData['formatted_last_value'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $cihData['formatted_average_7_days'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $cihData['formatted_average_30_days'] }}</flux:text>
-                            </div>
-                            @if ($cihData['is_numerical'] && $cihData['trend_icon'] && $cihData['trend_percentage'] !== 'N/A')
-                                <div class="mt-1 flex items-center justify-between">
-                                <flux:badge size="sm"
-                                    inset="top bottom"
-                                    color="{{ $cihData['trend_color'] }}">
-                                    <div class="flex items-center gap-1">
-                                        <flux:icon class="-mr-0.5"
-                                            name="{{ $cihData['trend_icon'] }}"
-                                            variant="micro" />
-                                        <span>{{ $cihData['trend_percentage'] }}</span>
-                                    </div>
-                                </flux:badge>
-                                </div>
-                            @else
-                                <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">N/A</span></flux:text>
-                            @endif
-                        </div>
-                        <div class="mt-2">
-                            @if ($cihData['chart_data'] && !empty($cihData['chart_data']['data']) && count(array_filter($cihData['chart_data']['data'], fn($val) => $val !== null)) >= 2)
-                                <flux:chart class="aspect-[3/1] h-10 w-full" :value="collect($cihData['chart_data']['data']) -> filter(fn($val) => $val !== null) -> take(14)">
-                                    <flux:chart.svg gutter="0">
-                                        <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
-                                    </flux:chart.svg>
-                                </flux:chart>
-                            @else
-                                <flux:card class="flex h-10 items-center border-2 border-dashed">
-                                    <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
-                                </flux:card>
-                            @endif
-                        </div>
-                    </flux:table.cell>
-
-                    {{-- SBM --}}
-                    <flux:table.cell>
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center justify-between">
-                                <flux:tooltip content="Dernière valeur enregistrée pour cette métrique sur la période sélectionnée.">
-                                    <flux:text class="text-xs font-semibold uppercase text-zinc-500 underline decoration-zinc-500/30 decoration-dotted">Valeur:</flux:text>
-                                </flux:tooltip>
-                                <flux:text class="ms-1 font-bold">{{ $sbmData['formatted_last_value'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $sbmData['formatted_average_7_days'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $sbmData['formatted_average_30_days'] }}</flux:text>
-                            </div>
-                            @if ($sbmData['is_numerical'] && $sbmData['trend_icon'] && $sbmData['trend_percentage'] !== 'N/A')
-                                <div class="mt-1 flex items-center justify-between">
-                                <flux:badge size="sm"
-                                    inset="top bottom"
-                                    color="{{ $sbmData['trend_color'] }}">
-                                    <div class="flex items-center gap-1">
-                                        <flux:icon class="-mr-0.5"
-                                            name="{{ $sbmData['trend_icon'] }}"
-                                            variant="micro" />
-                                        <span>{{ $sbmData['trend_percentage'] }}</span>
-                                    </div>
-                                </flux:badge>
-                                </div>
-                            @else
-                                <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">N/A</span></flux:text>
-                            @endif
-                        </div>
-                        <div class="mt-2">
-                            @if ($sbmData['chart_data'] && !empty($sbmData['chart_data']['data']) && count(array_filter($sbmData['chart_data']['data'], fn($val) => $val !== null)) >= 2)
-                                <flux:chart class="aspect-[3/1] h-10 w-full" :value="collect($sbmData['chart_data']['data']) -> filter(fn($val) => $val !== null) -> take(14)">
-                                    <flux:chart.svg gutter="0">
-                                        <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
-                                    </flux:chart.svg>
-                                </flux:chart>
-                            @else
-                                <flux:card class="flex h-10 items-center border-2 border-dashed">
-                                    <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
-                                </flux:card>
-                            @endif
-                        </div>
-                    </flux:table.cell>
-
-                    {{-- CPH --}}
-                    <flux:table.cell>
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center justify-between">
-                                <flux:tooltip content="Dernière valeur enregistrée pour cette métrique sur la période sélectionnée.">
-                                    <flux:text class="text-xs font-semibold uppercase text-zinc-500 underline decoration-zinc-500/30 decoration-dotted">Valeur:</flux:text>
-                                </flux:tooltip>
-                                <flux:text class="ms-1 font-bold">{{ $cphData['formatted_last_value'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $cphData['formatted_average_7_days'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $cphData['formatted_average_30_days'] }}</flux:text>
-                            </div>
-                            @if ($cphData['is_numerical'] && $cphData['trend_icon'] && $cphData['trend_percentage'] !== 'N/A')
-                                <div class="mt-1 flex items-center justify-between">
-                                <flux:badge size="sm"
-                                    inset="top bottom"
-                                    color="{{ $cphData['trend_color'] }}">
-                                    <div class="flex items-center gap-1">
-                                        <flux:icon class="-mr-0.5"
-                                            name="{{ $cphData['trend_icon'] }}"
-                                            variant="micro" />
-                                        <span>{{ $cphData['trend_percentage'] }}</span>
-                                    </div>
-                                </flux:badge>
-                                </div>
-                            @else
-                                <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">N/A</span></flux:text>
-                            @endif
-                        </div>
-                        <div class="mt-2">
-                            @if ($cphData['chart_data'] && !empty($cphData['chart_data']['data']) && count(array_filter($cphData['chart_data']['data'], fn($val) => $val !== null)) >= 2)
-                                <flux:chart class="aspect-[3/1] h-10 w-full" :value="collect($cphData['chart_data']['data']) -> filter(fn($val) => $val !== null) -> take(14)">
-                                    <flux:chart.svg gutter="0">
-                                        <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
-                                    </flux:chart.svg>
-                                </flux:chart>
-                            @else
-                                <flux:card class="flex h-10 items-center border-2 border-dashed">
-                                    <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
-                                </flux:card>
-                            @endif
-                        </div>
-                    </flux:table.cell>
-
-                    {{-- Ratio CIH/CPH --}}
-                    <flux:table.cell>
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center justify-between">
-                                <flux:tooltip content="Dernière valeur enregistrée pour cette métrique sur la période sélectionnée.">
-                                    <flux:text class="text-xs font-semibold uppercase text-zinc-500 underline decoration-zinc-500/30 decoration-dotted">Valeur:</flux:text>
-                                </flux:tooltip>
-                                <flux:text class="ms-1 font-bold">{{ $ratioCihCphData['formatted_last_value'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $ratioCihCphData['formatted_average_7_days'] }}</flux:text>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
-                                <flux:text class="ms-1 font-medium">{{ $ratioCihCphData['formatted_average_30_days'] }}</flux:text>
-                            </div>
-                            @if ($ratioCihCphData['is_numerical'] && $ratioCihCphData['trend_icon'] && $ratioCihCphData['trend_percentage'] !== 'N/A')
-                                <div class="mt-1 flex items-center justify-between">
-                                <flux:badge size="sm"
-                                    inset="top bottom"
-                                    color="{{ $ratioCihCphData['trend_color'] }}">
-                                    <div class="flex items-center gap-1">
-                                        <flux:icon class="-mr-0.5"
-                                            name="{{ $ratioCihCphData['trend_icon'] }}"
-                                            variant="micro" />
-                                        <span>{{ $ratioCihCphData['trend_percentage'] }}</span>
-                                    </div>
-                                </flux:badge>
-                                </div>
-                            @else
-                                <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">N/A</span></flux:text>
-                            @endif
-                        </div>
-                        <div class="mt-2">
-                            @if ($ratioCihCphData['chart_data'] && !empty($ratioCihCphData['chart_data']['data']) && count(array_filter($ratioCihCphData['chart_data']['data'], fn($val) => $val !== null)) >= 2)
-                                <flux:chart class="aspect-[3/1] h-10 w-full" :value="collect($ratioCihCphData['chart_data']['data']) -> filter(fn($val) => $val !== null) -> take(14)">
-                                    <flux:chart.svg gutter="0">
-                                        <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
-                                    </flux:chart.svg>
-                                </flux:chart>
-                            @else
-                                <flux:card class="flex h-10 items-center border-2 border-dashed">
-                                    <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
-                                </flux:card>
-                            @endif
-                        </div>
-                    </flux:table.cell>
-
-                    @foreach ($dashboard_metric_types as $metricType)
+                    @foreach ($allMetricsToDisplay as $metricInfo)
                         @php
-                            $metricData = $athlete->metricsDataForDashboard[$metricType->value];
-                            $chartData = $metricData['chart_data'];
+                            $metricData = $athlete->metricsDataForDashboard[$metricInfo['key']];
+                            $chartData = $metricData['chart_data'] ?? ['data' => []];
                         @endphp
                         <flux:table.cell>
                             <div class="flex flex-col gap-2">
@@ -395,7 +183,7 @@
                             </div>
                         </flux:table.cell>
                     @endforeach
-
+                    
                     <flux:table.cell class="text-center">
                         <flux:modal.trigger :name="'copy-link-account-'.$athlete->id">
                             <flux:button icon="user" variant="ghost" size="sm">Compte</flux:button>

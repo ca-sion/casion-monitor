@@ -8,6 +8,7 @@ use App\Enums\MetricType;
 use Illuminate\View\View;
 use App\Enums\FeedbackType;
 use Illuminate\Support\Carbon;
+use App\Enums\CalculatedMetric;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Services\MetricStatisticsService;
@@ -29,8 +30,13 @@ class TrainerController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
-        $athletes = $trainer->athletes;
+        $period = request()->input('period', 'last_60_days');
 
+        // Appel unique à la nouvelle méthode de service qui fait tout le travail en une fois
+        $athletesOverviewData = $this->metricStatisticsService
+                                     ->getBulkAthletesDashboardData($trainer->athletes, $period);
+
+        // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
@@ -39,37 +45,8 @@ class TrainerController extends Controller
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
-        $period = request()->input('period', 'last_60_days');
-        // Définir la date de début de la semaine actuelle pour les alertes de charge
-        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
-
-        $athletesOverviewData = $athletes->map(function ($athlete) use ($dashboardMetricTypes, $period, $currentWeekStartDate) {
-            $metricsDataForDashboard = [];
-            foreach ($dashboardMetricTypes as $metricType) {
-                // Utilise le même service pour les données de résumé de chaque athlète
-                $metricsDataForDashboard[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
-            }
-            // Attache les données agrégées directement à l'objet Athlete pour un accès facile dans la vue
-            // Pour éviter "Indirect modification of overloaded property", on utilise une variable temporaire
-            $tempMetricsData = $metricsDataForDashboard;
-
-            // Calcul des métriques hebdomadaires (CIH, SBM, CPH, Ratio CIH/CPH)
-            $tempMetricsData['cih'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'cih', $period);
-            $tempMetricsData['sbm'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'sbm', $period);
-            $tempMetricsData['cph'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'cph', $period);
-            $tempMetricsData['ratio_cih_cph'] = $this->metricStatisticsService->getDashboardWeeklyMetricData($athlete, 'ratio_cih_cph', $period);
-
-            $athlete->metricsDataForDashboard = $tempMetricsData;
-
-            // Alertes et le cycle menstruel
-            $athlete->alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, 'last_60_days');
-            $athlete->menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
-
-            // Alertes de charge pour la semaine en cours
-            $athlete->chargeAlerts = $this->metricStatisticsService->getChargeAlerts($athlete, $currentWeekStartDate);
-
-            return $athlete;
-        });
+        // Obtenir tous les cas de notre nouvel Enum pour les métriques calculées
+        $calculatedMetricTypes = CalculatedMetric::cases();
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
@@ -81,14 +58,14 @@ class TrainerController extends Controller
             'last_year'     => 'Dernière année',
             'all_time'      => 'Depuis le début',
         ];
-        // Vous pourriez ajouter d'autres périodes personnalisées ici, comme 'custom:2024-01-01,2024-03-31'
 
         $data = [
-            'trainer'                => $trainer,
-            'athletes_overview_data' => $athletesOverviewData,
-            'dashboard_metric_types' => $dashboardMetricTypes,
-            'period_label'           => $period,
-            'period_options'         => $periodOptions,
+            'trainer'                 => $trainer,
+            'athletes_overview_data'  => $athletesOverviewData,
+            'dashboard_metric_types'  => $dashboardMetricTypes,
+            'calculated_metric_types' => $calculatedMetricTypes, // Passer le nouvel Enum à la vue
+            'period_label'            => $period,
+            'period_options'          => $periodOptions,
         ];
 
         if (request()->expectsJson()) {

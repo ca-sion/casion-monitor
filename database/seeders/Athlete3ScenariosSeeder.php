@@ -33,13 +33,13 @@ class Athlete3ScenariosSeeder extends Seeder
         // $scenarioFactory->seedHrvTrendScenario($athlete->id);
         // $scenarioFactory->seedSleepQualityTrendScenario($athlete->id);
         // $scenarioFactory->seedBodyWeightTrendScenario($athlete->id);
-        $scenarioFactory->seedNoAlertsScenario($athlete->id);
+        // $scenarioFactory->seedNoAlertsScenario($athlete->id);
 
         // Scénarios d'alertes spécifiques (pour tester getAthleteAlerts)
         // $scenarioFactory->seedPersistentHighFatigueAlert($athlete->id);
         // $scenarioFactory->seedIncreasingFatigueTrendAlert($athlete->id);
         // $scenarioFactory->seedPersistentLowSleepQualityAlert($athlete->id);
-        // $scenarioFactory->seedDecreasingSleepQualityTrendAlert($athlete->id);
+        $scenarioFactory->seedDecreasingSleepQualityTrendAlert($athlete->id);
         // $scenarioFactory->seedPersistentPainAlert($athlete->id);
         // $scenarioFactory->seedIncreasingPainTrendAlert($athlete->id);
         // $scenarioFactory->seedDecreasingHrvTrendAlert($athlete->id);
