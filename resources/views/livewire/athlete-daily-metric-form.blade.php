@@ -1,5 +1,5 @@
 <x-slot:title>{{ $athlete->name }} - Formulaire quotidien</x-slot>
-<div class="mx-auto max-w-2xl">
+<div class="mx-auto max-w-sm">
 
     <flux:heading size="xl" level="1">{{ $athlete->name }}</flux:heading>
     <flux:text class="mb-6 mt-2 text-base">Rentrer les métriques pour le jour choisi.</flux:text>

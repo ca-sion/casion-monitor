@@ -190,9 +190,12 @@
                     @foreach ($display_table_metric_types as $metricType)
                         <flux:table.column class="text-center">
                             {{ $metricType->getLabelShort() }}
-                            <flux:tooltip content="{{ $metricType->getDescription() }}">
-                                <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
-                            </flux:tooltip>
+                            <flux:dropdown hover position="top" align="start" class="ms-1">
+                                <flux:button size="xs" variant="outline" class="rounded-full!">ℹ︎</flux:button>
+                                <flux:popover class="max-w-xs">
+                                    <flux:text>{{ $metricType->getDescription() }}</flux:text>
+                                </flux:popover>
+                            </flux:dropdown>
                         </flux:table.column>
                     @endforeach
                     <flux:table.column class="text-center w-24">Actions</flux:table.column>
