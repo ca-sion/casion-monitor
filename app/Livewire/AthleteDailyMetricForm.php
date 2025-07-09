@@ -216,10 +216,12 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             MetricType::MORNING_SLEEP_QUALITY->value,
             MetricType::MORNING_GENERAL_FATIGUE->value,
             MetricType::MORNING_MOOD_WELLBEING->value,
+            MetricType::MORNING_FIRST_DAY_PERIOD->value,
+            MetricType::PRE_SESSION_ENERGY_LEVEL->value,
+            MetricType::PRE_SESSION_LEG_FEEL->value,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value,
             MetricType::POST_SESSION_SESSION_LOAD->value,
             MetricType::POST_SESSION_PERFORMANCE_FEEL->value,
-            MetricType::MORNING_FIRST_DAY_PERIOD->value,
         ];
     }
 
