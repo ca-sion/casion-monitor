@@ -1196,7 +1196,7 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
      * @param  Carbon  $weekStartDate
      * @return TrainingPlanWeek|null
      */
-    protected function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
+    public function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
     {
         $assignedPlan = $athlete->currentTrainingPlan;
 

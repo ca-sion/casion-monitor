@@ -36,6 +36,27 @@
         </flux:card>
     </a>
 
+    {{-- Section Volume et Intensité Planifiés de la semaine en cours --}}
+    @if ($weekly_planned_volume || $weekly_planned_intensity)
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
+        <flux:card class="p-4 bg-blue-50! border-blue-400! hover:bg-zinc-50 dark:hover:bg-zinc-700" size="sm" color="blue">
+            <flux:heading class="flex items-center gap-2">Volume planifié cette semaine</flux:heading>
+            <flux:text class="mt-2 text-2xl font-bold text-blue-600">
+                {{ number_format($weekly_planned_volume, 0) }} <span class="text-base font-normal text-blue-500">/5</span>
+            </flux:text>
+            <flux:text class="text-xs text-zinc-500">Volume d'entraînement prévu pour la semaine.</flux:text>
+        </flux:card>
+
+        <flux:card class="p-4 bg-purple-50! border-purple-400! hover:bg-zinc-50 dark:hover:bg-zinc-700" size="sm" color="purple">
+            <flux:heading class="flex items-center gap-2">Intensité planifiée cette semaine</flux:heading>
+            <flux:text class="mt-2 text-2xl font-bold text-purple-600">
+                {{ number_format($weekly_planned_intensity, 0) }} <span class="text-base font-normal text-purple-500">/100</span>
+            </flux:text>
+            <flux:text class="text-xs text-zinc-500">Intensité d'entraînement prévue pour la semaine.</flux:text>
+        </flux:card>
+    </div>
+    @endif
+
     {{-- Section Alertes --}}
     <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
         <flux:heading size="lg" level="2" class="mb-4 text-center">🔔 Tes Alertes Récentes</flux:heading>

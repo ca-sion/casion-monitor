@@ -116,6 +116,9 @@ class AthleteController extends Controller
             'all_time'      => 'Depuis le début',
         ];
 
+        $currentWeekStartDate = \Carbon\Carbon::now()->startOfWeek(\Carbon\Carbon::MONDAY);
+        $trainingPlanWeek = $this->metricStatisticsService->getTrainingPlanWeekForAthlete($athlete, $currentWeekStartDate);
+
         $data = [
             'athlete'                       => $athlete,
             'dashboard_metrics_data'        => $metricsDataForDashboard,
@@ -125,6 +128,8 @@ class AthleteController extends Controller
             'period_options'                => $periodOptions,
             'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable, // Renommé et pré-traité
             'display_table_metric_types'    => $displayTableMetricTypes,
+            'weekly_planned_volume'         => $trainingPlanWeek->volume_planned ?? 0,
+            'weekly_planned_intensity'      => $trainingPlanWeek->intensity_planned ?? 0,
         ];
 
         if ($request->expectsJson()) {
