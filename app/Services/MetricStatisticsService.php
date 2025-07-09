@@ -43,8 +43,8 @@ private const ALERT_THRESHOLDS = [
             'ratio_overload_threshold'  => 1.3,
         ],
         'SBM' => [
-            'average_low_threshold'  => 20,
-            'average_high_threshold' => 35,
+            'average_low_threshold'  => 19,
+            'average_high_threshold' => 30,
             'trend_decrease_percent' => -10,
         ],
         'MENSTRUAL_CYCLE' => [
