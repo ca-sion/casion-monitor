@@ -39,7 +39,7 @@ private const ALERT_THRESHOLDS = [
             'trend_decrease_percent' => -3,
         ],
         'CHARGE_LOAD' => [
-            'ratio_underload_threshold' => 0.7,
+            'ratio_underload_threshold' => 0.8,
             'ratio_overload_threshold'  => 1.3,
         ],
         'SBM' => [
@@ -1221,29 +1221,23 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
     protected function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
     {
         $alerts = [];
-        if (is_null($allMetrics)) {
-            $cih = $this->calculateCih($athlete, $weekStartDate);
-        } else {
-            $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
-            $metricsForWeek = $allMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
-            $cih = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
-        }
+        $cihNormalized = $this->calculateCihNormalized($athlete, $weekStartDate);
         $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
 
-        if ($cih > 0 && $cph > 0) {
-            $ratio = $this->calculateRatio($cih, $cph);
+        if ($cihNormalized > 0 && $cph > 0) {
+            $ratio = $this->calculateRatio($cihNormalized, $cph);
 
             if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle : Charge réelle ({$cih}) significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle : Charge réelle normalisée ({$cihNormalized}) significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
             } elseif ($ratio > $chargeThresholds['ratio_overload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle : Charge réelle ({$cih}) significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle : Charge réelle normalisée ({$cihNormalized}) significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
             } else {
-                $alerts[] = ['type' => 'success', 'message' => "Charge réelle ({$cih}) en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+                $alerts[] = ['type' => 'success', 'message' => "Charge réelle normalisée ({$cihNormalized}) en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
             }
-        } elseif ($cih == 0) {
-            $alerts[] = ['type' => 'info', 'message' => 'Pas suffisamment de données "'.MetricType::POST_SESSION_SESSION_LOAD->getLabelShort().'" enregistrées cette semaine pour calculer le CIH.'];
+        } elseif ($cihNormalized == 0) {
+            $alerts[] = ['type' => 'info', 'message' => 'Pas suffisamment de données "'.MetricType::POST_SESSION_SESSION_LOAD->getLabelShort().'" enregistrées cette semaine pour calculer le CIH Normalisée.'];
         } elseif ($cph == 0) {
             $alerts[] = ['type' => 'info', 'message' => "Pas de volume/intensité planifiés pour cette semaine ou CPH est à zéro. CPH: {$cph}."];
         }
