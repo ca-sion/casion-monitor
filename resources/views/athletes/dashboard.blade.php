@@ -120,16 +120,16 @@
                 <div class="flex items-center justify-between mb-2">
                         <div>
                             <flux:text class="text-xs font-semibold uppercase text-zinc-500 inline">{{ $metricData['short_label'] }}</flux:text>
-                            <flux:dropdown hover position="top" align="start">
-                                <flux:button size="xs" variant="outline" class="rounded-full!">ℹ︎</flux:button>
-                                <flux:popover class="max-w-xs">
-                                    <flux:heading>{{ $metricData['description'] }}</flux:heading>
-                                    <flux:separator variant="subtle" class="my-2" />
-                                    <flux:text>La valeur ci-après est la dernière valeur enregistrée pour cette métrique sur la période sélectionnée.</flux:text>
-                                    <flux:separator variant="subtle" class="my-2" />
-                                    <flux:text>La valeur dans le badge indique comment vos mesures changent, montrant si elles augmentent, diminuent, ou restent stables dans le temps.</flux:text>
-                                </flux:popover>
-                            </flux:dropdown>
+                            <x-filament::icon-button
+                                class="inline ms-1"
+                                style="vertical-align: text-bottom;"
+                                icon="heroicon-o-information-circle"
+                                tooltip="{{ $metricData['description'] }}"
+                                label="{{ $metricData['description'] }}"
+                                color="gray"
+                                size="sm"
+                                x-data="{}"
+                            />
                         </div>
                     @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
                         <flux:badge size="xs" color="{{ $metricData['trend_color'] }}">
@@ -142,6 +142,15 @@
                 </div>
                 <flux:heading size="lg" level="2" class="mb-4 text-slate-600 dark:text-slate-400">
                     {{ $metricData['formatted_last_value'] }}
+                    <x-filament::icon-button
+                        class="inline ms-1"
+                        icon="heroicon-o-information-circle"
+                        tooltip="Dernière valeur enregistrée pour cette métrique."
+                        label="Dernière valeur enregistrée pour cette métrique."
+                        color="gray"
+                        size="xs"
+                        x-data="{}"
+                    />
                 </flux:heading>
                 <div class="mb-4">
                     {{-- Utilisation du composant Flux UI pour le graphique - MISE À JOUR AVEC VOTRE SOLUTION --}}
@@ -190,12 +199,15 @@
                     @foreach ($display_table_metric_types as $metricType)
                         <flux:table.column class="text-center">
                             {{ $metricType->getLabelShort() }}
-                            <flux:dropdown hover position="top" align="start" class="ms-1">
-                                <flux:button size="xs" variant="outline" class="rounded-full!">ℹ︎</flux:button>
-                                <flux:popover class="max-w-xs">
-                                    <flux:text>{{ $metricType->getDescription() }}</flux:text>
-                                </flux:popover>
-                            </flux:dropdown>
+                            <x-filament::icon-button
+                                class="inline ms-1"
+                                icon="heroicon-o-information-circle"
+                                tooltip="{{ $metricType->getDescription() }}"
+                                label="{{ $metricType->getDescription() }}"
+                                color="gray"
+                                size="sm"
+                                x-data="{}"
+                            />
                         </flux:table.column>
                     @endforeach
                     <flux:table.column class="text-center w-24">Actions</flux:table.column>

@@ -51,9 +51,15 @@
             @foreach ($calculated_metric_types as $metric)
                 <flux:table.column class="w-fit text-center">
                     {{ $metric->getLabelShort() }}
-                    <flux:tooltip content="{{ $metric->getDescription() }}">
-                        <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
-                    </flux:tooltip>
+                    <x-filament::icon-button
+                        class="inline ms-1"
+                        icon="heroicon-o-information-circle"
+                        tooltip="{{ $metric->getDescription() }}"
+                        label="{{ $metric->getDescription() }}"
+                        color="gray"
+                        size="sm"
+                        x-data="{}"
+                    />
                 </flux:table.column>
             @endforeach
             
@@ -61,9 +67,15 @@
             @foreach ($dashboard_metric_types as $metricType)
                 <flux:table.column class="w-fit text-center">
                     {{ $metricType->getLabelShort() }}
-                    <flux:tooltip content="{{ $metricType->getDescription() }}">
-                        <flux:icon class="ms-2 inline size-4" size="sm" icon="information-circle"></flux:icon>
-                    </flux:tooltip>
+                    <x-filament::icon-button
+                        class="inline ms-1"
+                        icon="heroicon-o-information-circle"
+                        tooltip="{{ $metricType->getDescription() }}"
+                        label="{{ $metricType->getDescription() }}"
+                        color="gray"
+                        size="sm"
+                        x-data="{}"
+                    />
                 </flux:table.column>
             @endforeach
             <flux:table.column class="w-36 text-center">Actions</flux:table.column>
@@ -79,10 +91,17 @@
                                 <div>{{ $athlete->last_name }}</div>
                             </div>
                             <div class="mt-2 text-xs">
-                                <flux:tooltip content="Dernière connexion">
-                                    <flux:icon.clock class="inline size-4" size="sm" />
-                                </flux:tooltip>
-                                {{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->diffForHumans() : 'Jamais' }}
+                                <x-filament::link
+                                    class="font-normal color-zinc-500!"
+                                    icon="heroicon-o-clock"
+                                    tooltip="Dernière connexion"
+                                    label="Dernière connexion"
+                                    color="gray"
+                                    size="xs"
+                                    x-data="{}"
+                                >
+                                    {{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->shortAbsoluteDiffForHumans() : 'Jamais' }}
+                                </x-filament::link>
                             </div>
                         </a>
                     </flux:table.cell>
@@ -159,9 +178,7 @@
                         <flux:table.cell>
                             <div class="flex flex-col gap-2">
                                 <div class="flex items-center justify-between">
-                                    <flux:tooltip content="Dernière valeur enregistrée pour cette métrique sur la période sélectionnée.">
-                                        <flux:text class="text-xs font-semibold uppercase text-zinc-500 underline decoration-zinc-500/30 decoration-dotted">Valeur:</flux:text>
-                                    </flux:tooltip>
+                                    <flux:text class="text-xs font-semibold uppercase text-zinc-500"> </flux:text>
                                     <flux:text class="ms-1 font-bold">{{ $metricData['formatted_last_value'] }}</flux:text>
                                 </div>
                                 <div class="flex items-center justify-between">
@@ -225,6 +242,8 @@
     </flux:table>
 
     <flux:separator variant="subtle" class="my-2" />
+    <flux:text class="text-sm">La valeur dans chaque colonne indique la dernière valeur enregistrée pour cette métrique.</flux:text>
+
     <flux:text class="text-sm">La valeur dans les badges indique la tendance des changements d'une métrique spécifique dans une période donnée. Elle examine si la métrique augmente, diminue ou reste stable en comparant les valeurs moyennes du début et de la fin d'un ensemble de données filtrées et triées par date.</flux:text>
 
 </x-layouts.trainer>
