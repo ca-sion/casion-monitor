@@ -27,7 +27,13 @@ class TrainingPlanForm
                     ->afterOrEqual('start_date'),
                 Select::make('trainer_id')
                     ->relationship('trainer', 'first_name')
-                    ->required(),
+                    ->required()
+                    ->preload(),
+                Select::make('athletes')
+                    ->label('Athlètes')
+                    ->relationship('athletes', 'first_name')
+                    ->multiple()
+                    ->preload(),
             ]);
     }
 }

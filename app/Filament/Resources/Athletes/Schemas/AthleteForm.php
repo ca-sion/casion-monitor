@@ -6,6 +6,7 @@ use Filament\Schemas\Schema;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 
 class AthleteForm
 {
@@ -23,6 +24,11 @@ class AthleteForm
                     ->native(false)
                     ->displayFormat('d.m.Y H:i')
                     ->locale('fr'),
+                Select::make('trainingPlans')
+                    ->label('Plans d\'entraînement')
+                    ->relationship('trainingPlans', 'name')
+                    ->multiple()
+                    ->preload(),
             ]);
     }
 }
