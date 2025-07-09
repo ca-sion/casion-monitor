@@ -32,8 +32,8 @@ enum CalculatedMetric: string implements HasLabel
             self::CIH_NORMALIZED  => 'CIH-N',
             self::SBM           => 'SBM',
             self::CPH           => 'CPH',
-            self::RATIO_CIH_CPH => 'Ratio CIH/CPH',
-            self::RATIO_CIH_NORMALIZED_CPH => 'Ratio CIH Normalisée/CPH',
+            self::RATIO_CIH_CPH => 'CIH/CPH',
+            self::RATIO_CIH_NORMALIZED_CPH => 'CIH-N/CPH',
         };
     }
 
@@ -41,11 +41,11 @@ enum CalculatedMetric: string implements HasLabel
     {
         return match ($this) {
             self::CIH           => 'Somme des Charges subjectives réelles par séance (CSR-S) pour la semaine.',
-            self::CIH_NORMALIZED  => 'Charge interne hebdomadaire normalisée pour la comparabilité avec la CPH.',
-            self::SBM           => 'Score agrégé des métriques de bien-être matinal.',
+            self::CIH_NORMALIZED  => 'Somme des Charges subjectives réelles par séance (CSR-S) normalisée pour la comparabilité avec la CPH.',
+            self::SBM           => 'Score agrégé des métriques de bien-être matinal, basé sur l\'Indice de Hooper.',
             self::CPH           => 'Charge d\'entraînement planifiée pour la semaine.',
             self::RATIO_CIH_CPH => 'Ratio entre la Charge interne hebdomadaire (CIH) et la Charge planifiée hebdomadaire (CPH).',
-            self::RATIO_CIH_NORMALIZED_CPH => 'Ratio entre la Charge interne hebdomadaire normalisée (CIH Normalisée) et la Charge planifiée hebdomadaire (CPH).',
+            self::RATIO_CIH_NORMALIZED_CPH => 'Ratio entre la Charge interne hebdomadaire normalisée (CIH-N) et la Charge planifiée hebdomadaire (CPH).',
         };
     }
 }

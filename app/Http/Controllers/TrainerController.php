@@ -48,8 +48,12 @@ class TrainerController extends Controller
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
-        // Obtenir tous les cas de notre nouvel Enum pour les métriques calculées
-        $calculatedMetricTypes = CalculatedMetric::cases();
+        // Définir les types de métriques "calculées" à afficher
+        $calculatedMetricTypes = [
+            CalculatedMetric::CIH_NORMALIZED,
+            CalculatedMetric::SBM,
+            CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
+        ];
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
