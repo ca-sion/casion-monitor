@@ -56,6 +56,9 @@ private const ALERT_THRESHOLDS = [
             'menstrual_fatigue_min'         => 7,
             'menstrual_perf_feel_max'       => 4,
         ],
+        'CIH_NORMALIZED' => [
+            'normalization_days' => 4,
+        ],
     ];
 
     /**
@@ -106,10 +109,12 @@ private const ALERT_THRESHOLDS = [
             $metricsDataForDashboard[$metricType->value] = $this->getDashboardMetricDataForCollection($metricsForType, $metricType, $period);
         }
 
-        $metricsDataForDashboard['cih'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'cih', $period, $athletePlanWeeks);
-        $metricsDataForDashboard['sbm'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'sbm', $period, $athletePlanWeeks);
-        $metricsDataForDashboard['cph'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'cph', 'period', $athletePlanWeeks);
-        $metricsDataForDashboard['ratio_cih_cph'] = $this->getDashboardWeeklyMetricDataForCollection($athleteMetrics, 'ratio_cih_cph', $period, $athletePlanWeeks);
+        $metricsDataForDashboard['cih'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'cih', $period, $athletePlanWeeks);
+        $metricsDataForDashboard['sbm'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'sbm', $period, $athletePlanWeeks);
+        $metricsDataForDashboard['cph'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'cph', 'period', $athletePlanWeeks);
+        $metricsDataForDashboard['cih_normalized'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'cih_normalized', $period, $athletePlanWeeks);
+        $metricsDataForDashboard['ratio_cih_cph'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'ratio_cih_cph', $period, $athletePlanWeeks);
+        $metricsDataForDashboard['ratio_cih_normalized_cph'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'ratio_cih_normalized_cph', $period, $athletePlanWeeks);
 
         $athlete->metricsDataForDashboard = $metricsDataForDashboard;
 
@@ -188,7 +193,7 @@ protected function getDashboardMetricDataForCollection(Collection $metricsForPer
     /**
      * Prépare les données hebdomadaires d'une métrique pour le tableau de bord à partir de collections pré-filtrées.
      */
-protected function getDashboardWeeklyMetricDataForCollection(Collection $allAthleteMetrics, string $metricKey, string $period, Collection $athletePlanWeeks): array
+protected function getDashboardWeeklyMetricDataForCollection(Athlete $athlete, Collection $allAthleteMetrics, string $metricKey, string $period, Collection $athletePlanWeeks): array
     {
         $now = Carbon::now();
         $startDate = $this->getStartDateFromPeriod($period)->startOfWeek(Carbon::MONDAY);
@@ -229,13 +234,17 @@ protected function getDashboardWeeklyMetricDataForCollection(Collection $allAthl
             $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
             $cph = $planWeek ? $this->calculateCph($planWeek) : 0.0;
             
-            $ratio = ($cih > 0 && $cph > 0) ? $cih / $cph : null;
+            $cihNormalized = $this->calculateCihNormalized($athlete, $weekStartDate);
+            $ratioCihCph = ($cih > 0 && $cph > 0) ? $cih / $cph : null;
+            $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $cihNormalized / $cph : null;
 
             $value = match ($metricKey) {
                 'cih' => $cih,
                 'sbm' => $sbm,
                 'cph' => $cph,
-                'ratio_cih_cph' => $ratio,
+                'cih_normalized' => $cihNormalized,
+                'ratio_cih_cph' => $ratioCihCph,
+                'ratio_cih_normalized_cph' => $ratioCihNormalizedCph,
                 default => null,
             };
 
@@ -799,6 +808,40 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
     }
 
     /**
+     * Calcule la Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED) pour une semaine donnée et un athlète.
+     * CIH_NORMALIZED est calculée comme : (Somme des POST_SESSION_SESSION_LOAD / Nombre de jours avec POST_SESSION_SESSION_LOAD) * 4.
+     *
+     * @param  Athlete  $athlete L'athlète concerné.
+     * @param  Carbon  $weekStartDate La date de début de la semaine.
+     * @return float La Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED).
+     */
+    public function calculateCihNormalized(Athlete $athlete, Carbon $weekStartDate): float
+    {
+        $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $rpeMetrics = $athlete->metrics()
+            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
+            ->whereBetween('date', [$weekStartDate->toDateString(), $weekEndDate->toDateString()])
+            ->get();
+
+        if ($rpeMetrics->isEmpty()) {
+            return 0.0;
+        }
+
+        $sumRpe = $rpeMetrics->sum('value');
+        $distinctDays = $rpeMetrics->pluck('date')->unique()->count();
+
+        if ($distinctDays === 0) {
+            return 0.0;
+        }
+
+        $averageSessionLoad = $sumRpe / $distinctDays;
+
+        $normalizationDays = self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days'];
+        return (float) ($averageSessionLoad * $normalizationDays);
+    }
+
+    /**
      * Calcule le Score de Bien-être Matinal (SBM) pour un jour donné et un athlète.
      * SBM est calculé comme suit : MORNING_SLEEP_QUALITY + (10 - MORNING_GENERAL_FATIGUE) + (10 - MORNING_PAIN) + MORNING_MOOD_WELLBEING.
      *
@@ -903,11 +946,16 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
 
         $ratioCihCph = ($cih > 0 && $cph > 0) ? round($this->calculateRatio($cih, $cph), 2) : 'N/A';
 
+        $cihNormalized = $this->calculateCihNormalized($athlete, $weekStartDate);
+        $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? round($this->calculateRatio($cihNormalized, $cph), 2) : 'N/A';
+
         return [
             'cih'           => $cih,
             'sbm'           => $sbm,
             'cph'           => $cph,
+            'cih_normalized'  => $cihNormalized,
             'ratio_cih_cph' => $ratioCihCph,
+            'ratio_cih_normalized_cph' => $ratioCihNormalizedCph,
         ];
     }
 
@@ -966,7 +1014,9 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
                 'cih'           => 'CIH',
                 'sbm'           => 'SBM',
                 'cph'           => 'CPH',
+                'cih_normalized'  => 'CIH Normalisée',
                 'ratio_cih_cph' => 'Ratio CIH/CPH',
+                'ratio_cih_normalized_cph' => 'Ratio CIH Normalisée/CPH',
                 default         => '',
             },
         ];
@@ -990,21 +1040,27 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
                 'cih'           => 'Charge Interne Hebdomadaire',
                 'sbm'           => 'Score de Bien-être Matinal',
                 'cph'           => 'Charge Planifiée Hebdomadaire',
+                'cih_normalized'  => 'Charge Interne Hebdomadaire Normalisée',
                 'ratio_cih_cph' => 'Ratio CIH/CPH',
+                'ratio_cih_normalized_cph' => 'Ratio CIH Normalisée/CPH',
                 default         => '',
             },
             'short_label'               => match ($metricKey) {
                 'cih'           => 'CIH',
                 'sbm'           => 'SBM',
                 'cph'           => 'CPH',
+                'cih_normalized'  => 'CIH Normalisée',
                 'ratio_cih_cph' => 'Ratio CIH/CPH',
+                'ratio_cih_normalized_cph' => 'Ratio CIH Normalisée/CPH',
                 default         => '',
             },
             'description'               => match ($metricKey) {
                 'cih'           => 'Somme des Charges Subjectives Réelles par Séance (CSR-S) pour la semaine.',
                 'sbm'           => 'Score agrégé des métriques de bien-être matinal (Qualité du sommeil, Fatigue générale, Douleur, Humeur).',
                 'cph'           => 'Charge d\'entraînement planifiée pour la semaine, basée sur le volume et l\'intensité.',
+                'cih_normalized'  => 'Charge interne hebdomadaire normalisée pour la comparabilité avec la CPH.',
                 'ratio_cih_cph' => 'Ratio entre la Charge Interne Hebdomadaire (CIH) et la Charge Planifiée Hebdomadaire (CPH).',
+                'ratio_cih_normalized_cph' => 'Ratio entre la Charge Interne Hebdomadaire Normalisée (CIH Normalisée) et la Charge Planifiée Hebdomadaire (CPH).',
                 default         => '',
             },
             'unit'                      => null,
