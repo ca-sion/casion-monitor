@@ -70,7 +70,7 @@ enum MetricType: string implements HasLabel
     public function getDescription(): ?string
     {
         return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => 'Poids corporel le matin.',
+            self::MORNING_BODY_WEIGHT_KG   => 'Poids corporel au matin.',
             self::MORNING_HRV              => 'Valeur de la Variabilité de la fréquence cardiaque (HRV) au matin.',
             self::MORNING_SLEEP_QUALITY    => 'Évaluation subjective de la qualité du sommeil au matin.',
             self::MORNING_GENERAL_FATIGUE  => 'Évaluation subjective de la fatigue générale au matin.',
@@ -106,27 +106,6 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => 10,
             self::POST_SESSION_PERFORMANCE_FEEL   => 10,
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 10,
-        };
-    }
-
-    public function getScaleHint(): ?string
-    {
-        return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => null,
-            self::MORNING_HRV              => null,
-            self::MORNING_SLEEP_QUALITY    => 'très mauvaise ➝ excellente',
-            self::MORNING_GENERAL_FATIGUE  => 'pas fatigué ➝ épuisé',
-            self::MORNING_PAIN             => 'aucune ➝ très fortes',
-            self::MORNING_PAIN_LOCATION    => null,
-            self::MORNING_MOOD_WELLBEING   => 'très mauvaise ➝ excellente',
-            self::MORNING_FIRST_DAY_PERIOD => null,
-
-            self::PRE_SESSION_ENERGY_LEVEL => 'très bas ➝ très haut',
-            self::PRE_SESSION_LEG_FEEL     => 'très lourdes ➝ très légères',
-
-            self::POST_SESSION_SESSION_LOAD       => 'basse ➝ très haute',
-            self::POST_SESSION_PERFORMANCE_FEEL   => 'mauvais ➝ excellent',
-            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'aucune ➝ extrême',
         };
     }
 
@@ -180,6 +159,81 @@ enum MetricType: string implements HasLabel
         return match ($this) {
             self::MORNING_BODY_WEIGHT_KG => 2, // Poids en kg, souvent avec décimales
             default                      => 0, // La plupart des autres métriques sont des entiers ou des scores
+        };
+    }
+
+    /**
+     * Retourne une indication de l'échelle pour aider l'utilisateur à remplir le formulaire.
+     */
+    public function getScaleHint(): ?string
+    {
+        return match ($this) {
+            self::MORNING_BODY_WEIGHT_KG   => null,
+            self::MORNING_HRV              => null,
+            self::MORNING_SLEEP_QUALITY    => 'très mauvaise ➝ excellente',
+            self::MORNING_GENERAL_FATIGUE  => 'pas fatigué ➝ épuisé',
+            self::MORNING_PAIN             => 'aucune ➝ très fortes',
+            self::MORNING_PAIN_LOCATION    => null,
+            self::MORNING_MOOD_WELLBEING   => 'très mauvaise ➝ excellente',
+            self::MORNING_FIRST_DAY_PERIOD => null,
+
+            self::PRE_SESSION_ENERGY_LEVEL => 'très bas ➝ très haut',
+            self::PRE_SESSION_LEG_FEEL     => 'très lourdes ➝ très légères',
+
+            self::POST_SESSION_SESSION_LOAD       => 'basse ➝ très haute',
+            self::POST_SESSION_PERFORMANCE_FEEL   => 'mauvais ➝ excellent',
+            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'aucune ➝ extrême',
+        };
+    }
+
+    /**
+     * Retourne une indication de la métrique pour aider l'utilisateur à remplir le formulaire.
+     */
+    public function getHint(): ?string
+    {
+        return match ($this) {
+            self::MORNING_BODY_WEIGHT_KG   => "C'est ton poids juste après t'être levé(e), avant de manger ou de boire. Pèse-toi toujours à jeun, après être allé(e) aux toilettes, et si possible, à la même heure chaque fois. Ça nous aide à voir comment ton corps réagit à l'entraînement et au repos.",
+            self::MORNING_HRV              => "La VFC (Variabilité de la Fréquence Cardiaque) mesure les petites variations entre tes battements de cœur. C'est un super indicateur de la façon dont ton corps récupère et gère le stress (entraînement, vie quotidienne). Une VFC élevée est souvent un signe de bonne récupération, tandis qu'une VFC basse peut indiquer de la fatigue ou un stress important. Utilise l'application ou l'appareil que tu utilises habituellement pour la mesurer.",
+            self::MORNING_SLEEP_QUALITY    => "Comment as-tu dormi cette nuit ? Évalue la qualité de ton sommeil sur une échelle de 1 à 10.
+                1 = Nuit horrible, tu as très mal dormi, tu te sens épuisé(e).
+                5 = Nuit moyenne, tu as dormi mais tu ne te sens pas super frais(fraîche).
+                10 = Nuit parfaite, tu as dormi comme un bébé et tu te sens en pleine forme !",
+            self::MORNING_GENERAL_FATIGUE  => "Comment te sens-tu globalement ce matin ? Évalue ton niveau de fatigue sur une échelle de 1 à 10.
+                1 = Pas fatigué(e) du tout, tu as plein d'énergie.
+                5 = Fatigue normale, tu sens que tu as besoin de te réveiller.
+                10 = Épuisé(e), tu as l'impression de ne pas avoir dormi et tu as du mal à démarrer la journée.",
+            self::MORNING_PAIN             => "As-tu des douleurs musculaires ou articulaires ce matin ? Évalue l'intensité de tes douleurs sur une échelle de 1 à 10.
+                1 = Aucune douleur.
+                5 = Douleur légère mais présente, tu la sens un peu.
+                10 = Douleur très forte, ça t'empêche de bouger normalement ou de te sentir bien.",
+            self::MORNING_PAIN_LOCATION    => "Si tu as indiqué une douleur supérieure à 3 (légère à forte), précise où tu as mal. Par exemple : 'genou droit', 'épaule gauche', 'bas du dos', 'ischio-jambiers'. Sois le plus précis possible pour qu'on puisse comprendre et t'aider.",
+            self::MORNING_MOOD_WELLBEING   => "Comment te sens-tu émotionnellement ce matin ? Évalue ton humeur et ton bien-être général sur une échelle de 1 à 10.
+                1 = Très mauvaise humeur, tu te sens mal.
+                5 = Humeur neutre, ça va.
+                10 = Excellente humeur, tu te sens super bien et motivé(e) !",
+            self::MORNING_FIRST_DAY_PERIOD => "Indique si aujourd'hui est le premier jour de tes règles. C'est une information importante pour adapter ton entraînement et comprendre tes sensations.",
+
+            self::PRE_SESSION_ENERGY_LEVEL => "Avant de commencer ta session, comment évalues-tu ton niveau d'énergie ? Sur une échelle de 1 à 10.
+                1 = Très bas, tu te sens mou(molle) et sans force.
+                5 = Moyen, tu te sens normal mais pas au top.
+                10 = Très haut, tu te sens prêt(e) à tout déchirer, plein(e) d'énergie !",
+            self::PRE_SESSION_LEG_FEEL     => "Comment sens-tu tes jambes juste avant l'entraînement ? Sur une échelle de 1 à 10.
+                1 = Très lourdes, tu as l'impression d'avoir des parpaings à la place des jambes.
+                5 = Normales, tu ne sens rien de particulier.
+                10 = Très légères, tes jambes sont fraîches et prêtes à performer !",
+
+            self::POST_SESSION_SESSION_LOAD       => "Après ta session, évalue la charge totale de ton entraînement. C'est une combinaison de l'intensité (à quel point c'était dur) et du volume (combien tu as fait). Sur une échelle de 1 à 10 :
+                1 = Très facile (échauffement léger, pas d'effort).
+                5 = Modéré (tu as fait un bon entraînement).
+                10 = Maximal (c'était la mort).",
+            self::POST_SESSION_PERFORMANCE_FEEL   => "Comment as-tu ressenti ta performance pendant la session ? Sur une échelle de 1 à 10.
+                1 = Mauvaise, tu n'étais pas dans le coup, rien n'allait.
+                5 = Moyenne, tu as fait ce que tu savais faire.
+                10 = Excellente, tu as dépassé tes attentes, tu étais au top !",
+            self::POST_SESSION_SUBJECTIVE_FATIGUE => "Après ta session, quel est ton niveau de fatigue général ? Sur une échelle de 1 à 10.
+                1 = Aucune fatigue, tu pourrais refaire une session.
+                5 = Fatigue modérée, tu sens que tu as travaillé.
+                10 = Fatigue extrême, tu es vidé(e), tu as besoin de repos immédiat.",
         };
     }
 }

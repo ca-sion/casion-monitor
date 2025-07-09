@@ -13,6 +13,8 @@ use Livewire\Attributes\Url;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Illuminate\Contracts\View\View;
+use Filament\Support\Icons\Heroicon;
+use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -89,6 +91,11 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                     ->schema([
                         TextInput::make(MetricType::MORNING_HRV->value)
                             ->label(MetricType::MORNING_HRV->getLabel())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_HRV->getHint())
+                            ])
                             ->integer()
                             ->inputMode('numeric')
                             ->minValue(10)
@@ -97,24 +104,43 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                         ToggleButtons::make(MetricType::MORNING_SLEEP_QUALITY->value)
                             ->label(MetricType::MORNING_SLEEP_QUALITY->getLabel())
                             ->helperText(MetricType::MORNING_SLEEP_QUALITY->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_SLEEP_QUALITY->getHint())
+                            ])
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         ToggleButtons::make(MetricType::MORNING_GENERAL_FATIGUE->value)
                             ->label(MetricType::MORNING_GENERAL_FATIGUE->getLabel())
                             ->helperText(MetricType::MORNING_GENERAL_FATIGUE->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_GENERAL_FATIGUE->getHint())
+                            ])
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         ToggleButtons::make(MetricType::MORNING_MOOD_WELLBEING->value)
                             ->label(MetricType::MORNING_MOOD_WELLBEING->getLabel())
                             ->helperText(MetricType::MORNING_MOOD_WELLBEING->getScaleHint())
-                            ->inline()
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_MOOD_WELLBEING->getHint())
+                            ])
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         ToggleButtons::make(MetricType::MORNING_FIRST_DAY_PERIOD->value)
                             ->label(MetricType::MORNING_FIRST_DAY_PERIOD->getLabel())
-                            ->helperText(MetricType::MORNING_FIRST_DAY_PERIOD->getDescription())
+                            ->helperText(MetricType::MORNING_FIRST_DAY_PERIOD->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_FIRST_DAY_PERIOD->getHint())
+                            ])
                             ->visible(fn () => $this->athlete->gender == 'w')
                             ->inline()
                             ->grouped()
@@ -134,18 +160,33 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                     ->schema([
                         ToggleButtons::make(MetricType::PRE_SESSION_ENERGY_LEVEL->value)
                             ->label(MetricType::PRE_SESSION_ENERGY_LEVEL->getLabel())
-                            ->hint(MetricType::PRE_SESSION_ENERGY_LEVEL->getScaleHint())
+                            ->helperText(MetricType::PRE_SESSION_ENERGY_LEVEL->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::PRE_SESSION_ENERGY_LEVEL->getHint())
+                            ])
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         ToggleButtons::make(MetricType::PRE_SESSION_LEG_FEEL->value)
                             ->label(MetricType::PRE_SESSION_LEG_FEEL->getLabel())
                             ->helperText(MetricType::PRE_SESSION_LEG_FEEL->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::PRE_SESSION_LEG_FEEL->getHint())
+                            ])
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         Textarea::make(FeedbackType::PRE_SESSION_GOALS->value)
                             ->label(FeedbackType::PRE_SESSION_GOALS->getLabel())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(FeedbackType::PRE_SESSION_GOALS->getHint())
+                            ])
                             ->maxLength(255)
                             ->autosize(),
                     ]),
@@ -156,24 +197,44 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                     ->schema([
                         ToggleButtons::make(MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value)
                             ->label(MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->getLabel())
-                            ->hint(MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->getScaleHint())
+                            ->helperText(MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->getHint())
+                            ])
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         ToggleButtons::make(MetricType::POST_SESSION_SESSION_LOAD->value)
                             ->label(MetricType::POST_SESSION_SESSION_LOAD->getLabel())
-                            ->hint(MetricType::POST_SESSION_SESSION_LOAD->getScaleHint())
+                            ->helperText(MetricType::POST_SESSION_SESSION_LOAD->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::POST_SESSION_SESSION_LOAD->getHint())
+                            ])
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         ToggleButtons::make(MetricType::POST_SESSION_PERFORMANCE_FEEL->value)
                             ->label(MetricType::POST_SESSION_PERFORMANCE_FEEL->getLabel())
                             ->helperText(MetricType::POST_SESSION_PERFORMANCE_FEEL->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::POST_SESSION_PERFORMANCE_FEEL->getHint())
+                            ])
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         Textarea::make(FeedbackType::POST_SESSION_SENSATION->value)
                             ->label(FeedbackType::POST_SESSION_SENSATION->getLabel())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(FeedbackType::POST_SESSION_SENSATION->getHint())
+                            ])
                             ->maxLength(255),
                     ]),
             ])
