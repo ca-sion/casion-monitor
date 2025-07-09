@@ -44,7 +44,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
      *
      * @var array
      */
-    protected $appends = ['name'];
+    protected $appends = ['name', 'current_training_plan'];
 
     /**
      * Get the attributes that should be cast.
@@ -90,6 +90,16 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     public function feedbacks(): HasMany
     {
         return $this->hasMany(Feedback::class);
+    }
+
+    /**
+     * Get the athlete's current training plan.
+     */
+    protected function currentTrainingPlan(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->trainingPlans()->orderByDesc('assigned_training_plans.start_date')->first(),
+        );
     }
 
     /**

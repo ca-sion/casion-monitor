@@ -80,7 +80,7 @@ private const ALERT_THRESHOLDS = [
         ->get()
         ->groupBy('athlete_id');
     
-    $athletesTrainingPlansIds = $athletes->loadMissing('trainingPlans')->pluck('trainingPlans.0.id');
+    $athletesTrainingPlansIds = $athletes->pluck('current_training_plan.id')->filter()->values();
 
     $allTrainingPlanWeeksByAthleteTrainingPlanId = TrainingPlanWeek::whereIn('training_plan_id', $athletesTrainingPlansIds)
         ->where('start_date', '>=', $startDate->copy()->subWeek())
@@ -90,7 +90,7 @@ private const ALERT_THRESHOLDS = [
     // Itération sur les athlètes pour calculer les données spécifiques à chacun
     return $athletes->map(function ($athlete) use ($allMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $period) {
         $athleteMetrics = $allMetricsByAthlete->get($athlete->id) ?? collect();
-        $athleteTrainingPlansId = data_get(collect($athlete), 'training_plans.0.id');
+        $athleteTrainingPlansId = $athlete->currentTrainingPlan?->id;
         $athletePlanWeeks = $allTrainingPlanWeeksByAthleteTrainingPlanId->get($athleteTrainingPlansId) ?? collect();
 
         $metricsDataForDashboard = [];
@@ -1176,7 +1176,7 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
         if (is_null($planWeeks)) {
             $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
         } else {
-            $assignedPlan = $athlete->trainingPlans?->first();
+            $assignedPlan = $athlete->currentTrainingPlan;
             $trainingPlanWeek = $planWeeks->firstWhere('start_date', $weekStartDate->toDateString());
         }
 
@@ -1198,7 +1198,7 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
      */
     protected function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
     {
-        $assignedPlan = $athlete->trainingPlans?->first();
+        $assignedPlan = $athlete->currentTrainingPlan;
 
         if (! $assignedPlan) {
             return null;
