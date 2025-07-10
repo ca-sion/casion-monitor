@@ -210,7 +210,7 @@ class MetricStatisticsService
             $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
             $metricsForWeek = $allAthleteMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
 
-            $cih = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
+            $cih = $this->calculateCihForCollection($metricsForWeek);
 
             $sbmSum = 0;
             $sbmCount = 0;
@@ -237,9 +237,9 @@ class MetricStatisticsService
             $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
             $cph = $planWeek ? $this->calculateCph($planWeek) : 0.0;
 
-            $cihNormalized = $this->calculateCihNormalized($athlete, $weekStartDate);
-            $ratioCihCph = ($cih > 0 && $cph > 0) ? $cih / $cph : null;
-            $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $cihNormalized / $cph : null;
+            $cihNormalized = $this->calculateCihNormalizedForCollection($metricsForWeek);
+            $ratioCihCph = ($cih > 0 && $cph > 0) ? $this->calculateRatio($cih, $cph) : null;
+            $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->calculateRatio($cihNormalized, $cph) : null;
 
             $value = match ($metricKey) {
                 'cih'                      => $cih,
@@ -803,36 +803,23 @@ class MetricStatisticsService
      * @param  Carbon  $weekStartDate  La date de début de la semaine.
      * @return float La Charge Interne Hebdomadaire (CIH).
      */
-    public function calculateCih(Athlete $athlete, Carbon $weekStartDate): float
+    protected function calculateCihForCollection(Collection $metricsForWeek): float
     {
-        $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
-
-        $rpeMetrics = $athlete->metrics()
-            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
-            ->whereBetween('date', [$weekStartDate->toDateString(), $weekEndDate->toDateString()])
-            ->get();
-
-        $cih = $rpeMetrics->sum('value');
+        $cih = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
 
         return (float) $cih;
     }
 
     /**
-     * Calcule la Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED) pour une semaine donnée et un athlète.
+     * Calcule la Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED) pour une semaine donnée à partir d'une collection de métriques.
      * CIH_NORMALIZED est calculée comme : (Somme des POST_SESSION_SESSION_LOAD / Nombre de jours avec POST_SESSION_SESSION_LOAD) * 4.
      *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $weekStartDate  La date de début de la semaine.
+     * @param  Collection<Metric>  $metricsForWeek  La collection de métriques pour la semaine.
      * @return float La Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED).
      */
-    public function calculateCihNormalized(Athlete $athlete, Carbon $weekStartDate): float
+    protected function calculateCihNormalizedForCollection(Collection $metricsForWeek): float
     {
-        $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
-
-        $rpeMetrics = $athlete->metrics()
-            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
-            ->whereBetween('date', [$weekStartDate->toDateString(), $weekEndDate->toDateString()])
-            ->get();
+        $rpeMetrics = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value);
 
         if ($rpeMetrics->isEmpty()) {
             return 0.0;
@@ -1059,11 +1046,11 @@ class MetricStatisticsService
         } elseif ($readinessScore < 70) {
             $status['level'] = 'orange';
             $status['message'] = 'Readiness modérée. Signes de fatigue ou de stress.';
-            $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité, se concentrer sur la technique, ou privilégier la récupération.";
+            $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité ou privilégier la récupération.";
         } elseif ($readinessScore < 85) {
             $status['level'] = 'yellow';
             $status['message'] = 'Bonne readiness, quelques points à surveiller.';
-            $status['recommendation'] = 'Entraînement normal, mais rester attentif(ve) aux sensations et adapter si nécessaire.';
+            $status['recommendation'] = 'Entraînement normal, mais rester attentif aux sensations et adapter si nécessaire.';
         }
         // Si >= 85, reste 'green' par défaut
 
@@ -1102,16 +1089,20 @@ class MetricStatisticsService
      *
      * @return array ['cih' => float, 'sbm' => float|string, 'cph' => float, 'ratio_cih_cph' => float|string]
      */
-    public function getAthleteWeeklyMetricsSummary(Athlete $athlete, Carbon $weekStartDate): array
+    public function getAthleteWeeklyMetricsSummary(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
     {
-        $cih = $this->calculateCih($athlete, $weekStartDate);
+        $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
+        $metricsForWeek = $allMetrics ? $allMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]) : $athlete->metrics()->whereBetween('date', [$weekStartDate, $weekEndDate])->get();
+
+        $cih = $this->calculateCihForCollection($metricsForWeek);
 
         $sbmSum = 0;
         $sbmCount = 0;
-        $periodCarbon = \Carbon\CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
+        $periodCarbon = \Carbon\CarbonPeriod::create($weekStartDate, '1 day', $weekEndDate);
         foreach ($periodCarbon as $date) {
-            $sbmValue = $this->calculateSbm($athlete, $date);
-            if ($sbmValue > 0) {
+            $dailyMetrics = $metricsForWeek->filter(fn ($m) => $m->date->format('Y-m-d') === $date->format('Y-m-d'));
+            $sbmValue = $this->calculateSbmForCollection($dailyMetrics);
+            if ($sbmValue !== null) {
                 $sbmSum += $sbmValue;
                 $sbmCount++;
             }
@@ -1123,7 +1114,7 @@ class MetricStatisticsService
 
         $ratioCihCph = ($cih > 0 && $cph > 0) ? round($this->calculateRatio($cih, $cph), 2) : 'N/A';
 
-        $cihNormalized = $this->calculateCihNormalized($athlete, $weekStartDate);
+        $cihNormalized = $this->calculateCihNormalizedForCollection($metricsForWeek);
         $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? round($this->calculateRatio($cihNormalized, $cph), 2) : 'N/A';
 
         return [
@@ -1144,7 +1135,7 @@ class MetricStatisticsService
      * @param  string  $metricKey  La clé de la métrique hebdomadaire (ex: 'cih', 'sbm').
      * @return array Les données formatées pour un graphique.
      */
-    public function getWeeklyMetricsChartData(Athlete $athlete, string $period, string $metricKey): array
+    public function getWeeklyMetricsChartData(Athlete $athlete, string $period, string $metricKey, ?Collection $allMetrics = null): array
     {
         $labels = [];
         $data = [];
@@ -1166,7 +1157,7 @@ class MetricStatisticsService
         $endWeek = $now->endOfWeek(Carbon::SUNDAY);
 
         while ($currentWeek->lessThanOrEqualTo($endWeek)) {
-            $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeek);
+            $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeek, $allMetrics);
             $weekLabel = $currentWeek->format('W Y');
             $value = $summary[$metricKey];
 
@@ -1207,7 +1198,7 @@ class MetricStatisticsService
      * @param  string  $period  La période pour laquelle récupérer les données.
      * @return array Les données formatées pour le tableau de bord.
      */
-    public function getDashboardWeeklyMetricData(Athlete $athlete, string $metricKey, string $period): array
+    public function getDashboardWeeklyMetricData(Athlete $athlete, string $metricKey, string $period, ?Collection $allMetrics = null): array
     {
         $now = Carbon::now();
         $currentWeekStartDate = $now->startOfWeek(Carbon::MONDAY);
@@ -1254,12 +1245,12 @@ class MetricStatisticsService
             'is_numerical'              => true,
         ];
 
-        $weeklySummary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeekStartDate);
+        $weeklySummary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeekStartDate, $allMetrics);
         $currentValue = $weeklySummary[$metricKey];
         $metricData['last_value'] = $currentValue;
         $metricData['formatted_last_value'] = is_numeric($currentValue) ? number_format($currentValue, 1) : 'N/A';
 
-        $metricData['chart_data'] = $this->getWeeklyMetricsChartData($athlete, $period, $metricKey);
+        $metricData['chart_data'] = $this->getWeeklyMetricsChartData($athlete, $period, $metricKey, $allMetrics);
 
         $allWeeklyData = new Collection;
         $startDateForAverages = match ($period) {
@@ -1275,7 +1266,7 @@ class MetricStatisticsService
 
         $tempWeek = $startDateForAverages->copy();
         while ($tempWeek->lessThanOrEqualTo($now->endOfWeek(Carbon::SUNDAY))) {
-            $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $tempWeek);
+            $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $tempWeek, $allMetrics);
             if (is_numeric($summary[$metricKey])) {
                 $allWeeklyData->push((object) ['date' => $tempWeek->copy(), 'value' => $summary[$metricKey]]);
             }
@@ -1394,7 +1385,7 @@ class MetricStatisticsService
     protected function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
     {
         $alerts = [];
-        $cihNormalized = $this->calculateCihNormalized($athlete, $weekStartDate);
+        $cihNormalized = $this->calculateCihNormalizedForCollection($allMetrics->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
         $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
