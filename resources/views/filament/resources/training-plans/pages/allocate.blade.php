@@ -30,7 +30,7 @@
 
                             {{-- Slider d'Intensité (1-100) - Vertical --}}
                             <div class="relative h-36 w-8 flex items-center justify-center">
-                                <input type="range" min="0" max="100" step="1"
+                                <input type="range" min="0" max="100" step="5"
                                        wire:model.live="weeks.{{ $loop->index }}.intensity_planned"
                                        wire:change="updateWeekData('{{ $week['start_date'] }}', 'intensity_planned', $event.target.value)"
                                        class="absolute h-1 w-36 transform -rotate-90 origin-center rounded-lg appearance-none cursor-pointer"
