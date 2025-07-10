@@ -232,9 +232,10 @@
                                         inset="top bottom"
                                         color="{{ $metricData['trend_color'] }}">
                                         <div class="flex items-center gap-1">
-                                            <flux:icon class="-mr-0.5"
+                                            <x-filament::icon
+                                                class="shrink-0 [:where(&)]:size-4 -mr-0.5"
                                                 name="{{ $metricData['trend_icon'] }}"
-                                                variant="micro" />
+                                            />
                                             <span>{{ $metricData['trend_percentage'] }}</span>
                                         </div>
                                     </flux:badge>

@@ -59,7 +59,7 @@ class BaseDataSeeder extends Seeder
         }
 
         // Attacher les athlètes à l'entraîneur
-        $merlin->athletes()->attach([$arthur->id, $guenievre->id]);
+        $merlin->athletes()->syncWithoutDetaching([$arthur->id, $guenievre->id]);
 
         $athlete3 = Athlete::find(3);
         if (! $athlete3) {
