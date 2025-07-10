@@ -12,7 +12,7 @@ enum CalculatedMetric: string implements HasLabel
     case CPH = 'cph';
     case RATIO_CIH_CPH = 'ratio_cih_cph';
     case RATIO_CIH_NORMALIZED_CPH = 'ratio_cih_normalized_cph';
-    case READINESS = 'readiness';
+    case READINESS_SCORE = 'readiness_score';
 
     public function getLabel(): string
     {
@@ -23,7 +23,7 @@ enum CalculatedMetric: string implements HasLabel
             self::CPH                      => 'Charge planifiée hebdomadaire',
             self::RATIO_CIH_CPH            => 'Ratio CIH/CPH',
             self::RATIO_CIH_NORMALIZED_CPH => 'Ratio CIH normalisée/CPH',
-            self::READINESS                => 'Readiness',
+            self::READINESS_SCORE          => 'Readiness',
         };
     }
 
@@ -36,7 +36,7 @@ enum CalculatedMetric: string implements HasLabel
             self::CPH                      => 'CPH',
             self::RATIO_CIH_CPH            => 'CIH/CPH',
             self::RATIO_CIH_NORMALIZED_CPH => 'CIH-N/CPH',
-            self::READINESS                => 'Read.',
+            self::READINESS_SCORE          => 'Read.',
         };
     }
 
@@ -49,7 +49,7 @@ enum CalculatedMetric: string implements HasLabel
             self::CPH                      => 'Charge d\'entraînement planifiée pour la semaine.',
             self::RATIO_CIH_CPH            => 'Ratio entre la Charge interne hebdomadaire (CIH) et la Charge planifiée hebdomadaire (CPH).',
             self::RATIO_CIH_NORMALIZED_CPH => 'Ratio entre la Charge interne hebdomadaire normalisée (CIH-N) et la Charge planifiée hebdomadaire (CPH).',
-            self::READINESS                => 'Indique à quel point le corps est prêt pour l\'entraînement et la performance chaque jour.',
+            self::READINESS_SCORE          => 'Indique à quel point le corps est prêt pour l\'entraînement et la performance chaque jour.',
         };
     }
 
@@ -62,7 +62,7 @@ enum CalculatedMetric: string implements HasLabel
             self::CPH                      => 50,
             self::RATIO_CIH_CPH            => 1.4,
             self::RATIO_CIH_NORMALIZED_CPH => 0.8,
-            self::READINESS                => 100,
+            self::READINESS_SCORE          => 100,
         };
     }
 
@@ -81,7 +81,7 @@ enum CalculatedMetric: string implements HasLabel
             self::CPH                      => 'neutral',
             self::RATIO_CIH_CPH            => 'neutral',
             self::RATIO_CIH_NORMALIZED_CPH => 'neutral',
-            self::READINESS                => 'neutral',
+            self::READINESS_SCORE          => 'neutral',
         };
     }
 }

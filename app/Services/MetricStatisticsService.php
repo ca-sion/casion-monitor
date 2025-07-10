@@ -59,6 +59,25 @@ class MetricStatisticsService
         'CIH_NORMALIZED' => [
             'normalization_days' => 4,
         ],
+        'READINESS_SCORE' => [
+            'sbm_penalty_factor'        => 5,
+            'hrv_drop_severe_percent'   => -10,
+            'hrv_drop_moderate_percent' => -5,
+            'pain_penalty_factor'       => 4,
+            'pre_session_energy_low'    => 4,
+            'pre_session_energy_medium' => 6,
+            'pre_session_penalty_high'  => 15,
+            'pre_session_penalty_medium'=> 5,
+            'pre_session_leg_feel_low'  => 4,
+            'pre_session_leg_feel_medium' => 6,
+            'charge_overload_penalty_factor' => 15,
+            'charge_overload_threshold' => 1.3,
+            'level_red_threshold'       => 50,
+            'level_orange_threshold'    => 70,
+            'level_yellow_threshold'    => 85,
+            'severe_pain_threshold'     => 7,
+            'menstrual_energy_low'      => 4,
+        ],
     ];
 
     private const ESSENTIAL_DAILY_READINESS_METRICS = [
@@ -944,7 +963,7 @@ class MetricStatisticsService
             // Convertissons le SBM sur 10 en un impact sur 100 points de readiness.
             // Si SBM = 10 (parfait), 0 pénalité. Si SBM = 0, pénalité maximale.
             // Ex: (10 - SBM) * 5. Si SBM=10, (10-10)*5=0. Si SBM=0, (10-0)*5=50.
-            $readinessScore -= (10 - $dailySbm) * 5;
+            $readinessScore -= (10 - $dailySbm) * self::ALERT_THRESHOLDS['READINESS_SCORE']['sbm_penalty_factor'];
         }
 
         // 2. Impact de la VFC (HRV)
@@ -960,10 +979,10 @@ class MetricStatisticsService
             if ($hrv7DayAvg && $hrv7DayAvg > 0) {
                 $changePercent = (($lastHrv - $hrv7DayAvg) / $hrv7DayAvg) * 100;
 
-                if ($changePercent < -10) { // Chute de plus de 10%
-                    $readinessScore -= 20;
-                } elseif ($changePercent < -5) { // Chute de 5% à 10%
-                    $readinessScore -= 10;
+                if ($changePercent < self::ALERT_THRESHOLDS['READINESS_SCORE']['hrv_drop_severe_percent']) { // Chute de plus de 10%
+                    $readinessScore -= 20; // Cette valeur n'est pas dans ALERT_THRESHOLDS, mais elle est fixe.
+                } elseif ($changePercent < self::ALERT_THRESHOLDS['READINESS_SCORE']['hrv_drop_moderate_percent']) { // Chute de 5% à 10%
+                    $readinessScore -= 10; // Cette valeur n'est pas dans ALERT_THRESHOLDS, mais elle est fixe.
                 }
                 // Aucune pénalité si stable ou en hausse.
             }
@@ -976,7 +995,7 @@ class MetricStatisticsService
 
         if ($morningPain !== null && $morningPain > 0) {
             // Pénalité plus forte pour la douleur
-            $readinessScore -= ($morningPain * 4); // Ex: 4 points par niveau de douleur sur 10
+            $readinessScore -= ($morningPain * self::ALERT_THRESHOLDS['READINESS_SCORE']['pain_penalty_factor']); // Ex: 4 points par niveau de douleur sur 10
         }
 
         // 4. Impact des métriques pré-session (remplies juste avant la session)
@@ -984,20 +1003,20 @@ class MetricStatisticsService
             ->where('date', now()->startOfDay())
             ->first()?->value;
 
-        if ($preSessionEnergy !== null && $preSessionEnergy <= 4) { // Si l'énergie est très basse (1-4)
-            $readinessScore -= 15;
-        } elseif ($preSessionEnergy !== null && $preSessionEnergy <= 6) { // Si l'énergie est moyenne (5-6)
-            $readinessScore -= 5;
+        if ($preSessionEnergy !== null && $preSessionEnergy <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_energy_low']) { // Si l'énergie est très basse (1-4)
+            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_high'];
+        } elseif ($preSessionEnergy !== null && $preSessionEnergy <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_energy_medium']) { // Si l'énergie est moyenne (5-6)
+            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_medium'];
         }
 
         $preSessionLegFeel = $allMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL->value)
             ->where('date', now()->startOfDay())
             ->first()?->value;
 
-        if ($preSessionLegFeel !== null && $preSessionLegFeel <= 4) { // Si les jambes sont très lourdes (1-4)
-            $readinessScore -= 15;
-        } elseif ($preSessionLegFeel !== null && $preSessionLegFeel <= 6) { // Si les jambes sont moyennes (5-6)
-            $readinessScore -= 5;
+        if ($preSessionLegFeel !== null && $preSessionLegFeel <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_leg_feel_low']) { // Si les jambes sont très lourdes (1-4)
+            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_high'];
+        } elseif ($preSessionLegFeel !== null && $preSessionLegFeel <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_leg_feel_medium']) { // Si les jambes sont moyennes (5-6)
+            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_medium'];
         }
 
         // 5. Impact du ratio de charge (CIH/CPH) - à évaluer sur la semaine en cours
@@ -1014,10 +1033,10 @@ class MetricStatisticsService
 
         if ($currentCih > 0 && $currentCph > 0) {
             $ratio = $currentCih / $currentCph;
-            $overloadThreshold = self::ALERT_THRESHOLDS['CHARGE_LOAD']['ratio_overload_threshold'] ?? 1.3;
+            $overloadThreshold = self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_threshold'];
 
             if ($ratio > $overloadThreshold) { // Surcharge
-                $readinessScore -= 15 * ($ratio - $overloadThreshold); // Pénalité croissante
+                $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_penalty_factor'] * ($ratio - $overloadThreshold); // Pénalité croissante
             }
             // Pas de pénalité directe pour la sous-charge sur la readiness immédiate ici.
         }
@@ -1029,6 +1048,7 @@ class MetricStatisticsService
     public function getAthleteReadinessStatus(Athlete $athlete, Collection $allMetrics): array
     {
         $readinessScore = 100; // Valeur par défaut, sera écrasée ou non calculée
+        $readinessThresholds = self::ALERT_THRESHOLDS['READINESS_SCORE'];
 
         $status = [
             'level'           => 'green',
@@ -1056,26 +1076,26 @@ class MetricStatisticsService
             $status['readiness_score'] = $readinessScore;
 
             // Définition des règles pour les niveaux de readiness basées sur le score
-            if ($readinessScore < 50) {
+            if ($readinessScore < $readinessThresholds['level_red_threshold']) {
                 $status['level'] = 'red';
                 $status['message'] = 'Faible readiness. Risque accru de fatigue ou blessure.';
                 $status['recommendation'] = 'Repos complet, récupération active très légère, ou réévaluation du plan. Ne pas forcer un entraînement intense.';
-            } elseif ($readinessScore < 70) {
+            } elseif ($readinessScore < $readinessThresholds['level_orange_threshold']) {
                 $status['level'] = 'orange';
                 $status['message'] = 'Readiness modérée. Signes de fatigue ou de stress.';
                 $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité ou privilégier la récupération.";
-            } elseif ($readinessScore < 85) {
+            } elseif ($readinessScore < $readinessThresholds['level_yellow_threshold']) {
                 $status['level'] = 'yellow';
                 $status['message'] = 'Bonne readiness, quelques points à surveiller.';
                 $status['recommendation'] = 'Entraînement normal, mais rester attentif aux sensations et adapter si nécessaire.';
             }
-            // Si >= 85, reste 'green' par défaut
+            // Si >= 85, reste 'green' par default
 
             // Règle d'exception pour la douleur sévère, qui peut surclasser le score
             $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
                 ->where('date', now()->startOfDay())
                 ->first()?->value;
-            if ($morningPain !== null && $morningPain >= 7) { // Douleur de 7/10 ou plus
+            if ($morningPain !== null && $morningPain >= $readinessThresholds['severe_pain_threshold']) { // Douleur de 7/10 ou plus
                 $status['level'] = 'red';
                 $status['message'] = 'Douleur sévère signalée. Repos ou consultation médicale.';
                 $status['recommendation'] = "Absolument aucun entraînement intense. Focalisation sur la récupération et l'identification de la cause de la douleur.";
@@ -1089,7 +1109,7 @@ class MetricStatisticsService
                 ->where('date', now()->startOfDay())
                 ->first()?->value;
 
-            if ($firstDayPeriod && ($preSessionEnergy !== null && $preSessionEnergy <= 4)) {
+            if ($firstDayPeriod && ($preSessionEnergy !== null && $preSessionEnergy <= $readinessThresholds['menstrual_energy_low'])) {
                 // Si l'état n'est pas déjà rouge, on le passe à orange
                 if ($status['level'] !== 'red') {
                     $status['level'] = 'orange';
