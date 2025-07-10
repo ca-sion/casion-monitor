@@ -67,7 +67,7 @@ class Metric extends Model
     {
         return Attribute::make(
             get: fn (): object => (object) [
-                'date'            => $this->date,
+                'date'            => $this->date->format('Y-m-d'),
                 'formatted_date'  => $this->date->locale('fr_CH')->isoFormat('L'),
                 'day'             => $this->date->locale('fr_CH')->isoFormat('dddd'),
                 'value'           => $value = $this->{$this->metric_type?->getValueColumn()} ?? null,

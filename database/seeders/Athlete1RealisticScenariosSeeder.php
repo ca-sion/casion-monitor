@@ -79,7 +79,7 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                     break 2; // Sortir des deux boucles si on dépasse la date de fin
                 }
 
-                $daysAgo = $endDate->diffInDays($currentDate, true);
+                $daysAgo = $endDate->diffInDays($currentDate, true) - 1; // (-1) pour avoir des métrique à now()
 
                 // Insertion du poids mensuel (une fois par mois)
                 // L'idée est de l'enregistrer au début de chaque mois simulé
@@ -104,9 +104,24 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                 $sleepQuality = max(1.0, min(10.0, $baseSleepQuality + $phaseParams['sleep_mod'] + (rand(-5, 5) / 10)));
                 $this->insertMetric($athlete->id, MetricType::MORNING_SLEEP_QUALITY, $daysAgo, $sleepQuality);
 
+                // Bien-être Matin (MORNING_MOOD_WELLBEING)
+                $moodWellbeing = max(1.0, min(10.0, 7.5 + $phaseParams['sleep_mod'] + (rand(-5, 5) / 10)));
+                $this->insertMetric($athlete->id, MetricType::MORNING_MOOD_WELLBEING, $daysAgo, $moodWellbeing);
+
                 // Fréquence Cardiaque au Repos (MORNING_RESTING_HEART_RATE)
                 // $restingHr = max(40.0, min(70.0, $baseRestingHr - ($baseRestingHr * $phaseParams['hrv_mod'] * 0.5) + (rand(-100, 100) / 100))); // Inverse de HRV
                 // $this->insertMetric($athlete->id, MetricType::MORNING_RESTING_HEART_RATE, $daysAgo, $restingHr);
+
+                // Énergie pré-session (PRE_SESSION_ENERGY_LEVEL)
+                $preSessionEnergyLevel = max(1.0, min(10.0, 5.5 + $phaseParams['fatigue_mod']/2 + rand(-1, 1)));
+                $this->insertMetric($athlete->id, MetricType::PRE_SESSION_ENERGY_LEVEL, $daysAgo, $preSessionEnergyLevel);
+
+                // Ressenti des Jambes pré-session (PRE_SESSION_LEG_FEEL)
+                $preSessionLegFeel = max(1.0, min(10.0, 5.5 + $phaseParams['fatigue_mod'] * 0.4 + (rand(-2, 2))));
+                if ($preSessionLegFeel < 3) { // Amélioration si en deçà de seuil faible
+                    $preSessionLegFeel = $preSessionLegFeel + 1;
+                }
+                $this->insertMetric($athlete->id, MetricType::PRE_SESSION_LEG_FEEL, $daysAgo, $preSessionLegFeel);
 
                 // Ressenti de Performance Post-Séance (POST_SESSION_PERFORMANCE_FEEL)
                 $performanceFeel = max(1.0, min(10.0, $basePerformanceFeel + $phaseParams['perf_mod'] + (rand(-5, 5) / 10)));

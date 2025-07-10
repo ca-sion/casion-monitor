@@ -129,6 +129,43 @@
                                 @endforeach
                             </div>
 
+                            {{-- Statut de Readiness --}}
+                            @if ($athlete->readinessStatus)
+                                @php
+                                    $readiness = $athlete->readinessStatus;
+                                    $readinessColor = match($readiness['level']) {
+                                        'green' => 'emerald',
+                                        'yellow' => 'lime',
+                                        'orange' => 'amber',
+                                        'red' => 'rose',
+                                        default => 'zinc'
+                                    };
+                                    $readinessBgColor = match($readiness['level']) {
+                                        'green' => 'bg-emerald-50/50 dark:bg-emerald-950/50',
+                                        'yellow' => 'bg-lime-50/50 dark:bg-lime-950/50',
+                                        'orange' => 'bg-amber-50/50 dark:bg-amber-950/50',
+                                        'red' => 'bg-rose-50/50 dark:bg-rose-950/50',
+                                        default => 'bg-zinc-50/50 dark:bg-zinc-950/50'
+                                    };
+                                    $readinessBorderColor = match($readiness['level']) {
+                                        'green' => 'border-emerald-400',
+                                        'yellow' => 'border-lime-400',
+                                        'orange' => 'border-amber-400',
+                                        'red' => 'border-rose-400',
+                                        default => 'border-zinc-400'
+                                    };
+                                @endphp
+                                <div class="p-2 border rounded-md {{ $readinessBorderColor }} {{ $readinessBgColor }}">
+                                    <flux:text class="text-sm font-semibold">Readiness: <span class="font-bold">{{ $readiness['readiness_score'] }}%</span></flux:text>
+                                    <flux:badge size="sm" inset="top bottom" color="{{ $readinessColor }}" class="mt-1 whitespace-normal!">
+                                        {{ $readiness['message'] }}
+                                    </flux:badge>
+                                    <flux:text class="mt-2 text-xs whitespace-normal!">
+                                        <span class="font-medium">Recommandation:</span> {{ $readiness['recommendation'] }}
+                                    </flux:text>
+                                </div>
+                            @endif
+
                             {{-- Cycle Menstruel --}}
                             @if ($show_menstrual_cycle && $athlete->gender === 'w' && $athlete->menstrualCycleInfo)
                                 @php

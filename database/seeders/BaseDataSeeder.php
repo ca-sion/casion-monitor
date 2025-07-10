@@ -15,32 +15,48 @@ class BaseDataSeeder extends Seeder
     public function run(): void
     {
         // Création de l'utilisateur Admin
-        User::factory()->create([
-            'name'  => 'Admin',
-            'email' => 'admin@example.com',
-        ]);
+        $admin = User::find(1);
+        if (! $admin) {
+            $admin = User::factory()->create([
+                'id'         => 1,
+                'name'  => 'Admin',
+                'email' => 'admin@example.com',
+            ]);
+        }
 
         // Création de l'athlète Arthur (ID 1)
-        $arthur = Athlete::factory()->create([
-            'first_name' => 'Arthur',
-            'last_name'  => 'de Bretagne',
-            'email'      => 'athlete@example.com',
-        ]);
+        $arthur = Athlete::find(1);
+        if (! $arthur) {
+            $arthur = Athlete::factory()->create([
+                'id'         => 1,
+                'first_name' => 'Arthur',
+                'last_name'  => 'de Bretagne',
+                'email'      => 'athlete@example.com',
+            ]);
+        }
 
         // Création de l'athlète Guenièvre (ID 2)
-        $guenievre = Athlete::factory()->create([
-            'first_name' => 'Genièvre',
-            'last_name'  => 'Lindron',
-            'email'      => 'athlete2@example.com',
-            'gender'     => 'w',
-        ]);
+        $guenievre = Athlete::find(1);
+        if (! $guenievre) {
+            $guenievre = Athlete::factory()->create([
+                'id'         => 2,
+                'first_name' => 'Genièvre',
+                'last_name'  => 'Lindron',
+                'email'      => 'athlete2@example.com',
+                'gender'     => 'w',
+            ]);
+        }
 
         // Création de l'entraîneur Merlin
-        $merlin = Trainer::factory()->create([
-            'first_name' => 'Merlin',
-            'last_name'  => "L'enchenteur",
-            'email'      => 'trainer@example.com',
-        ]);
+        $merlin = Trainer::find(1);
+        if (! $merlin) {
+            $merlin = Trainer::factory()->create([
+                'id'         => 1,
+                'first_name' => 'Merlin',
+                'last_name'  => "L'enchenteur",
+                'email'      => 'trainer@example.com',
+            ]);
+        }
 
         // Attacher les athlètes à l'entraîneur
         $merlin->athletes()->attach([$arthur->id, $guenievre->id]);
