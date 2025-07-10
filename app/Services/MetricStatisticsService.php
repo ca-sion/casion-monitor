@@ -1423,7 +1423,8 @@ class MetricStatisticsService
     protected function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
     {
         $alerts = [];
-        $cihNormalized = $this->calculateCihNormalizedForCollection($allMetrics->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
+        $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
+        $cihNormalized = $this->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
         $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
