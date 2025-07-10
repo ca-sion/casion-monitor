@@ -111,7 +111,7 @@
                         <div class="flex flex-col gap-2 w-48">
                             {{-- Alertes --}}
                             <div class="flex flex-col gap-2">
-                                @foreach (array_merge($athlete->alerts, $athlete->chargeAlerts) as $alert)
+                                @foreach (array_merge($athlete->alerts, $athlete->chargeAlerts, $athlete->readinessStatus['alerts']) as $alert)
                                     @if ($show_info_alerts || $alert['type'] !== 'info')
                                     <div>
                                         <flux:badge size="sm" inset="top bottom" class="whitespace-normal!"

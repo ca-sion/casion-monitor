@@ -61,6 +61,13 @@ class MetricStatisticsService
         ],
     ];
 
+    private const ESSENTIAL_DAILY_READINESS_METRICS = [
+        MetricType::MORNING_SLEEP_QUALITY,
+        MetricType::MORNING_GENERAL_FATIGUE,
+        MetricType::PRE_SESSION_ENERGY_LEVEL,
+        MetricType::PRE_SESSION_LEG_FEEL,
+    ];
+
     /**
      * Prépare les données du tableau de bord pour une collection d'athlètes en optimisant les requêtes.
      */
@@ -917,7 +924,6 @@ class MetricStatisticsService
         return $cih / $cph;
     }
 
-    // Dans votre service MetricStatisticsService
     public function calculateOverallReadinessScore(Athlete $athlete, Collection $allMetrics): int
     {
         $readinessScore = 100;
@@ -1020,64 +1026,78 @@ class MetricStatisticsService
         return max(0, min(100, (int) round($readinessScore)));
     }
 
-    // Dans votre service MetricStatisticsService
     public function getAthleteReadinessStatus(Athlete $athlete, Collection $allMetrics): array
     {
-        // Calcul du score global de readiness
-        $readinessScore = $this->calculateOverallReadinessScore($athlete, $allMetrics);
+        $readinessScore = 100; // Valeur par défaut, sera écrasée ou non calculée
 
         $status = [
-            'level'           => 'green', // Vert par défaut
-            'message'         => "L'athlète est prêt pour l'entraînement !",
-            'readiness_score' => $readinessScore,
-            'recommendation'  => "Poursuivre l'entraînement planifié.",
-            'alerts'          => [], // Sera rempli par getAthleteAlerts
+            'level'           => 'green', // Sera ajusté
+            'message'         => "L'athlète est prêt pour l'entraînement !", // Sera ajusté
+            'readiness_score' => null, // Initialisé à null pour indiquer non calculé par défaut
+            'recommendation'  => "Poursuivre l'entraînement planifié.", // Sera ajusté
+            'alerts'          => [],
         ];
 
-        // Récupération des alertes détaillées
+        // Récupération des alertes détaillées existantes
         $alerts = $this->getAthleteAlertsForCollection($athlete, $allMetrics);
         $status['alerts'] = $alerts;
 
-        // Définition des règles pour les niveaux de readiness basées sur le score
-        if ($readinessScore < 50) {
+        // Vérification des métriques quotidiennes manquantes
+        $missingDailyMetricsData = $this->checkMissingDailyReadinessMetrics($allMetrics);
+        $status['alerts'] = array_merge($status['alerts'], $missingDailyMetricsData['alerts']);
+        $missingCount = $missingDailyMetricsData['missing_count'];
+
+        if ($missingCount > 3) {
             $status['level'] = 'red';
-            $status['message'] = 'Faible readiness. Risque accru de fatigue ou blessure.';
-            $status['recommendation'] = 'Repos complet, récupération active très légère, ou réévaluation du plan. Ne pas forcer un entraînement intense.';
-        } elseif ($readinessScore < 70) {
-            $status['level'] = 'orange';
-            $status['message'] = 'Readiness modérée. Signes de fatigue ou de stress.';
-            $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité ou privilégier la récupération.";
-        } elseif ($readinessScore < 85) {
-            $status['level'] = 'yellow';
-            $status['message'] = 'Bonne readiness, quelques points à surveiller.';
-            $status['recommendation'] = 'Entraînement normal, mais rester attentif aux sensations et adapter si nécessaire.';
-        }
-        // Si >= 85, reste 'green' par défaut
+            $status['message'] = 'Score de readiness non calculable.';
+            $status['recommendation'] = "Trop de données essentielles sont manquantes pour aujourd'hui ({$missingCount} manquantes). Veuillez remplir les métriques quotidiennes pour obtenir un score.";
+            $status['readiness_score'] = 'N/A';
+        } else {
+            // Calcul du score global de readiness
+            $readinessScore = $this->calculateOverallReadinessScore($athlete, $allMetrics);
+            $status['readiness_score'] = $readinessScore;
 
-        // Règle d'exception pour la douleur sévère, qui peut surclasser le score
-        $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
-            ->where('date', now()->startOfDay())
-            ->first()?->value;
-        if ($morningPain !== null && $morningPain >= 7) { // Douleur de 7/10 ou plus
-            $status['level'] = 'red';
-            $status['message'] = 'Douleur sévère signalée. Repos ou consultation médicale.';
-            $status['recommendation'] = "Absolument aucun entraînement intense. Focalisation sur la récupération et l'identification de la cause de la douleur.";
-        }
-
-        // Règle d'exception pour le premier jour des règles avec niveau d'énergie bas
-        $firstDayPeriod = $allMetrics->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
-            ->where('date', now()->startOfDay())
-            ->first()?->value;
-        $preSessionEnergy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
-            ->where('date', now()->startOfDay())
-            ->first()?->value;
-
-        if ($firstDayPeriod && ($preSessionEnergy !== null && $preSessionEnergy <= 4)) {
-            // Si l'état n'est pas déjà rouge, on le passe à orange
-            if ($status['level'] !== 'red') {
+            // Définition des règles pour les niveaux de readiness basées sur le score
+            if ($readinessScore < 50) {
+                $status['level'] = 'red';
+                $status['message'] = 'Faible readiness. Risque accru de fatigue ou blessure.';
+                $status['recommendation'] = 'Repos complet, récupération active très légère, ou réévaluation du plan. Ne pas forcer un entraînement intense.';
+            } elseif ($readinessScore < 70) {
                 $status['level'] = 'orange';
-                $status['message'] = "Premier jour des règles avec niveau d'énergie bas.";
-                $status['recommendation'] = "Adapter l'entraînement aux sensations, privilégier des activités plus douces ou de la récupération active.";
+                $status['message'] = 'Readiness modérée. Signes de fatigue ou de stress.';
+                $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité ou privilégier la récupération.";
+            } elseif ($readinessScore < 85) {
+                $status['level'] = 'yellow';
+                $status['message'] = 'Bonne readiness, quelques points à surveiller.';
+                $status['recommendation'] = 'Entraînement normal, mais rester attentif aux sensations et adapter si nécessaire.';
+            }
+            // Si >= 85, reste 'green' par défaut
+
+            // Règle d'exception pour la douleur sévère, qui peut surclasser le score
+            $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
+                ->where('date', now()->startOfDay())
+                ->first()?->value;
+            if ($morningPain !== null && $morningPain >= 7) { // Douleur de 7/10 ou plus
+                $status['level'] = 'red';
+                $status['message'] = 'Douleur sévère signalée. Repos ou consultation médicale.';
+                $status['recommendation'] = "Absolument aucun entraînement intense. Focalisation sur la récupération et l'identification de la cause de la douleur.";
+            }
+
+            // Règle d'exception pour le premier jour des règles avec niveau d'énergie bas
+            $firstDayPeriod = $allMetrics->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
+                ->where('date', now()->startOfDay())
+                ->first()?->value;
+            $preSessionEnergy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
+                ->where('date', now()->startOfDay())
+                ->first()?->value;
+
+            if ($firstDayPeriod && ($preSessionEnergy !== null && $preSessionEnergy <= 4)) {
+                // Si l'état n'est pas déjà rouge, on le passe à orange
+                if ($status['level'] !== 'red') {
+                    $status['level'] = 'orange';
+                    $status['message'] = "Premier jour des règles avec niveau d'énergie bas.";
+                    $status['recommendation'] = "Adapter l'entraînement aux sensations, privilégier des activités plus douces ou de la récupération active.";
+                }
             }
         }
 
@@ -1839,5 +1859,38 @@ class MetricStatisticsService
             'cph', 'ratio_cih_cph', 'ratio_cih_normalized_cph' => 'neutral',
             default => 'neutral',
         };
+    }
+
+    protected function checkMissingDailyReadinessMetrics(Collection $allMetrics): array
+    {
+        $missingAlerts = [];
+        $missingCount = 0;
+        $today = now()->startOfDay();
+
+        foreach (self::ESSENTIAL_DAILY_READINESS_METRICS as $metricType) {
+            $metricExists = $allMetrics->where('metric_type', $metricType->value)
+                                       ->where('date', $today)
+                                       ->isNotEmpty();
+
+            if (! $metricExists) {
+                $missingAlerts[] = [
+                    'type'    => 'info',
+                    'message' => "Donnée manquante : La métrique \"{$metricType->getLabel()}\" n'a pas été enregistrée pour aujourd'hui. Veuillez la remplir pour un calcul complet du score de readiness.",
+                ];
+                $missingCount++;
+            }
+        }
+
+        // Cas spécifique pour le CIH/CPH qui est hebdomadaire mais dépend des données quotidiennes
+        $sessionLoadMetricsThisWeek = $allMetrics->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
+                                                 ->whereBetween('date', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+        if ($sessionLoadMetricsThisWeek->isEmpty()) {
+            $missingAlerts[] = [
+                'type'    => 'info',
+                'message' => "Donnée manquante : Aucune \"Charge de Session\" n'a été enregistrée cette semaine. Le calcul du ratio Charge Réelle/Planifiée sera incomplet.",
+            ];
+        }
+
+        return ['alerts' => $missingAlerts, 'missing_count' => $missingCount];
     }
 }
