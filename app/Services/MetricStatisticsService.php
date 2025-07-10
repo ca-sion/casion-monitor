@@ -1230,11 +1230,11 @@ public function calculateSbmForCollection(Collection $dailyMetrics): ?float
             $ratio = $this->calculateRatio($cihNormalized, $cph);
 
             if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle : Charge réelle normalisée ({$cihNormalized}) significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+                $alerts[] = ['type' => 'warning', 'message' => "Sous-charge potentielle : Charge réelle normalisée (".number_format($cihNormalized, 1).") significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
             } elseif ($ratio > $chargeThresholds['ratio_overload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle : Charge réelle normalisée ({$cihNormalized}) significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+                $alerts[] = ['type' => 'warning', 'message' => "Surcharge potentielle : Charge réelle normalisée (".number_format($cihNormalized, 1).") significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
             } else {
-                $alerts[] = ['type' => 'success', 'message' => "Charge réelle normalisée ({$cihNormalized}) en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
+                $alerts[] = ['type' => 'success', 'message' => "Charge réelle normalisée (".number_format($cihNormalized, 1).") en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2)."."];
             }
         } elseif ($cihNormalized == 0) {
             $alerts[] = ['type' => 'info', 'message' => 'Pas suffisamment de données "'.MetricType::POST_SESSION_SESSION_LOAD->getLabelShort().'" enregistrées cette semaine pour calculer le CIH Normalisée.'];
