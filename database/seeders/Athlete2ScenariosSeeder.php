@@ -21,7 +21,7 @@ class Athlete2ScenariosSeeder extends Seeder
         }
 
         // Assurez-vous que l'athlète est bien une femme pour les tests du cycle
-        if ($athlete->gender !== 'w') {
+        if ($athlete->gender->value !== 'w') {
             $this->command->warn("L'athlète Guenièvre (ID {$athlete->id}) n'est pas féminine. Mise à jour de son genre à 'w'.");
             $athlete->update(['gender' => 'w']);
         }
@@ -63,7 +63,7 @@ class Athlete2ScenariosSeeder extends Seeder
         // $scenarioFactory->seedLowPerformanceDuringMenstrualPhaseInfo($athlete->id);
 
         // Exemple : un scénario complet
-        $scenarioFactory->seedNormalCycleScenario($athlete->id);
+        // $scenarioFactory->seedNormalCycleScenario($athlete->id);
         // $scenarioFactory->seedNoAlertsScenario($athlete->id);
     }
 }

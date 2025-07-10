@@ -1808,7 +1808,7 @@ class MetricStatisticsService
         }
 
         // ** Alertes Spécifiques aux Femmes (potentiels signes de RED-S) **
-        if ($athlete->gender === 'w') {
+        if ($athlete->gender->value === 'w') {
             $menstrualThresholds = self::ALERT_THRESHOLDS['MENSTRUAL_CYCLE'];
             $cycleData = $this->deduceMenstrualCyclePhase($athlete);
 

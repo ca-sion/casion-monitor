@@ -21,7 +21,7 @@ class Athlete4ScenariosSeeder extends Seeder
         }
 
         // Assurez-vous que l'athlète 4 est bien une femme pour les tests du cycle
-        if ($athlete->gender !== 'w') {
+        if ($athlete->gender->value !== 'w') {
             $this->command->warn("L'athlète ID 4 n'est pas féminine. Mise à jour de son genre à 'w'.");
             $athlete->update(['gender' => 'w']);
         }

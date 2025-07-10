@@ -54,9 +54,9 @@
                     </div>
                 @endif
 
-                @if ($athlete->gender)
+                @if ($athlete->gender->value)
                     <div class="flex items-center space-x-2">
-                        @if ($athlete->gender === 'm')
+                        @if ($athlete->gender->value === 'm')
                             <flux:icon name="user" class="size-5 text-slate-200" />
                             <flux:text class="text-white">Homme</flux:text>
                         @else
@@ -115,7 +115,7 @@
                 Aucune alerte détectée pour la période sélectionnée. Tout semble en ordre ! 🎉
             </flux:text>
         @endif
-        @if ($athlete->gender === 'w' && $menstrualCycleInfo)
+        @if ($athlete->gender->value === 'w' && $menstrualCycleInfo)
             @php
                 $menstrualCycleBoxBorderColor = 'border-emerald-400';
                 $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';

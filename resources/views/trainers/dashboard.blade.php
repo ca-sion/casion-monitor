@@ -167,7 +167,7 @@
                             @endif
 
                             {{-- Cycle Menstruel --}}
-                            @if ($show_menstrual_cycle && $athlete->gender === 'w' && $athlete->menstrualCycleInfo)
+                            @if ($show_menstrual_cycle && $athlete->gender->value === 'w' && $athlete->menstrualCycleInfo)
                                 @php
                                     $info = $athlete->menstrualCycleInfo;
                                     $borderColor = match($info['phase']) {

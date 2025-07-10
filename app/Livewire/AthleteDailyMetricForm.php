@@ -149,7 +149,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                                     ->color('gray')
                                     ->tooltip(MetricType::MORNING_FIRST_DAY_PERIOD->getHint()),
                             ])
-                            ->visible(fn () => $this->athlete->gender == 'w')
+                            ->visible(fn () => $this->athlete->gender->value == 'w')
                             ->inline()
                             ->grouped()
                             ->options([

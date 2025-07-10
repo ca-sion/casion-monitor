@@ -80,7 +80,7 @@
                 Aucune alerte détectée pour la période sélectionnée. Tout semble en ordre ! 🎉
             </flux:text>
         @endif
-        @if ($athlete->gender === 'w' && $menstrualCycleInfo)
+        @if ($athlete->gender->value === 'w' && $menstrualCycleInfo)
             @php
                 $menstrualCycleBoxBorderColor = 'border-emerald-400';
                 $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';

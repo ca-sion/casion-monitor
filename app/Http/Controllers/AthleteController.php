@@ -63,7 +63,7 @@ class AthleteController extends Controller
 
         // Fetch menstrual cycle info if applicable
         $menstrualCycleInfo = null;
-        if ($athlete->gender === 'w') {
+        if ($athlete->gender->value === 'w') {
             $menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
         }
 
