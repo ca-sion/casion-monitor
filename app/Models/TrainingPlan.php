@@ -14,7 +14,7 @@ class TrainingPlan extends Model
     /** @use HasFactory<\Database\Factories\TrainingPlanFactory> */
     use HasFactory;
     
-    protected $fillable = ['name', 'description', 'trainer_id'];
+    protected $fillable = ['name', 'description', 'trainer_id', 'start_date', 'end_date'];
 
     /**
      * Get the trainer that owns the TrainingPlan.
