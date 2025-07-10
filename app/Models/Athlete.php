@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\ValueObjects\Gender;
 use Illuminate\Support\Carbon;
 use Vinkla\Hashids\Facades\Hashids;
 use Illuminate\Auth\Authenticatable;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use MichaelRavedoni\LaravelValueObjects\Casts\ValueObjectCast;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 
@@ -56,6 +58,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
         return [
             'birthday'        => 'date',
             'last_connection' => 'datetime',
+            'gender'          => ValueObjectCast::class.':'.Gender::class,
         ];
     }
 
@@ -81,7 +84,8 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     public function trainingPlans(): BelongsToMany
     {
         return $this->belongsToMany(TrainingPlan::class, 'assigned_training_plans', 'athlete_id', 'training_plan_id')
-                    ->withPivot('start_date', 'is_customized');
+            ->withPivot('start_date', 'is_customized')
+            ->with('weeks');
     }
 
     /**

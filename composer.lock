@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0150c8ec436247a8d21d7eba5fea634a",
+    "content-hash": "091e689521c7630d161ea571a407078a",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -3710,6 +3710,69 @@
                 "source": "https://github.com/Masterminds/html5-php/tree/2.9.0"
             },
             "time": "2024-03-31T07:05:07+00:00"
+        },
+        {
+            "name": "michaelravedoni/laravel-value-objects",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/michaelravedoni/laravel-value-objects.git",
+                "reference": "4fd5c4f4519eed37c298b78d047786a797325fe3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/michaelravedoni/laravel-value-objects/zipball/4fd5c4f4519eed37c298b78d047786a797325fe3",
+                "reference": "4fd5c4f4519eed37c298b78d047786a797325fe3",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/database": "^10.0|^11.0|^12.0",
+                "illuminate/support": "^10.0|^11.0|^12.0",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.23",
+                "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0|^11.0",
+                "pestphp/pest": "^2.31|^3.0",
+                "phpunit/phpunit": "^10.0|^11.0|^12.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "MichaelRavedoni\\LaravelValueObjects\\LaravelValueObjectsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "MichaelRavedoni\\LaravelValueObjects\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Michael Ravedoni",
+                    "homepage": "https://michaelravedoni.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A base package for creating value objects in Laravel, with Artisan command and generic Eloquent cast.",
+            "homepage": "https://github.com/michaelravedoni/laravel-value-objects",
+            "keywords": [
+                "casting",
+                "eloquent",
+                "laravel",
+                "value objects"
+            ],
+            "support": {
+                "issues": "https://github.com/michaelravedoni/laravel-value-objects/issues",
+                "source": "https://github.com/michaelravedoni/laravel-value-objects/tree/v1.0.0"
+            },
+            "time": "2025-07-09T13:46:33+00:00"
         },
         {
             "name": "monolog/monolog",

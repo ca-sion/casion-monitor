@@ -36,7 +36,7 @@ class TrainerController extends Controller
 
         // Appel unique à la nouvelle méthode de service qui fait tout le travail en une fois
         $athletesOverviewData = $this->metricStatisticsService
-                                     ->getBulkAthletesDashboardData($trainer->athletes, $period);
+            ->getBulkAthletesDashboardData($trainer->athletes()->with('trainingPlans.weeks')->get(), $period);
 
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
