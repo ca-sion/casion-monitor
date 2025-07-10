@@ -156,7 +156,7 @@
                                     };
                                 @endphp
                                 <div class="p-2 border rounded-md {{ $readinessBorderColor }} {{ $readinessBgColor }}">
-                                    <flux:text class="text-sm font-semibold">Readiness: <span class="font-bold">{{ $readiness['readiness_score'] }}%</span></flux:text>
+                                    <flux:text class="text-sm font-semibold">Readiness: <span class="font-bold">{{ $readiness['readiness_score'] }}</span></flux:text>
                                     <flux:badge size="sm" inset="top bottom" color="{{ $readinessColor }}" class="mt-1 whitespace-normal!">
                                         {{ $readiness['message'] }}
                                     </flux:badge>

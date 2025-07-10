@@ -1046,14 +1046,16 @@ class MetricStatisticsService
         $missingDailyMetricsData = $this->checkMissingDailyReadinessMetrics($allMetrics);
         $status['alerts'] = array_merge($status['alerts'], $missingDailyMetricsData['alerts']);
         $missingCount = $missingDailyMetricsData['missing_count'];
+        $missingMetricNames = $missingDailyMetricsData['missing_metric_names'];
 
         if ($missingCount > 3) {
+            $missingNamesString = implode(', ', $missingMetricNames);
             $status['level'] = 'red';
             $status['message'] = 'Score de readiness non calculable.';
-            $status['recommendation'] = "Trop de données essentielles sont manquantes pour aujourd'hui ({$missingCount} manquantes). Veuillez remplir les métriques quotidiennes pour obtenir un score.";
-            $status['readiness_score'] = 'N/A';
+            $status['recommendation'] = "Trop de données essentielles sont manquantes pour aujourd'hui ({$missingCount} manquantes : {$missingNamesString}). Veuillez remplir toutes les métriques quotidiennes pour obtenir un score précis.";
+            $status['readiness_score'] = 'N/A'; // Indiquer que le score n'est pas disponible
         } else {
-            // Calcul du score global de readiness
+            // Calcul du score global de readiness UNIQUEMENT si pas trop de données manquantes
             $readinessScore = $this->calculateOverallReadinessScore($athlete, $allMetrics);
             $status['readiness_score'] = $readinessScore;
 
@@ -1865,6 +1867,7 @@ class MetricStatisticsService
     {
         $missingAlerts = [];
         $missingCount = 0;
+        $missingMetricNames = [];
         $today = now()->startOfDay();
 
         foreach (self::ESSENTIAL_DAILY_READINESS_METRICS as $metricType) {
@@ -1878,6 +1881,7 @@ class MetricStatisticsService
                     'message' => "Donnée manquante : La métrique \"{$metricType->getLabel()}\" n'a pas été enregistrée pour aujourd'hui. Veuillez la remplir pour un calcul complet du score de readiness.",
                 ];
                 $missingCount++;
+                $missingMetricNames[] = $metricType->getLabel();
             }
         }
 
@@ -1891,6 +1895,6 @@ class MetricStatisticsService
             ];
         }
 
-        return ['alerts' => $missingAlerts, 'missing_count' => $missingCount];
+        return ['alerts' => $missingAlerts, 'missing_count' => $missingCount, 'missing_metric_names' => $missingMetricNames];
     }
 }
