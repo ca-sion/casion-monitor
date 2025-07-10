@@ -29,7 +29,7 @@ enum MetricType: string implements HasLabel
     {
         return match ($this) {
             self::MORNING_BODY_WEIGHT_KG   => 'Poids corporel le matin',
-            self::MORNING_HRV              => 'Variabilité de la fréquence cardiaque (VFC/HRV)',
+            self::MORNING_HRV              => 'Variabilité de la fréquence cardiaque',
             self::MORNING_SLEEP_QUALITY    => 'Qualité du sommeil',
             self::MORNING_GENERAL_FATIGUE  => 'Fatigue générale',
             self::MORNING_PAIN             => 'Douleurs musculaires/articulaires',
@@ -50,7 +50,7 @@ enum MetricType: string implements HasLabel
     {
         return match ($this) {
             self::MORNING_BODY_WEIGHT_KG   => 'Poids',
-            self::MORNING_HRV              => 'VFC/HRV',
+            self::MORNING_HRV              => 'VFC',
             self::MORNING_SLEEP_QUALITY    => 'Sommeil',
             self::MORNING_GENERAL_FATIGUE  => 'Fatigue mat.',
             self::MORNING_PAIN             => 'Douleurs',
@@ -71,7 +71,7 @@ enum MetricType: string implements HasLabel
     {
         return match ($this) {
             self::MORNING_BODY_WEIGHT_KG   => 'Poids corporel au matin.',
-            self::MORNING_HRV              => 'Valeur de la Variabilité de la fréquence cardiaque (HRV) au matin.',
+            self::MORNING_HRV              => 'Valeur de la Variabilité de la fréquence cardiaque (VFC/HRV) au matin.',
             self::MORNING_SLEEP_QUALITY    => 'Évaluation subjective de la qualité du sommeil au matin.',
             self::MORNING_GENERAL_FATIGUE  => 'Évaluation subjective de la fatigue générale au matin.',
             self::MORNING_PAIN             => 'Évaluation subjective des douleurs musculaires/articulaires au matin.',
