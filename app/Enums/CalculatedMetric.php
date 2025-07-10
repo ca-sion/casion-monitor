@@ -60,4 +60,22 @@ enum CalculatedMetric: string implements HasLabel
             self::RATIO_CIH_NORMALIZED_CPH => 0.8,
         };
     }
+
+    /**
+     * Retourne la direction optimale de la tendance pour cette métrique calculée.
+     * 'good': une augmentation est généralement positive.
+     * 'bad': une augmentation est généralement négative.
+     * 'neutral': la direction n'a pas de signification intrinsèque positive/négative (ex: poids).
+     */
+    public function getTrendOptimalDirection(): string
+    {
+        return match ($this) {
+            self::CIH                      => 'bad',
+            self::CIH_NORMALIZED           => 'bad',
+            self::SBM                      => 'good',
+            self::CPH                      => 'neutral',
+            self::RATIO_CIH_CPH            => 'neutral',
+            self::RATIO_CIH_NORMALIZED_CPH => 'neutral',
+        };
+    }
 }
