@@ -1031,20 +1031,16 @@ class MetricStatisticsService
         $readinessScore = 100; // Valeur par défaut, sera écrasée ou non calculée
 
         $status = [
-            'level'           => 'green', // Sera ajusté
-            'message'         => "L'athlète est prêt pour l'entraînement !", // Sera ajusté
-            'readiness_score' => null, // Initialisé à null pour indiquer non calculé par défaut
-            'recommendation'  => "Poursuivre l'entraînement planifié.", // Sera ajusté
+            'level'           => 'green',
+            'message'         => "L'athlète est prêt pour l'entraînement !",
+            'readiness_score' => null,
+            'recommendation'  => "Poursuivre l'entraînement planifié.",
             'alerts'          => [],
         ];
 
-        // Récupération des alertes détaillées existantes
-        $alerts = $this->getAthleteAlertsForCollection($athlete, $allMetrics);
-        $status['alerts'] = $alerts;
-
         // Vérification des métriques quotidiennes manquantes
         $missingDailyMetricsData = $this->checkMissingDailyReadinessMetrics($allMetrics);
-        $status['alerts'] = array_merge($status['alerts'], $missingDailyMetricsData['alerts']);
+        $status['alerts'] = $missingDailyMetricsData['alerts'];
         $missingCount = $missingDailyMetricsData['missing_count'];
         $missingMetricNames = $missingDailyMetricsData['missing_metric_names'];
 
