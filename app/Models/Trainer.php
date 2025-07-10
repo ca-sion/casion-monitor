@@ -125,6 +125,6 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
      */
     public function feedbacks(): HasMany
     {
-        return $this->hasMany(Athlete::class);
+        return $this->hasMany(Feedback::class);
     }
 }

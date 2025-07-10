@@ -835,7 +835,7 @@ class MetricStatisticsService
         if (is_null($allMetrics)) {
             $rpeMetrics = $athlete->metrics()
                 ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
-                ->whereBetween('date', [$weekStartDate->toDateString(), $weekEndDate->toDateString()])
+                ->whereBetween('date', [$weekStartDate->startOfDay(), $weekEndDate->endOfDay()])
                 ->get();
         } else {
             $rpeMetrics = $allMetrics->filter(fn ($metric) =>
