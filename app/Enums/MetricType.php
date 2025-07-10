@@ -236,4 +236,31 @@ enum MetricType: string implements HasLabel
                 10 = Fatigue extrême, tu es vidé(e), tu as besoin de repos immédiat.",
         };
     }
+
+    /**
+     * Retourne la direction optimale de la tendance pour cette métrique.
+     * 'good': une augmentation est généralement positive (ex: VFC, qualité du sommeil).
+     * 'bad': une augmentation est généralement négative (ex: fatigue, douleur).
+     * 'neutral': la direction n'a pas de signification intrinsèque positive/négative (ex: poids).
+     */
+    public function getTrendOptimalDirection(): string
+    {
+        return match ($this) {
+            self::MORNING_HRV,
+            self::MORNING_SLEEP_QUALITY,
+            self::MORNING_MOOD_WELLBEING,
+            self::PRE_SESSION_ENERGY_LEVEL,
+            self::PRE_SESSION_LEG_FEEL,
+            self::POST_SESSION_PERFORMANCE_FEEL => 'good',
+
+            self::MORNING_GENERAL_FATIGUE,
+            self::MORNING_PAIN,
+            self::POST_SESSION_SUBJECTIVE_FATIGUE,
+            self::POST_SESSION_SESSION_LOAD => 'bad',
+
+            self::MORNING_BODY_WEIGHT_KG,
+            self::MORNING_PAIN_LOCATION,
+            self::MORNING_FIRST_DAY_PERIOD => 'neutral',
+        };
+    }
 }

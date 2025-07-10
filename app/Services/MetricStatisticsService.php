@@ -169,16 +169,18 @@ class MetricStatisticsService
 
             $evolutionTrendData = $this->getEvolutionTrendForCollection($metricsForPeriod, $metricType);
             if ($metricData['average_7_days'] !== null && $evolutionTrendData['trend'] !== 'N/A') {
+                $optimalDirection = $metricType->getTrendOptimalDirection();
+
                 $metricData['trend_icon'] = match ($evolutionTrendData['trend']) {
                     'increasing' => 'arrow-trending-up',
                     'decreasing' => 'arrow-trending-down',
-                    'stable'     => 'minus',
-                    default      => 'ellipsis-horizontal',
+                    default      => 'minus', // stable
                 };
+
                 $metricData['trend_color'] = match ($evolutionTrendData['trend']) {
-                    'increasing' => 'lime',
-                    'decreasing' => 'rose',
-                    default      => 'zinc',
+                    'increasing' => ($optimalDirection === 'good' ? 'lime' : ($optimalDirection === 'bad' ? 'rose' : 'zinc')),
+                    'decreasing' => ($optimalDirection === 'good' ? 'rose' : ($optimalDirection === 'bad' ? 'lime' : 'zinc')),
+                    default      => 'zinc', // stable
                 };
             }
 
@@ -281,7 +283,9 @@ class MetricStatisticsService
                 'increasing' => 'arrow-trending-up', 'decreasing' => 'arrow-trending-down', default => 'minus'
             } : 'ellipsis-horizontal',
             'trend_color' => $trend['trend'] !== 'N/A' ? match ($trend['trend']) {
-                'increasing' => 'lime', 'decreasing' => 'rose', default => 'zinc'
+                'increasing' => ($this->getWeeklyMetricOptimalDirection($metricKey) === 'good' ? 'lime' : ($this->getWeeklyMetricOptimalDirection($metricKey) === 'bad' ? 'rose' : 'zinc')),
+                'decreasing' => ($this->getWeeklyMetricOptimalDirection($metricKey) === 'good' ? 'rose' : ($this->getWeeklyMetricOptimalDirection($metricKey) === 'bad' ? 'lime' : 'zinc')),
+                default      => 'zinc',
             } : 'zinc',
             'trend_percentage' => $changePercentage,
             'chart_data'       => [
@@ -1831,5 +1835,18 @@ class MetricStatisticsService
         }
 
         return $alerts;
+    }
+
+    /**
+     * Retourne la direction optimale de la tendance pour une métrique hebdomadaire.
+     */
+    protected function getWeeklyMetricOptimalDirection(string $metricKey): string
+    {
+        return match ($metricKey) {
+            'sbm' => 'good',
+            'cih', 'cih_normalized' => 'bad',
+            'cph', 'ratio_cih_cph', 'ratio_cih_normalized_cph' => 'neutral',
+            default => 'neutral',
+        };
     }
 }
