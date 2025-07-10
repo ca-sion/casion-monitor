@@ -930,8 +930,6 @@ class MetricStatisticsService
     public function calculateOverallReadinessScore(Athlete $athlete, Collection $allMetrics): int
     {
         $readinessScore = 100;
-        $today = Carbon::now()->startOfDay();
-        $sevenDaysAgo = Carbon::now()->subDays(7)->startOfDay();
 
         // 1. Impact du SBM (sur 10)
         $sbmMetrics = $allMetrics->whereIn('metric_type', [
