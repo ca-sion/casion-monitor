@@ -11,13 +11,16 @@ use App\Enums\FeedbackType;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Url;
 use Illuminate\Support\Carbon;
+use App\Enums\CalculatedMetric;
 use Livewire\Attributes\Layout;
+use App\Models\TrainingPlanWeek;
 use Illuminate\Contracts\View\View;
 use Filament\Support\Icons\Heroicon;
 use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use App\Services\MetricStatisticsService;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\TextEntry;
@@ -44,6 +47,8 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
 
     public bool $canGetNextDay;
 
+    public ?TrainingPlanWeek $athleteCurrentTrainingPlanWeek;
+
     public function mount(): void
     {
         $this->athlete = auth('athlete')->user();
@@ -54,6 +59,9 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         $this->nextDate = $this->date->copy()->addDay();
 
         $this->canGetNextDay = $this->nextDate < now()->endOfDay();
+
+        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $this->athleteCurrentTrainingPlanWeek = resolve(MetricStatisticsService::class)->getTrainingPlanWeekForAthlete($this->athlete, $currentWeekStartDate);
 
         $metrics = Metric::where('athlete_id', $this->athlete->id)
             ->whereDate('date', $this->date)
@@ -94,7 +102,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::MORNING_HRV->getHint())
+                                    ->tooltip(MetricType::MORNING_HRV->getHint()),
                             ])
                             ->integer()
                             ->inputMode('numeric')
@@ -107,7 +115,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::MORNING_SLEEP_QUALITY->getHint())
+                                    ->tooltip(MetricType::MORNING_SLEEP_QUALITY->getHint()),
                             ])
                             ->inline()
                             ->grouped()
@@ -118,7 +126,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::MORNING_GENERAL_FATIGUE->getHint())
+                                    ->tooltip(MetricType::MORNING_GENERAL_FATIGUE->getHint()),
                             ])
                             ->inline()
                             ->grouped()
@@ -129,7 +137,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::MORNING_MOOD_WELLBEING->getHint())
+                                    ->tooltip(MetricType::MORNING_MOOD_WELLBEING->getHint()),
                             ])
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
@@ -139,7 +147,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::MORNING_FIRST_DAY_PERIOD->getHint())
+                                    ->tooltip(MetricType::MORNING_FIRST_DAY_PERIOD->getHint()),
                             ])
                             ->visible(fn () => $this->athlete->gender == 'w')
                             ->inline()
@@ -164,7 +172,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::PRE_SESSION_ENERGY_LEVEL->getHint())
+                                    ->tooltip(MetricType::PRE_SESSION_ENERGY_LEVEL->getHint()),
                             ])
                             ->inline()
                             ->grouped()
@@ -175,7 +183,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::PRE_SESSION_LEG_FEEL->getHint())
+                                    ->tooltip(MetricType::PRE_SESSION_LEG_FEEL->getHint()),
                             ])
                             ->inline()
                             ->grouped()
@@ -185,7 +193,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(FeedbackType::PRE_SESSION_GOALS->getHint())
+                                    ->tooltip(FeedbackType::PRE_SESSION_GOALS->getHint()),
                             ])
                             ->maxLength(255)
                             ->autosize(),
@@ -201,7 +209,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->getHint())
+                                    ->tooltip(MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->getHint()),
                             ])
                             ->inline()
                             ->grouped()
@@ -212,7 +220,14 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::POST_SESSION_SESSION_LOAD->getHint())
+                                    ->tooltip(MetricType::POST_SESSION_SESSION_LOAD->getHint()),
+                            ])
+                            ->belowLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(CalculatedMetric::CPH->getDescription()),
+                                CalculatedMetric::CPH->getLabelShort().':',
+                                $this->athleteCurrentTrainingPlanWeek?->cphNormalizedOverTen ?? 'N/A',
                             ])
                             ->inline()
                             ->grouped()
@@ -223,7 +238,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(MetricType::POST_SESSION_PERFORMANCE_FEEL->getHint())
+                                    ->tooltip(MetricType::POST_SESSION_PERFORMANCE_FEEL->getHint()),
                             ])
                             ->inline()
                             ->grouped()
@@ -233,7 +248,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->afterLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(FeedbackType::POST_SESSION_SENSATION->getHint())
+                                    ->tooltip(FeedbackType::POST_SESSION_SENSATION->getHint()),
                             ])
                             ->maxLength(255),
                     ]),

@@ -1,7 +1,6 @@
 <x-filament-panels::page>
-    <div x-data="trainingCalendar()" x-init="init()">
+    <div>
 
-        {{-- Nouveau Tableau Horizontal des Semaines --}}
         @if(count($this->weeks) > 0)
             <div class="overflow-x-auto">
                 <div class="flex space-x-2">
@@ -45,20 +44,4 @@
         @endif
 
     </div>
-
-    <script>
-
-        function trainingCalendar() {
-            return {
-                init() {
-                    // Pas de génération de calendrier annuel ici
-                },
-
-                selectWeek(startDate) {
-                    console.log('Selected week starting:', startDate);
-                    @this.call('selectWeek', startDate);
-                }
-            };
-        }
-    </script>
 </x-filament-panels::page>

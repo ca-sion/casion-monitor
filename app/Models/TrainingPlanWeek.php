@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+use App\Enums\CalculatedMetric;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\MetricStatisticsService;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TrainingPlanWeek extends Model
 {
-
     /** @use HasFactory<\Database\Factories\TrainingPlanFactory> */
     use HasFactory;
-    
+
     protected $fillable = ['training_plan_id', 'week_number', 'start_date', 'volume_planned', 'intensity_planned'];
 
     /**
@@ -32,66 +34,22 @@ class TrainingPlanWeek extends Model
     }
 
     /**
-     * Getter for training_plan_id attribute
+     * Get the training plan week's cph.
      */
-    public function getTrainingPlanId(): int
+    protected function cph(): Attribute
     {
-        return $this->training_plan_id;
+        return Attribute::make(
+            get: fn () => resolve(MetricStatisticsService::class)->calculateCph($this),
+        );
     }
 
     /**
-     * Setter for training_plan_id attribute
+     * Get the training plan week's cph normalized over ten scale.
      */
-    public function setTrainingPlanId(int $trainingPlanId): void
+    protected function cphNormalizedOverTen(): Attribute
     {
-        $this->training_plan_id = $trainingPlanId;
-    }
-
-    /**
-     * Getter for week_number attribute
-     */
-    public function getWeekNumber(): int
-    {
-        return $this->week_number;
-    }
-
-    /**
-     * Setter for week_number attribute
-     */
-    public function setWeekNumber(int $weekNumber): void
-    {
-        $this->week_number = $weekNumber;
-    }
-
-    /**
-     * Getter for volume_planned attribute
-     */
-    public function getVolumePlanned(): int
-    {
-        return $this->volume_planned;
-    }
-
-    /**
-     * Setter for volume_planned attribute
-     */
-    public function setVolumePlanned(int $volumePlanned): void
-    {
-        $this->volume_planned = $volumePlanned;
-    }
-
-    /**
-     * Getter for intensity_planned attribute
-     */
-    public function getIntensityPlanned(): int
-    {
-        return $this->intensity_planned;
-    }
-
-    /**
-     * Setter for intensity_planned attribute
-     */
-    public function setIntensityPlanned(int $intensityPlanned): void
-    {
-        $this->intensity_planned = $intensityPlanned;
+        return Attribute::make(
+            get: fn () => $this->cph * 10 / CalculatedMetric::CPH->getScale(),
+        );
     }
 }
