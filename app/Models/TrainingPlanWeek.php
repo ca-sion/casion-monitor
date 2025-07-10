@@ -13,7 +13,7 @@ class TrainingPlanWeek extends Model
     /** @use HasFactory<\Database\Factories\TrainingPlanFactory> */
     use HasFactory;
     
-    protected $fillable = ['training_plan_id', 'week_number', 'volume_planned', 'intensity_planned'];
+    protected $fillable = ['training_plan_id', 'week_number', 'start_date', 'volume_planned', 'intensity_planned'];
 
     /**
      * Get the training plan that owns the TrainingPlanWeek.

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TrainingPlans\Pages;
 
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
@@ -14,6 +15,8 @@ class EditTrainingPlan extends EditRecord
     {
         return [
             DeleteAction::make(),
+            Action::make('allocate')
+                ->url(AllocateTrainingPlan::getUrl(['record' => $this->record])),
         ];
     }
 }
