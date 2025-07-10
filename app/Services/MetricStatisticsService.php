@@ -1412,11 +1412,11 @@ class MetricStatisticsService
             $ratio = $this->calculateRatio($cihNormalized, $cph);
 
             if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Sous-charge potentielle : Charge réelle normalisée ('.number_format($cihNormalized, 1).") significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
+                $alerts[] = ['type' => 'warning', 'message' => 'Sous-charge potentielle : Charge interne ('.number_format($cihNormalized, 1).") significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
             } elseif ($ratio > $chargeThresholds['ratio_overload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Surcharge potentielle : Charge réelle normalisée ('.number_format($cihNormalized, 1).") significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
+                $alerts[] = ['type' => 'warning', 'message' => 'Surcharge potentielle : Charge interne ('.number_format($cihNormalized, 1).") significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
             } else {
-                $alerts[] = ['type' => 'success', 'message' => 'Charge réelle normalisée ('.number_format($cihNormalized, 1).") en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
+                $alerts[] = ['type' => 'success', 'message' => 'Charge interne ('.number_format($cihNormalized, 1).") en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
             }
         } elseif ($cihNormalized == 0) {
             $alerts[] = ['type' => 'info', 'message' => 'Pas suffisamment de données "'.MetricType::POST_SESSION_SESSION_LOAD->getLabelShort().'" enregistrées cette semaine pour calculer le CIH Normalisée.'];
@@ -1837,10 +1837,6 @@ class MetricStatisticsService
         // On vérifie d'abord s'il y a suffisamment de données pour une analyse.
         if ($metrics->isEmpty() || $metrics->count() < 5) {
             $alerts[] = ['type' => 'info', 'message' => 'Pas encore suffisamment de données enregistrées pour une analyse complète sur la période : '.str_replace('_', ' ', $period).'.'];
-        } elseif (empty($alerts)) {
-            // Si $alerts est vide et qu'il y a suffisamment de données (vérifié par le else if précédent),
-            // cela signifie qu'aucune alerte préoccupante n'a été trouvée.
-            $alerts[] = ['type' => 'success', 'message' => 'Aucune alerte, tout va bien.'];
         }
 
         return $alerts;
