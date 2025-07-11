@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CalculatedMetric;
 use App\Enums\MetricType;
 use App\Models\Athlete;
 use App\Models\Metric;
@@ -75,9 +76,9 @@ class MetricCalculationService
 
     /**
      * Calcule la Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED) pour une semaine donnée à partir d'une collection de métriques.
-     * CIH_NORMALIZED est calculée comme : (Somme des POST_SESSION_SESSION_LOAD / Nombre de jours avec POST_SESSION_SESSION_LOAD) * normalizationDays.
+     * CIH_NORMALIZED est calculée comme : Somme des POST_SESSION_SESSION_LOAD / Nombre de jours avec POST_SESSION_SESSION_LOAD.
      */
-    public function calculateCihNormalizedForCollection(Collection $metricsForWeek, int $normalizationDays): float
+    public function calculateCihNormalizedForCollection(Collection $metricsForWeek): float
     {
         $rpeMetrics = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value);
 
@@ -94,7 +95,7 @@ class MetricCalculationService
 
         $averageSessionLoad = $sumRpe / $distinctDays;
 
-        return (float) ($averageSessionLoad * $normalizationDays);
+        return (float) ($averageSessionLoad);
     }
 
     /**
@@ -145,9 +146,12 @@ class MetricCalculationService
     {
         $volumePlanned = $planWeek->volume_planned ?? 0;
         $intensityPlanned = $planWeek->intensity_planned ?? 0;
-        $normalizedIntensity = $intensityPlanned / 10;
+        $normalizedVolume = $volumePlanned / 5;
+        $normalizedIntensity = $intensityPlanned / 100;
 
-        $cph = $volumePlanned * $normalizedIntensity;
+        $scale = CalculatedMetric::CPH->getScale();
+
+        $cph = (($normalizedVolume * $normalizedIntensity) ** 0.5) * $scale;
 
         return (float) $cph;
     }
