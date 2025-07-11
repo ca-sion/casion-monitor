@@ -16,14 +16,11 @@ class MetricReadinessService
 {
     protected MetricCalculationService $metricCalculationService;
 
-    protected MetricAlertsService $metricAlertsService;
-
     protected MetricTrendsService $metricTrendsService;
 
-    public function __construct(MetricCalculationService $metricCalculationService, MetricAlertsService $metricAlertsService, MetricTrendsService $metricTrendsService)
+    public function __construct(MetricCalculationService $metricCalculationService, MetricTrendsService $metricTrendsService)
     {
         $this->metricCalculationService = $metricCalculationService;
-        $this->metricAlertsService = $metricAlertsService;
         $this->metricTrendsService = $metricTrendsService;
     }
 
