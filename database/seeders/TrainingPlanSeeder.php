@@ -35,6 +35,7 @@ class TrainingPlanSeeder extends Seeder
         }
 
         // Création de semaines réalistes pour le Plan A (48 semaines)
+        $plan1->weeks()->delete();
         $plan1->weeks()->createMany(
             collect(range(1, 48))->map(function ($i) {
                 return [
@@ -47,6 +48,7 @@ class TrainingPlanSeeder extends Seeder
         );
 
         // Création de semaines réalistes pour le Plan B (12 semaines)
+        $plan2->weeks()->delete();
         $plan2->weeks()->createMany(
             collect(range(1, 12))->map(function ($i) {
                 return [
