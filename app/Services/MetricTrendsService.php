@@ -6,8 +6,6 @@ use Carbon\Carbon;
 use App\Models\Metric;
 use App\Models\Athlete;
 use App\Enums\MetricType;
-use App\Enums\CalculatedMetric;
-use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
 
 class MetricTrendsService

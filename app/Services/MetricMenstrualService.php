@@ -3,14 +3,9 @@
 namespace App\Services;
 
 use Carbon\Carbon;
-use App\Models\Metric;
 use App\Models\Athlete;
-use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
-use App\Enums\CalculatedMetric;
-use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
-use Illuminate\Database\Eloquent\Builder;
 
 class MetricMenstrualService
 {

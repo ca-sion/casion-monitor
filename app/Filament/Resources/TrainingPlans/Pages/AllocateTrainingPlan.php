@@ -4,10 +4,9 @@ namespace App\Filament\Resources\TrainingPlans\Pages;
 
 use App\Models\TrainingPlanWeek;
 use Filament\Resources\Pages\Page;
-use App\Services\MetricStatisticsService;
+use App\Services\MetricCalculationService;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
-use App\Services\MetricCalculationService;
 
 class AllocateTrainingPlan extends Page
 {

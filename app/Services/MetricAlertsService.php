@@ -8,7 +8,6 @@ use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 
 class MetricAlertsService
 {
@@ -20,7 +19,7 @@ class MetricAlertsService
 
     protected MetricMenstrualService $metricMenstrualService;
 
-    public function __construct(MetricCalculationService $metricCalculationService , MetricTrendsService $metricTrendsService, MetricReadinessService $metricReadinessService, MetricMenstrualService $metricMenstrualService)
+    public function __construct(MetricCalculationService $metricCalculationService, MetricTrendsService $metricTrendsService, MetricReadinessService $metricReadinessService, MetricMenstrualService $metricMenstrualService)
     {
         $this->metricCalculationService = $metricCalculationService;
         $this->metricTrendsService = $metricTrendsService;
@@ -128,7 +127,7 @@ class MetricAlertsService
         $fatigueType = MetricType::MORNING_GENERAL_FATIGUE;
         $fatigueMetrics = $metrics->filter(fn ($m) => $m->metric_type === $fatigueType);
         $fatigueThresholds = self::ALERT_THRESHOLDS[$fatigueType->value];
-        
+
         if ($fatigueMetrics->count() > 5 && $fatigueType->getValueColumn() !== 'note') {
             $averageFatigue7Days = $this->metricTrendsService->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 7 jours'] ?? null;
             $averageFatigue30Days = $this->metricTrendsService->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 30 jours'] ?? null;

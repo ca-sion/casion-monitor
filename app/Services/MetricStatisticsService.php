@@ -10,7 +10,6 @@ use App\Enums\MetricType;
 use App\Enums\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
-use Illuminate\Database\Eloquent\Builder;
 
 class MetricStatisticsService
 {
@@ -106,7 +105,7 @@ class MetricStatisticsService
         if ($options['include_readiness_status']) {
             $existingMetricValues = array_map(fn ($metricType) => $metricType->value, $metricTypes);
             $essentialMetricValues = array_map(fn ($metricType) => $metricType->value, $this->metricReadinessService::ESSENTIAL_DAILY_READINESS_METRICS);
-            
+
             $combinedMetricValues = array_unique(array_merge($existingMetricValues, $essentialMetricValues));
             $metricTypes = array_map(fn ($value) => MetricType::from($value), $combinedMetricValues);
         }
@@ -120,7 +119,7 @@ class MetricStatisticsService
             ->where('date', '>=', $maxStartDate)
             ->whereIn('metric_type', $options['metric_types'])
             ->orderBy('date', 'asc')->get();
-            
+
         $allMenstrualMetrics = collect();
         if ($options['include_menstrual_cycle']) {
             $allMenstrualMetrics = Metric::whereIn('athlete_id', $athleteIds)
@@ -128,7 +127,7 @@ class MetricStatisticsService
                 ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD)
                 ->orderBy('date', 'asc')->get();
         }
-        
+
         $allMetricsByAthlete = $allMetrics
             ->merge($allMenstrualMetrics)
             ->groupBy('athlete_id');
@@ -211,11 +210,9 @@ class MetricStatisticsService
      * Prépare et calcule en masse les métriques hebdomadaires pour tous les athlètes.
      *
      * @param  Collection<Athlete>  $athletes
-     * @param  Carbon  $maxStartDate
      * @param  Collection<int, Collection<Metric>>  $allMetricsByAthlete
      * @param  Collection<int, Collection<TrainingPlanWeek>>  $allTrainingPlanWeeksByAthleteTrainingPlanId
-     * @param  string  $period
-     * @return Collection<int, Collection<string, array>>  Collection imbriquée [athlete_id => [week_start_date => [metric_key => value]]]
+     * @return Collection<int, Collection<string, array>> Collection imbriquée [athlete_id => [week_start_date => [metric_key => value]]]
      */
     protected function calculateBulkWeeklyMetrics(Collection $athletes, Carbon $maxStartDate, Collection $allMetricsByAthlete, Collection $allTrainingPlanWeeksByAthleteTrainingPlanId, string $period): Collection
     {
@@ -847,7 +844,6 @@ class MetricStatisticsService
             CalculatedMetric::RATIO_CIH_NORMALIZED_CPH->value => $ratioCihNormalizedCph,
         ];
     }
-
 
     /**
      * Prépare toutes les données agrégées pour le tableau de bord d'une métrique hebdomadaire spécifique.
