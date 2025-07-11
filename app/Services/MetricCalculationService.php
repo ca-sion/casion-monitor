@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Enums\CalculatedMetric;
-use App\Enums\MetricType;
-use App\Models\Athlete;
+use Carbon\Carbon;
 use App\Models\Metric;
+use App\Models\Athlete;
+use App\Enums\MetricType;
+use App\Enums\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 class MetricCalculationService
 {

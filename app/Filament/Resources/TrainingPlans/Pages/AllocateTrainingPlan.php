@@ -4,10 +4,10 @@ namespace App\Filament\Resources\TrainingPlans\Pages;
 
 use App\Models\TrainingPlanWeek;
 use Filament\Resources\Pages\Page;
+use App\Services\MetricStatisticsService;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use App\Filament\Resources\TrainingPlans\TrainingPlanResource;
-use App\Services\MetricStatisticsService;
-use Carbon\Carbon;
+use App\Services\MetricCalculationService;
 
 class AllocateTrainingPlan extends Page
 {
@@ -47,7 +47,7 @@ class AllocateTrainingPlan extends Page
                     ->first();
 
                 // Calcul des métriques de charge pour la semaine
-                $cph = resolve(MetricStatisticsService::class)->calculateCph($weekData ?? new TrainingPlanWeek());
+                $cph = resolve(MetricCalculationService::class)->calculateCph($weekData ?? new TrainingPlanWeek);
 
                 $this->weeks[] = [
                     'start_date'        => $currentWeekStart->toDateString(),

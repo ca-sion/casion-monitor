@@ -5,15 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class TrainingPlan extends Model
 {
-
     /** @use HasFactory<\Database\Factories\TrainingPlanFactory> */
     use HasFactory;
-    
+
     protected $fillable = ['name', 'description', 'trainer_id', 'start_date', 'end_date'];
 
     /**
@@ -38,7 +37,7 @@ class TrainingPlan extends Model
     public function athletes(): BelongsToMany
     {
         return $this->belongsToMany(Athlete::class, 'assigned_training_plans', 'training_plan_id', 'athlete_id')
-                    ->withPivot('start_date', 'is_customized');
+            ->withPivot('start_date', 'is_customized');
     }
 
     /**

@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\Athletes\Schemas;
 
 use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Select;
 
 class AthleteForm
 {

@@ -113,7 +113,7 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                 // $this->insertMetric($athlete->id, MetricType::MORNING_RESTING_HEART_RATE, $daysAgo, $restingHr);
 
                 // Énergie pré-session (PRE_SESSION_ENERGY_LEVEL)
-                $preSessionEnergyLevel = max(1.0, min(10.0, 5.5 + $phaseParams['fatigue_mod']/2 + rand(-1, 1)));
+                $preSessionEnergyLevel = max(1.0, min(10.0, 5.5 + $phaseParams['fatigue_mod'] / 2 + rand(-1, 1)));
                 $this->insertMetric($athlete->id, MetricType::PRE_SESSION_ENERGY_LEVEL, $daysAgo, $preSessionEnergyLevel);
 
                 // Ressenti des Jambes pré-session (PRE_SESSION_LEG_FEEL)

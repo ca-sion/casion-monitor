@@ -2,30 +2,27 @@
 
 namespace Tests\Unit\Services;
 
-use Tests\TestCase;
-use App\Services\MetricStatisticsService;
-use App\Models\Metric;
-use App\Models\Athlete;
-use App\Models\TrainingPlanWeek;
-use App\Enums\MetricType;
 use Carbon\Carbon;
+use App\Enums\MetricType;
+use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
+use App\Services\MetricStatisticsService;
 
+use function PHPUnit\Framework\assertNull;
 use function PHPUnit\Framework\assertEquals;
 use function PHPUnit\Framework\assertIsArray;
 use function PHPUnit\Framework\assertNotNull;
-use function PHPUnit\Framework\assertNull;
 
 beforeEach(function () {
-    $this->service = new MetricStatisticsService();
+    $this->service = new MetricStatisticsService;
 });
 
 it('can calculate SBM for a collection of daily metrics', function () {
     $dailyMetrics = new Collection([
-        (object)['metric_type' => MetricType::MORNING_SLEEP_QUALITY, 'value' => 8],
-        (object)['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 2],
-        (object)['metric_type' => MetricType::MORNING_PAIN, 'value' => 1],
-        (object)['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 7],
+        (object) ['metric_type' => MetricType::MORNING_SLEEP_QUALITY, 'value' => 8],
+        (object) ['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 2],
+        (object) ['metric_type' => MetricType::MORNING_PAIN, 'value' => 1],
+        (object) ['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 7],
     ]);
 
     $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
@@ -36,7 +33,7 @@ it('can calculate SBM for a collection of daily metrics', function () {
 
 it('returns null SBM if no relevant metrics are present', function () {
     $dailyMetrics = new Collection([
-        (object)['metric_type' => MetricType::POST_SESSION_SESSION_LOAD, 'value' => 50],
+        (object) ['metric_type' => MetricType::POST_SESSION_SESSION_LOAD, 'value' => 50],
     ]);
 
     $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
@@ -47,10 +44,10 @@ it('returns null SBM if no relevant metrics are present', function () {
 it('can calculate SBM with partial daily metrics', function () {
     // Scenario 1: MORNING_PAIN is missing
     $dailyMetrics = new Collection([
-        (object)['metric_type' => MetricType::MORNING_SLEEP_QUALITY, 'value' => 8],
-        (object)['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 2],
+        (object) ['metric_type' => MetricType::MORNING_SLEEP_QUALITY, 'value' => 8],
+        (object) ['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 2],
         // MORNING_PAIN is missing
-        (object)['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 7],
+        (object) ['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 7],
     ]);
 
     $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
@@ -61,8 +58,8 @@ it('can calculate SBM with partial daily metrics', function () {
 
     // Scenario 2: All SBM related metrics are missing
     $dailyMetrics = new Collection([
-        (object)['metric_type' => MetricType::POST_SESSION_SESSION_LOAD, 'value' => 50],
-        (object)['metric_type' => MetricType::MORNING_BODY_WEIGHT_KG, 'value' => 70],
+        (object) ['metric_type' => MetricType::POST_SESSION_SESSION_LOAD, 'value' => 50],
+        (object) ['metric_type' => MetricType::MORNING_BODY_WEIGHT_KG, 'value' => 70],
     ]);
 
     $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
@@ -70,8 +67,8 @@ it('can calculate SBM with partial daily metrics', function () {
 
     // Scenario 3: MORNING_SLEEP_QUALITY and MORNING_PAIN are missing
     $dailyMetrics = new Collection([
-        (object)['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 5], // contribution 5
-        (object)['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 5], // contribution 5
+        (object) ['metric_type' => MetricType::MORNING_GENERAL_FATIGUE, 'value' => 5], // contribution 5
+        (object) ['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 5], // contribution 5
     ]);
 
     $sbm = $this->service->calculateSbmForCollection($dailyMetrics);
@@ -97,7 +94,7 @@ it('can get start date from period', function () {
 });
 
 it('can calculate CPH', function () {
-    $planWeek = new TrainingPlanWeek();
+    $planWeek = new TrainingPlanWeek;
     $planWeek->volume_planned = 100;
     $planWeek->intensity_planned = 7;
 
@@ -108,7 +105,7 @@ it('can calculate CPH', function () {
 });
 
 it('returns 0 CPH if volume or intensity is null', function () {
-    $planWeek = new TrainingPlanWeek();
+    $planWeek = new TrainingPlanWeek;
     $planWeek->volume_planned = null;
     $planWeek->intensity_planned = 7;
 
@@ -141,9 +138,9 @@ it('can format metric value', function () {
 it('can prepare chart data for a single metric', function () {
     $metricType = MetricType::MORNING_HRV;
     $metrics = new Collection([
-        (object)['date' => Carbon::parse('2025-07-01'), 'metric_type' => $metricType, 'value' => 50],
-        (object)['date' => Carbon::parse('2025-07-02'), 'metric_type' => $metricType, 'value' => 55],
-        (object)['date' => Carbon::parse('2025-07-03'), 'metric_type' => $metricType, 'value' => 48],
+        (object) ['date' => Carbon::parse('2025-07-01'), 'metric_type' => $metricType, 'value' => 50],
+        (object) ['date' => Carbon::parse('2025-07-02'), 'metric_type' => $metricType, 'value' => 55],
+        (object) ['date' => Carbon::parse('2025-07-03'), 'metric_type' => $metricType, 'value' => 48],
     ]);
 
     $chartData = $this->service->prepareChartDataForSingleMetric($metrics, $metricType);
@@ -158,12 +155,12 @@ it('can prepare chart data for a single metric', function () {
 
 it('can calculate evolution trend from numeric collection', function () {
     $dataCollection = new Collection([
-        (object)['date' => Carbon::parse('2025-07-01'), 'value' => 10],
-        (object)['date' => Carbon::parse('2025-07-02'), 'value' => 12],
-        (object)['date' => Carbon::parse('2025-07-03'), 'value' => 15],
-        (object)['date' => Carbon::parse('2025-07-04'), 'value' => 13],
-        (object)['date' => Carbon::parse('2025-07-05'), 'value' => 18],
-        (object)['date' => Carbon::parse('2025-07-06'), 'value' => 20],
+        (object) ['date' => Carbon::parse('2025-07-01'), 'value' => 10],
+        (object) ['date' => Carbon::parse('2025-07-02'), 'value' => 12],
+        (object) ['date' => Carbon::parse('2025-07-03'), 'value' => 15],
+        (object) ['date' => Carbon::parse('2025-07-04'), 'value' => 13],
+        (object) ['date' => Carbon::parse('2025-07-05'), 'value' => 18],
+        (object) ['date' => Carbon::parse('2025-07-06'), 'value' => 20],
     ]);
 
     $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);
@@ -171,12 +168,12 @@ it('can calculate evolution trend from numeric collection', function () {
     assertNotNull($trend['change']);
 
     $dataCollection = new Collection([
-        (object)['date' => Carbon::parse('2025-07-01'), 'value' => 20],
-        (object)['date' => Carbon::parse('2025-07-02'), 'value' => 18],
-        (object)['date' => Carbon::parse('2025-07-03'), 'value' => 15],
-        (object)['date' => Carbon::parse('2025-07-04'), 'value' => 17],
-        (object)['date' => Carbon::parse('2025-07-05'), 'value' => 12],
-        (object)['date' => Carbon::parse('2025-07-06'), 'value' => 10],
+        (object) ['date' => Carbon::parse('2025-07-01'), 'value' => 20],
+        (object) ['date' => Carbon::parse('2025-07-02'), 'value' => 18],
+        (object) ['date' => Carbon::parse('2025-07-03'), 'value' => 15],
+        (object) ['date' => Carbon::parse('2025-07-04'), 'value' => 17],
+        (object) ['date' => Carbon::parse('2025-07-05'), 'value' => 12],
+        (object) ['date' => Carbon::parse('2025-07-06'), 'value' => 10],
     ]);
 
     $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);
@@ -184,9 +181,9 @@ it('can calculate evolution trend from numeric collection', function () {
     assertNotNull($trend['change']);
 
     $dataCollection = new Collection([
-        (object)['date' => Carbon::parse('2025-07-01'), 'value' => 10],
-        (object)['date' => Carbon::parse('2025-07-02'), 'value' => 10.1],
-        (object)['date' => Carbon::parse('2025-07-03'), 'value' => 9.9],
+        (object) ['date' => Carbon::parse('2025-07-01'), 'value' => 10],
+        (object) ['date' => Carbon::parse('2025-07-02'), 'value' => 10.1],
+        (object) ['date' => Carbon::parse('2025-07-03'), 'value' => 9.9],
     ]);
 
     $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);
@@ -194,7 +191,7 @@ it('can calculate evolution trend from numeric collection', function () {
     assertNotNull($trend['change']);
 
     $dataCollection = new Collection([
-        (object)['date' => Carbon::parse('2025-07-01'), 'value' => 10],
+        (object) ['date' => Carbon::parse('2025-07-01'), 'value' => 10],
     ]);
 
     $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);

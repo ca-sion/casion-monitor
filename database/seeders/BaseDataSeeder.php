@@ -18,7 +18,7 @@ class BaseDataSeeder extends Seeder
         $admin = User::find(1);
         if (! $admin) {
             $admin = User::factory()->create([
-                'id'         => 1,
+                'id'    => 1,
                 'name'  => 'Admin',
                 'email' => 'admin@example.com',
             ]);
