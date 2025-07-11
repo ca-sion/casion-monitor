@@ -97,6 +97,165 @@ class MetricStatisticsService
         MetricType::PRE_SESSION_LEG_FEEL,
     ];
 
+    public function getAthletesData(Collection $athletes, array $options = []): Collection
+    {
+        // Options par défaut
+        $defaultOptions = [
+            'period'                     => 'last_60_days',
+            'metric_types'               => MetricType::cases(),
+            'calculated_metrics'         => CalculatedMetric::cases(),
+            'include_dashboard_metrics'  => false,
+            'include_weekly_metrics'     => false,
+            'include_latest_daily_metrics' => false,
+            'include_alerts'             => ['general', 'charge', 'readiness'],
+            'include_menstrual_cycle'    => false,
+            'include_readiness_status'   => false,
+        ];
+        $options = array_merge($defaultOptions, $options);
+
+        $athleteIds = $athletes->pluck('id');
+        if ($athleteIds->isEmpty()) {
+            return collect();
+        }
+
+        // 1. Déterminer la période maximale de récupération des métriques brutes
+        $maxStartDate = $this->determineMaxStartDate($options);
+
+        // 2. Pré-charger toutes les métriques et les semaines de plan d'entraînement
+        // Si le cycle menstruel est inclus, s'assurer d'avoir 1-2 ans de données pour les métriques J1
+        $allMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
+            ->when($options['include_menstrual_cycle'], function (Builder $query) {
+                $query->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
+                ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD);
+            }, function (Builder $query) use($maxStartDate, $options) {
+                $query->where('date', '>=', $maxStartDate)
+                ->whereIn('metric_type', $options['metric_types']);
+            })
+            ->orderBy('date', 'asc')
+            ->get()
+            ->groupBy('athlete_id');
+
+        $athletesTrainingPlansIds = $athletes->pluck('current_training_plan.id')->filter()->values();
+        $allTrainingPlanWeeksByAthleteTrainingPlanId = TrainingPlanWeek::whereIn('training_plan_id', $athletesTrainingPlansIds)
+            ->where('start_date', '>=', $maxStartDate->copy()->startOfWeek(Carbon::MONDAY))
+            ->get()
+            ->groupBy('training_plan_id');
+
+        // 3. Itérer sur chaque athlète et effectuer les calculs conditionnels
+        return $athletes->map(function ($athlete) use ($allMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $options) {
+            $athleteMetrics = $allMetricsByAthlete->get($athlete->id) ?? collect();
+            $athleteTrainingPlansId = $athlete->currentTrainingPlan?->id;
+            $athletePlanWeeks = $allTrainingPlanWeeksByAthleteTrainingPlanId->get($athleteTrainingPlansId) ?? collect();
+
+            $athleteData = []; // Données à ajouter à l'athlète
+
+            // Filtrer les métriques par la période demandée par l'utilisateur pour les calculs
+            $periodStartDate = $this->getStartDateFromPeriod($options['period']);
+            $filteredAthleteMetrics = $athleteMetrics->where('date', '>=', $periodStartDate);
+
+            // Calculs conditionnels basés sur les options
+            if ($options['include_dashboard_metrics']) {
+                $dashboardMetricTypes = $options['metric_types'] ?: [
+                    MetricType::MORNING_HRV, MetricType::POST_SESSION_SESSION_LOAD,
+                    MetricType::POST_SESSION_SUBJECTIVE_FATIGUE, MetricType::MORNING_GENERAL_FATIGUE,
+                    MetricType::MORNING_SLEEP_QUALITY, MetricType::MORNING_BODY_WEIGHT_KG,
+                ];
+                $metricsDataForDashboard = [];
+                foreach ($dashboardMetricTypes as $metricType) {
+                    $metricsForType = $filteredAthleteMetrics->where('metric_type', $metricType->value);
+                    $metricsDataForDashboard[$metricType->value] = $this->getDashboardMetricDataForCollection($metricsForType, $metricType, $options['period']);
+                }
+                $athleteData['dashboard_metrics_data'] = $metricsDataForDashboard;
+            }
+
+            if ($options['include_weekly_metrics']) {
+                $weeklyMetricsData = [];
+                foreach ($options['calculated_metrics'] as $calculatedMetric) {
+                    if ($calculatedMetric === CalculatedMetric::READINESS_SCORE) {
+                        continue; // Le score de readiness est géré séparément, pas comme une métrique hebdomadaire ici.
+                    }
+                    $weeklyMetricsData[$calculatedMetric->value] = $this->getDashboardWeeklyMetricData($athlete, $calculatedMetric, $options['period'], $athleteMetrics);
+                }
+                $athleteData['weekly_metrics_data'] = $weeklyMetricsData;
+            }
+
+            if ($options['include_latest_daily_metrics']) {
+                // Adapter getLatestMetricsGroupedByDate pour prendre une collection
+                $athleteData['latest_daily_metrics'] = $this->getLatestMetricsGroupedByDateForCollection($athleteMetrics, $options['period']);
+            }
+
+            if (!empty($options['include_alerts'])) {
+                $period = $options['period'] ?? 'last_60_days';
+                $athleteData['alerts'] = $this->getAthleteAlertsForCollection($athlete, $athleteMetrics, $period);
+            }
+
+            if ($options['include_menstrual_cycle'] && $athlete->gender->value === 'w') {
+                $athleteData['menstrual_cycle_info'] = $this->deduceMenstrualCyclePhase($athlete, $athleteMetrics);
+            }
+
+            if ($options['include_readiness_status']) {
+                $athleteData['readiness_status'] = $this->getAthleteReadinessStatus($athlete, $athleteMetrics);
+            }
+
+            // Ajouter les données calculées à l'objet athlète
+            foreach ($athleteData as $key => $value) {
+                $athlete->{$key} = $value;
+            }
+            dd($athleteData);
+
+            return $athleteData;
+        });
+    }
+
+    protected function determineMaxStartDate(array $options): Carbon
+    {
+        $now = Carbon::now();
+        $startDate = $this->getStartDateFromPeriod($options['period']);
+
+        // Si les tendances sont incluses, s'assurer d'avoir au moins 60 jours de données
+        if ($options['include_dashboard_metrics'] || $options['include_weekly_metrics'] || !empty($options['include_alerts'])) {
+            $startDate = $startDate->min($now->copy()->subDays(60)->startOfDay());
+        }
+
+        return $startDate;
+    }
+
+    /**
+     * Get latest metrics grouped by date for a collection of metrics.
+     *
+     * @param Collection $athleteMetrics
+     * @param string $period
+     * @return Collection
+     */
+    protected function getLatestMetricsGroupedByDateForCollection(Collection $athleteMetrics, string $period): Collection
+    {
+        $startDate = $this->getStartDateFromPeriod($period);
+        $endDate = now()->endOfDay();
+
+        // Étape 1: Filtrer les métriques pour éliminer les duplicata de type même heure/date
+        $filteredMetrics = $athleteMetrics->filter(function (Metric $metric) use ($startDate, $endDate) {
+            return $metric->isLatest() && ! $metric->isDuplicate() && $metric->date->between($startDate, $endDate);
+        });
+
+        // Étape 2: Grouper les métriques par jour avec filtre J1/J2/J3/J4
+        $groupedData = $filteredMetrics->groupBy(function (Metric $metric) {
+            return $metric->date->format('Y-m-d'); // Grouping by date
+        });
+
+        // Étape 3: Trier par date les éléments de chaque groupe
+        $sortedGroupedData = $groupedData->map(function (Collection $group) {
+            return $group->sortByDesc('date')->first();
+        });
+
+        // Étape 4: Conserver les métriques récentes pour chaque jour
+        $mostRecentMetrics = $sortedGroupedData->filter(function (?Metric $metric) {
+            return $metric !== null;
+        });
+
+        // Étape finale: Trier les entités pour avoir un ordre chronologique
+        return $mostRecentMetrics->sortBy('date');
+    }
+
     /**
      * Prépare les données du tableau de bord pour une collection d'athlètes en optimisant les requêtes.
      */
@@ -145,12 +304,12 @@ class MetricStatisticsService
                 $metricsDataForDashboard[$metricType->value] = $this->getDashboardMetricDataForCollection($metricsForType, $metricType, $period);
             }
 
-            $metricsDataForDashboard['cih'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'cih', $period, $athletePlanWeeks);
-            $metricsDataForDashboard['sbm'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'sbm', $period, $athletePlanWeeks);
-            $metricsDataForDashboard['cph'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'cph', 'period', $athletePlanWeeks);
-            $metricsDataForDashboard['cih_normalized'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'cih_normalized', $period, $athletePlanWeeks);
-            $metricsDataForDashboard['ratio_cih_cph'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'ratio_cih_cph', $period, $athletePlanWeeks);
-            $metricsDataForDashboard['ratio_cih_normalized_cph'] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, 'ratio_cih_normalized_cph', $period, $athletePlanWeeks);
+            $metricsDataForDashboard[CalculatedMetric::CIH->value] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, CalculatedMetric::CIH, $period, $athletePlanWeeks);
+            $metricsDataForDashboard[CalculatedMetric::SBM->value] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, CalculatedMetric::SBM, $period, $athletePlanWeeks);
+            $metricsDataForDashboard[CalculatedMetric::CPH->value] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, CalculatedMetric::CPH, 'period', $athletePlanWeeks);
+            $metricsDataForDashboard[CalculatedMetric::CIH_NORMALIZED->value] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, CalculatedMetric::CIH_NORMALIZED, $period, $athletePlanWeeks);
+            $metricsDataForDashboard[CalculatedMetric::RATIO_CIH_CPH->value] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, CalculatedMetric::RATIO_CIH_CPH, $period, $athletePlanWeeks);
+            $metricsDataForDashboard[CalculatedMetric::RATIO_CIH_NORMALIZED_CPH->value] = $this->getDashboardWeeklyMetricDataForCollection($athlete, $athleteMetrics, CalculatedMetric::RATIO_CIH_NORMALIZED_CPH, $period, $athletePlanWeeks);
 
             $athlete->metricsDataForDashboard = $metricsDataForDashboard;
 
@@ -232,7 +391,7 @@ class MetricStatisticsService
     /**
      * Prépare les données hebdomadaires d'une métrique pour le tableau de bord à partir de collections pré-filtrées.
      */
-    protected function getDashboardWeeklyMetricDataForCollection(Athlete $athlete, Collection $allAthleteMetrics, string $metricKey, string $period, Collection $athletePlanWeeks): array
+    protected function getDashboardWeeklyMetricDataForCollection(Athlete $athlete, Collection $allAthleteMetrics, CalculatedMetric $metricKey, string $period, Collection $athletePlanWeeks): array
     {
         $now = Carbon::now();
         $startDate = $this->getStartDateFromPeriod($period)->startOfWeek(Carbon::MONDAY);
@@ -278,12 +437,12 @@ class MetricStatisticsService
             $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->metricCalculationService->calculateRatio($cihNormalized, $cph) : null;
 
             $value = match ($metricKey) {
-                'cih'                      => $cih,
-                'sbm'                      => $sbm,
-                'cph'                      => $cph,
-                'cih_normalized'           => $cihNormalized,
-                'ratio_cih_cph'            => $ratioCihCph,
-                'ratio_cih_normalized_cph' => $ratioCihNormalizedCph,
+                CalculatedMetric::CIH                      => $cih,
+                CalculatedMetric::SBM                      => $sbm,
+                CalculatedMetric::CPH                      => $cph,
+                CalculatedMetric::CIH_NORMALIZED           => $cihNormalized,
+                CalculatedMetric::RATIO_CIH_CPH            => $ratioCihCph,
+                CalculatedMetric::RATIO_CIH_NORMALIZED_CPH => $ratioCihNormalizedCph,
                 default                    => null,
             };
 
@@ -310,7 +469,7 @@ class MetricStatisticsService
 
         // Prépare les données pour le retour
         return [
-            'label'                     => $metricKey,
+            'label'                     => $metricKey->getLabelShort(),
             'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'N/A',
             'formatted_average_7_days'  => is_numeric($average7Days) ? number_format($average7Days, 1) : 'N/A',
             'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'N/A',
@@ -319,8 +478,8 @@ class MetricStatisticsService
                 'increasing' => 'arrow-trending-up', 'decreasing' => 'arrow-trending-down', default => 'minus'
             } : 'ellipsis-horizontal',
             'trend_color' => $trend['trend'] !== 'N/A' ? match ($trend['trend']) {
-                'increasing' => ($this->getWeeklyMetricOptimalDirection($metricKey) === 'good' ? 'lime' : ($this->getWeeklyMetricOptimalDirection($metricKey) === 'bad' ? 'rose' : 'zinc')),
-                'decreasing' => ($this->getWeeklyMetricOptimalDirection($metricKey) === 'good' ? 'rose' : ($this->getWeeklyMetricOptimalDirection($metricKey) === 'bad' ? 'lime' : 'zinc')),
+                'increasing' => ($metricKey->getTrendOptimalDirection() === 'good' ? 'lime' : ($metricKey->getTrendOptimalDirection() === 'bad' ? 'rose' : 'zinc')),
+                'decreasing' => ($metricKey->getTrendOptimalDirection() === 'good' ? 'rose' : ($metricKey->getTrendOptimalDirection() === 'bad' ? 'lime' : 'zinc')),
                 default      => 'zinc',
             } : 'zinc',
             'trend_percentage' => $changePercentage,
@@ -860,8 +1019,8 @@ class MetricStatisticsService
         // Assurez-vous que athlete->currentTrainingPlan existe et que trainingPlanWeeks est une collection
         $trainingPlanWeeks = $athlete->currentTrainingPlan?->weeks ?? collect();
 
-        $cihData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, 'cih', 'last_7_days', $trainingPlanWeeks);
-        $cphData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, 'cph', 'last_7_days', $trainingPlanWeeks);
+        $cihData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, CalculatedMetric::CIH, 'last_7_days', $trainingPlanWeeks);
+        $cphData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, CalculatedMetric::CPH, 'last_7_days', $trainingPlanWeeks);
 
         // Récupérer la dernière valeur calculée pour la semaine en cours
         $currentCih = end($cihData['chart_data']['data']) ?? 0;
@@ -992,12 +1151,12 @@ class MetricStatisticsService
         $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? round($this->metricCalculationService->calculateRatio($cihNormalized, $cph), 2) : 'N/A';
 
         return [
-            'cih'                      => $cih,
-            'sbm'                      => $sbm,
-            'cph'                      => $cph,
-            'cih_normalized'           => $cihNormalized,
-            'ratio_cih_cph'            => $ratioCihCph,
-            'ratio_cih_normalized_cph' => $ratioCihNormalizedCph,
+            CalculatedMetric::CIH->value                      => $cih,
+            CalculatedMetric::SBM->value                      => $sbm,
+            CalculatedMetric::CPH->value                      => $cph,
+            CalculatedMetric::CIH_NORMALIZED->value           => $cihNormalized,
+            CalculatedMetric::RATIO_CIH_CPH->value            => $ratioCihCph,
+            CalculatedMetric::RATIO_CIH_NORMALIZED_CPH->value => $ratioCihNormalizedCph,
         ];
     }
 
@@ -1006,10 +1165,10 @@ class MetricStatisticsService
      *
      * @param  Athlete  $athlete  L'athlète concerné.
      * @param  string  $period  La période pour laquelle récupérer les données (ex: 'last_60_days').
-     * @param  string  $metricKey  La clé de la métrique hebdomadaire (ex: 'cih', 'sbm').
+     * @param  CalculatedMetric  $metricKey  La clé de la métrique hebdomadaire (ex: 'cih', 'sbm').
      * @return array Les données formatées pour un graphique.
      */
-    public function getWeeklyMetricsChartData(Athlete $athlete, string $period, string $metricKey, ?Collection $allMetrics = null): array
+    public function getWeeklyMetricsChartData(Athlete $athlete, string $period, CalculatedMetric $metricKey, ?Collection $allMetrics = null): array
     {
         $labels = [];
         $data = [];
@@ -1033,7 +1192,7 @@ class MetricStatisticsService
         while ($currentWeek->lessThanOrEqualTo($endWeek)) {
             $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeek, $allMetrics);
             $weekLabel = $currentWeek->format('W Y');
-            $value = $summary[$metricKey];
+            $value = $summary[$metricKey->value];
 
             $labels[] = $weekLabel;
             $numericValue = is_numeric($value) ? (float) $value : null;
@@ -1052,15 +1211,7 @@ class MetricStatisticsService
             'data'            => $data,
             'labels_and_data' => $labelsAndData,
             'unit'            => null,
-            'label'           => match ($metricKey) {
-                'cih'                      => 'CIH',
-                'sbm'                      => 'SBM',
-                'cph'                      => 'CPH',
-                'cih_normalized'           => 'CIH Normalisée',
-                'ratio_cih_cph'            => 'Ratio CIH/CPH',
-                'ratio_cih_normalized_cph' => 'Ratio CIH Normalisée/CPH',
-                default                    => '',
-            },
+            'label'           => $metricKey->getLabelShort(),
         ];
     }
 
@@ -1068,43 +1219,19 @@ class MetricStatisticsService
      * Prépare toutes les données agrégées pour le tableau de bord d'une métrique hebdomadaire spécifique.
      *
      * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  string  $metricKey  La clé de la métrique hebdomadaire (ex: 'cih', 'sbm').
+     * @param  CalculatedMetric  $metricKey  La clé de la métrique hebdomadaire (ex: 'cih', 'sbm').
      * @param  string  $period  La période pour laquelle récupérer les données.
      * @return array Les données formatées pour le tableau de bord.
      */
-    public function getDashboardWeeklyMetricData(Athlete $athlete, string $metricKey, string $period, ?Collection $allMetrics = null): array
+    public function getDashboardWeeklyMetricData(Athlete $athlete, CalculatedMetric $metricKey, string $period, ?Collection $allMetrics = null): array
     {
         $now = Carbon::now();
         $currentWeekStartDate = $now->startOfWeek(Carbon::MONDAY);
 
         $metricData = [
-            'label' => match ($metricKey) {
-                'cih'                      => 'Charge Interne Hebdomadaire',
-                'sbm'                      => 'Score de Bien-être Matinal',
-                'cph'                      => 'Charge Planifiée Hebdomadaire',
-                'cih_normalized'           => 'Charge Interne Hebdomadaire Normalisée',
-                'ratio_cih_cph'            => 'Ratio CIH/CPH',
-                'ratio_cih_normalized_cph' => 'Ratio CIH Normalisée/CPH',
-                default                    => '',
-            },
-            'short_label' => match ($metricKey) {
-                'cih'                      => 'CIH',
-                'sbm'                      => 'SBM',
-                'cph'                      => 'CPH',
-                'cih_normalized'           => 'CIH Normalisée',
-                'ratio_cih_cph'            => 'Ratio CIH/CPH',
-                'ratio_cih_normalized_cph' => 'Ratio CIH Normalisée/CPH',
-                default                    => '',
-            },
-            'description' => match ($metricKey) {
-                'cih'                      => 'Somme des Charges Subjectives Réelles par Séance (CSR-S) pour la semaine.',
-                'sbm'                      => 'Score agrégé des métriques de bien-être matinal (Qualité du sommeil, Fatigue générale, Douleur, Humeur) sur une échelle de 0 à 10.',
-                'cph'                      => 'Charge d\'entraînement planifiée pour la semaine, basée sur le volume et l\'intensité.',
-                'cih_normalized'           => 'Charge interne hebdomadaire normalisée pour la comparabilité avec la CPH.',
-                'ratio_cih_cph'            => 'Ratio entre la Charge Interne Hebdomadaire (CIH) et la Charge Planifiée Hebdomadaire (CPH).',
-                'ratio_cih_normalized_cph' => 'Ratio entre la Charge Interne Hebdomadaire Normalisée (CIH Normalisée) et la Charge Planifiée Hebdomadaire (CPH).',
-                default                    => '',
-            },
+            'label' => $metricKey->getLabel(),
+            'short_label' => $metricKey->getLabelShort(),
+            'description' => $metricKey->getDescription(),
             'unit'                      => null,
             'last_value'                => null,
             'formatted_last_value'      => 'N/A',
@@ -1120,7 +1247,7 @@ class MetricStatisticsService
         ];
 
         $weeklySummary = $this->getAthleteWeeklyMetricsSummary($athlete, $currentWeekStartDate, $allMetrics);
-        $currentValue = $weeklySummary[$metricKey];
+        $currentValue = $weeklySummary[$metricKey->value];
         $metricData['last_value'] = $currentValue;
         $metricData['formatted_last_value'] = is_numeric($currentValue) ? number_format($currentValue, 1) : 'N/A';
 
@@ -1141,8 +1268,8 @@ class MetricStatisticsService
         $tempWeek = $startDateForAverages->copy();
         while ($tempWeek->lessThanOrEqualTo($now->endOfWeek(Carbon::SUNDAY))) {
             $summary = $this->getAthleteWeeklyMetricsSummary($athlete, $tempWeek, $allMetrics);
-            if (is_numeric($summary[$metricKey])) {
-                $allWeeklyData->push((object) ['date' => $tempWeek->copy(), 'value' => $summary[$metricKey]]);
+            if (is_numeric($summary[$metricKey->value])) {
+                $allWeeklyData->push((object) ['date' => $tempWeek->copy(), 'value' => $summary[$metricKey->value]]);
             }
             $tempWeek->addWeek();
         }
@@ -1702,14 +1829,9 @@ class MetricStatisticsService
     /**
      * Retourne la direction optimale de la tendance pour une métrique hebdomadaire.
      */
-    protected function getWeeklyMetricOptimalDirection(string $metricKey): string
+    protected function getWeeklyMetricOptimalDirection(CalculatedMetric $metricKey): string
     {
-        return match ($metricKey) {
-            'sbm' => 'good',
-            'cih', 'cih_normalized' => 'bad',
-            'cph', 'ratio_cih_cph', 'ratio_cih_normalized_cph' => 'neutral',
-            default => 'neutral',
-        };
+        return $metricKey->getTrendOptimalDirection();
     }
 
     protected function checkMissingDailyReadinessMetrics(Collection $allMetrics): array
