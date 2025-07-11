@@ -69,8 +69,6 @@ class MetricScenarioFactory
         $this->info("  - Nettoyage des métriques pour l'athlète ID : {$athleteId} pour les types spécifiés.");
     }
 
-    // --- Scénarios de Cycle Menstruel (anciennement dans MetricAlertsSeeder) ---
-
     public function seedAmenorrheaScenario(int $athleteId): void
     {
         $this->cleanMetrics($athleteId, [MetricType::MORNING_FIRST_DAY_PERIOD]);
