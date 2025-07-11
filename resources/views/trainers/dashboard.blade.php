@@ -111,7 +111,7 @@
                         <div class="flex flex-col gap-2 w-48">
                             {{-- Alertes --}}
                             <div class="flex flex-col gap-2">
-                                @foreach (array_merge($athlete->alerts, $athlete->chargeAlerts, $athlete->readinessStatus['alerts']) as $alert)
+                                @foreach (array_merge($athlete->alerts) as $alert)
                                     @if ($show_info_alerts || $alert['type'] !== 'info')
                                     <div>
                                         <flux:badge size="sm" inset="top bottom" class="whitespace-normal!"
@@ -130,9 +130,9 @@
                             </div>
 
                             {{-- Statut de Readiness --}}
-                            @if ($athlete->readinessStatus)
+                            @if ($athlete->readiness_status)
                                 @php
-                                    $readiness = $athlete->readinessStatus;
+                                    $readiness = $athlete->readiness_status;
                                     $readinessColor = match($readiness['level']) {
                                         'green' => 'emerald',
                                         'yellow' => 'lime',
@@ -167,9 +167,9 @@
                             @endif
 
                             {{-- Cycle Menstruel --}}
-                            @if ($show_menstrual_cycle && $athlete->gender->value === 'w' && $athlete->menstrualCycleInfo)
+                            @if ($show_menstrual_cycle && $athlete->menstrual_cycle_info)
                                 @php
-                                    $info = $athlete->menstrualCycleInfo;
+                                    $info = $athlete->menstrual_cycle_info;
                                     $borderColor = match($info['phase']) {
                                         'Aménorrhée', 'Oligoménorrhée' => 'border-rose-400',
                                         'Potentiel retard ou cycle long' => 'border-amber-400',
@@ -203,13 +203,13 @@
 
                     {{-- Boucle pour les cellules de métriques (calculées + brutes) --}}
                     @php
-                        $allMetricsToDisplay = collect($calculated_metric_types)->map(fn($m) => ['key' => $m->value, 'is_enum' => false])
-                            ->merge(collect($dashboard_metric_types)->map(fn($m) => ['key' => $m->value, 'is_enum' => true]));
+                    $allMetricsToDisplay = collect($calculated_metric_types)->merge(collect($dashboard_metric_types))
                     @endphp
 
                     @foreach ($allMetricsToDisplay as $metricInfo)
                         @php
-                            $metricData = $athlete->metricsDataForDashboard[$metricInfo['key']];
+                            $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
+                            $metricData = $allMetric[$metricInfo->value];
                             $chartData = $metricData['chart_data'] ?? ['data' => []];
                         @endphp
                         <flux:table.cell>

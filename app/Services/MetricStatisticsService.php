@@ -32,52 +32,6 @@ class MetricStatisticsService
         $this->metricMenstrualService = $metricMenstrualService;
     }
 
-    private const ALERT_THRESHOLDS = [
-        MetricType::MORNING_GENERAL_FATIGUE->value => [
-            'persistent_high_7d_min'  => 7,
-            'persistent_high_30d_min' => 6,
-            'elevated_7d_min'         => 5,
-            'elevated_30d_min'        => 5,
-            'trend_increase_percent'  => 15,
-        ],
-        MetricType::MORNING_SLEEP_QUALITY->value => [
-            'persistent_low_7d_max'  => 4,
-            'persistent_low_30d_max' => 5,
-            'trend_decrease_percent' => -15,
-        ],
-        MetricType::MORNING_PAIN->value => [
-            'persistent_high_7d_min' => 5,
-            'trend_increase_percent' => 20,
-        ],
-        MetricType::MORNING_HRV->value => [
-            'trend_decrease_percent' => -10,
-        ],
-        MetricType::POST_SESSION_PERFORMANCE_FEEL->value => [
-            'trend_decrease_percent' => -15,
-        ],
-        MetricType::MORNING_BODY_WEIGHT_KG->value => [
-            'trend_decrease_percent' => -3,
-        ],
-        'CHARGE_LOAD' => [
-            'ratio_underload_threshold' => 0.8,
-            'ratio_overload_threshold'  => 1.3,
-        ],
-        'SBM' => [
-            'average_low_threshold'  => 4.0,
-            'average_high_threshold' => 7.5,
-            'trend_decrease_percent' => -10.0,
-        ],
-        'MENSTRUAL_CYCLE' => [
-            'amenorrhea_days_beyond_avg'    => 60,
-            'oligomenorrhea_min_cycle'      => 21,
-            'oligomenorrhea_max_cycle'      => 35,
-            'delayed_cycle_days_beyond_avg' => 2,
-            'prolonged_absence_no_avg'      => 45,
-            'menstrual_fatigue_min'         => 7,
-            'menstrual_perf_feel_max'       => 4,
-        ],
-    ];
-
     public function getAthletesData(Collection $athletes, array $options = []): Collection
     {
         // Options par défaut
@@ -202,7 +156,7 @@ class MetricStatisticsService
                 $athlete->{$key} = $value;
             }
 
-            return $athleteData;
+            return $athlete;
         });
     }
 
@@ -318,6 +272,7 @@ class MetricStatisticsService
         return $groupedData->sortByDesc('date');
     }
 
+    // TO DELETE
     /**
      * Prépare les données du tableau de bord pour une collection d'athlètes en optimisant les requêtes.
      */
@@ -528,6 +483,7 @@ class MetricStatisticsService
         };
     }
 
+    // TO DELETE
     /**
      * Récupère les données de métriques pour un athlète donné, avec des filtres.
      *
@@ -802,6 +758,7 @@ class MetricStatisticsService
         return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
     }
 
+    // TO DELETE
     /**
      * Récupère un résumé des métriques hebdomadaires (CIH, SBM, CPH, Ratio CIH/CPH) pour un athlète.
      *
@@ -845,6 +802,7 @@ class MetricStatisticsService
         ];
     }
 
+    // TO DELETE
     /**
      * Prépare toutes les données agrégées pour le tableau de bord d'une métrique hebdomadaire spécifique.
      *
@@ -965,6 +923,7 @@ class MetricStatisticsService
             ->first();
     }
 
+    // TO DELETE
     /**
      * Retourne la direction optimale de la tendance pour une métrique hebdomadaire.
      */

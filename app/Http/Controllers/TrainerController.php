@@ -51,22 +51,6 @@ class TrainerController extends Controller
             CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
         ];
 
-        $test = $this->metricStatisticsService->getAthletesData($trainer->athletes, [
-            'period' => 'last_60_days',
-            // 'metric_types'               => [],
-            // 'calculated_metrics'         => [],
-            'include_dashboard_metrics'    => false,
-            'include_weekly_metrics'       => false,
-            'include_latest_daily_metrics' => false,
-            // 'include_alerts'             => [], //TODO
-            'include_menstrual_cycle'  => false,
-            'include_readiness_status' => false, // CONTROLER
-        ]);
-        dd($test->first());
-
-        // Appel unique à la nouvelle méthode de service qui fait tout le travail en une fois
-        $athletesOverviewData = $this->metricStatisticsService->getBulkAthletesDashboardData($trainer->athletes()->with('trainingPlans.weeks')->get(), $period);
-
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
             'last_14_days'  => '14 derniers jours',
@@ -78,11 +62,24 @@ class TrainerController extends Controller
             'all_time'      => 'Depuis le début',
         ];
 
+        // Appel unique pour avoir les données en une seule fois
+        $athletesOverviewData = $this->metricStatisticsService->getAthletesData($trainer->athletes, [
+            'period' => 'last_60_days',
+            // 'metric_types'               => [],
+            // 'calculated_metrics'         => [],
+            'include_dashboard_metrics'    => true,
+            'include_weekly_metrics'       => true,
+            'include_latest_daily_metrics' => true,
+            // 'include_alerts'             => [],
+            'include_menstrual_cycle'  => true,
+            'include_readiness_status' => true,
+        ]);
+
         $data = [
             'trainer'                 => $trainer,
             'athletes_overview_data'  => $athletesOverviewData,
             'dashboard_metric_types'  => $dashboardMetricTypes,
-            'calculated_metric_types' => $calculatedMetricTypes, // Passer le nouvel Enum à la vue
+            'calculated_metric_types' => $calculatedMetricTypes,
             'period_label'            => $period,
             'period_options'          => $periodOptions,
             'show_info_alerts'        => $showInfoAlerts,
