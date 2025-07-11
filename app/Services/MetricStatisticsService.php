@@ -234,26 +234,19 @@ class MetricStatisticsService
 
         // Étape 1: Filtrer les métriques pour éliminer les duplicata de type même heure/date
         $filteredMetrics = $athleteMetrics->filter(function (Metric $metric) use ($startDate, $endDate) {
-            return $metric->isLatest() && ! $metric->isDuplicate() && $metric->date->between($startDate, $endDate);
+            return $metric->date->between($startDate, $endDate);
         });
 
-        // Étape 2: Grouper les métriques par jour avec filtre J1/J2/J3/J4
-        $groupedData = $filteredMetrics->groupBy(function (Metric $metric) {
-            return $metric->date->format('Y-m-d'); // Grouping by date
-        });
+        // Étape 2: Trier par date les éléments de chaque groupe
+        $sortedMetrics = $filteredMetrics->sortByDesc('date');
 
-        // Étape 3: Trier par date les éléments de chaque groupe
-        $sortedGroupedData = $groupedData->map(function (Collection $group) {
-            return $group->sortByDesc('date')->first();
-        });
-
-        // Étape 4: Conserver les métriques récentes pour chaque jour
-        $mostRecentMetrics = $sortedGroupedData->filter(function (?Metric $metric) {
-            return $metric !== null;
+        // Étape 3: Grouper les métriques par jour
+        $groupedData = $sortedMetrics->groupBy(function (Metric $metric) {
+            return $metric->date->format('Y-m-d');
         });
 
         // Étape finale: Trier les entités pour avoir un ordre chronologique
-        return $mostRecentMetrics->sortBy('date');
+        return $groupedData->sortByDesc('date');
     }
 
     /**
