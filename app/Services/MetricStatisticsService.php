@@ -66,9 +66,6 @@ class MetricStatisticsService
             'menstrual_fatigue_min'         => 7,
             'menstrual_perf_feel_max'       => 4,
         ],
-        'CIH_NORMALIZED' => [
-            'normalization_days' => 4,
-        ],
         'READINESS_SCORE' => [
             'sbm_penalty_factor'        => 5,
             'hrv_drop_severe_percent'   => -10,
@@ -201,7 +198,6 @@ class MetricStatisticsService
             foreach ($athleteData as $key => $value) {
                 $athlete->{$key} = $value;
             }
-            dd($athleteData);
 
             return $athleteData;
         });
@@ -425,7 +421,7 @@ class MetricStatisticsService
             $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
             $cph = $planWeek ? $this->metricCalculationService->calculateCph($planWeek) : 0.0;
 
-            $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek, self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days']);
+            $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek);
             $ratioCihCph = ($cih > 0 && $cph > 0) ? $this->metricCalculationService->calculateRatio($cih, $cph) : null;
             $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->metricCalculationService->calculateRatio($cihNormalized, $cph) : null;
 
@@ -1140,7 +1136,7 @@ class MetricStatisticsService
 
         $ratioCihCph = ($cih > 0 && $cph > 0) ? round($this->metricCalculationService->calculateRatio($cih, $cph), 2) : 'N/A';
 
-        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek, self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days']);
+        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek);
         $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? round($this->metricCalculationService->calculateRatio($cihNormalized, $cph), 2) : 'N/A';
 
         return [
@@ -1380,7 +1376,7 @@ class MetricStatisticsService
     {
         $alerts = [];
         $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
-        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]), self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days']);
+        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
         $cph = $trainingPlanWeek ? $this->metricCalculationService->calculateCph($trainingPlanWeek) : 0.0;
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
