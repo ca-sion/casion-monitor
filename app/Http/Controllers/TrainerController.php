@@ -34,10 +34,6 @@ class TrainerController extends Controller
         $showInfoAlerts = filter_var(request()->input('show_info_alerts', false), FILTER_VALIDATE_BOOLEAN);
         $showMenstrualCycle = filter_var(request()->input('show_menstrual_cycle', false), FILTER_VALIDATE_BOOLEAN);
 
-        // Appel unique à la nouvelle méthode de service qui fait tout le travail en une fois
-        $athletesOverviewData = $this->metricStatisticsService
-            ->getBulkAthletesDashboardData($trainer->athletes()->with('trainingPlans.weeks')->get(), $period);
-
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
@@ -54,6 +50,22 @@ class TrainerController extends Controller
             CalculatedMetric::SBM,
             CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
         ];
+
+        $test = $this->metricStatisticsService->getAthletesData($trainer->athletes, [
+            'period' => 'last_60_days',
+            // 'metric_types'               => [],
+            // 'calculated_metrics'         => [],
+            'include_dashboard_metrics'    => false,
+            'include_weekly_metrics'       => false,
+            'include_latest_daily_metrics' => false,
+            // 'include_alerts'             => [], //TODO
+            'include_menstrual_cycle'  => false,
+            'include_readiness_status' => false, // CONTROLER
+        ]);
+        dd($test->first());
+
+        // Appel unique à la nouvelle méthode de service qui fait tout le travail en une fois
+        $athletesOverviewData = $this->metricStatisticsService->getBulkAthletesDashboardData($trainer->athletes()->with('trainingPlans.weeks')->get(), $period);
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',

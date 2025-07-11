@@ -2,24 +2,32 @@
 
 namespace App\Services;
 
-use App\Enums\CalculatedMetric;
 use Carbon\Carbon;
 use App\Models\Metric;
 use App\Models\Athlete;
 use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
+use App\Enums\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder;
-use App\Services\MetricCalculationService;
 
 class MetricStatisticsService
 {
     protected MetricCalculationService $metricCalculationService;
 
-    public function __construct(MetricCalculationService $metricCalculationService)
+    protected MetricAlertsService $metricAlertsService;
+
+    protected MetricTrendsService $metricTrendsService;
+
+    protected MetricReadinessService $metricReadinessService;
+
+    public function __construct(MetricCalculationService $metricCalculationService, MetricAlertsService $metricAlertsService, MetricTrendsService $metricTrendsService, MetricReadinessService $metricReadinessService)
     {
         $this->metricCalculationService = $metricCalculationService;
+        $this->metricAlertsService = $metricAlertsService;
+        $this->metricTrendsService = $metricTrendsService;
+        $this->metricReadinessService = $metricReadinessService;
     }
 
     private const ALERT_THRESHOLDS = [
@@ -67,23 +75,23 @@ class MetricStatisticsService
             'menstrual_perf_feel_max'       => 4,
         ],
         'READINESS_SCORE' => [
-            'sbm_penalty_factor'        => 5,
-            'hrv_drop_severe_percent'   => -10,
-            'hrv_drop_moderate_percent' => -5,
-            'pain_penalty_factor'       => 4,
-            'pre_session_energy_low'    => 4,
-            'pre_session_energy_medium' => 6,
-            'pre_session_penalty_high'  => 15,
-            'pre_session_penalty_medium'=> 5,
-            'pre_session_leg_feel_low'  => 4,
-            'pre_session_leg_feel_medium' => 6,
+            'sbm_penalty_factor'             => 5,
+            'hrv_drop_severe_percent'        => -10,
+            'hrv_drop_moderate_percent'      => -5,
+            'pain_penalty_factor'            => 4,
+            'pre_session_energy_low'         => 4,
+            'pre_session_energy_medium'      => 6,
+            'pre_session_penalty_high'       => 15,
+            'pre_session_penalty_medium'     => 5,
+            'pre_session_leg_feel_low'       => 4,
+            'pre_session_leg_feel_medium'    => 6,
             'charge_overload_penalty_factor' => 15,
-            'charge_overload_threshold' => 1.3,
-            'level_red_threshold'       => 50,
-            'level_orange_threshold'    => 70,
-            'level_yellow_threshold'    => 85,
-            'severe_pain_threshold'     => 7,
-            'menstrual_energy_low'      => 4,
+            'charge_overload_threshold'      => 1.3,
+            'level_red_threshold'            => 50,
+            'level_orange_threshold'         => 70,
+            'level_yellow_threshold'         => 85,
+            'severe_pain_threshold'          => 7,
+            'menstrual_energy_low'           => 4,
         ],
     ];
 
@@ -98,15 +106,15 @@ class MetricStatisticsService
     {
         // Options par défaut
         $defaultOptions = [
-            'period'                     => 'last_60_days',
-            'metric_types'               => MetricType::cases(),
-            'calculated_metrics'         => CalculatedMetric::cases(),
-            'include_dashboard_metrics'  => false,
-            'include_weekly_metrics'     => false,
+            'period'                       => 'last_60_days',
+            'metric_types'                 => MetricType::cases(),
+            'calculated_metrics'           => CalculatedMetric::cases(),
+            'include_dashboard_metrics'    => false,
+            'include_weekly_metrics'       => false,
             'include_latest_daily_metrics' => false,
-            'include_alerts'             => ['general', 'charge', 'readiness'],
-            'include_menstrual_cycle'    => false,
-            'include_readiness_status'   => false,
+            'include_alerts'               => ['general', 'charge', 'readiness'],
+            'include_menstrual_cycle'      => false,
+            'include_readiness_status'     => false,
         ];
         $options = array_merge($defaultOptions, $options);
 
@@ -123,10 +131,10 @@ class MetricStatisticsService
         $allMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
             ->when($options['include_menstrual_cycle'], function (Builder $query) {
                 $query->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
-                ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD);
-            }, function (Builder $query) use($maxStartDate, $options) {
+                    ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD);
+            }, function (Builder $query) use ($maxStartDate, $options) {
                 $query->where('date', '>=', $maxStartDate)
-                ->whereIn('metric_type', $options['metric_types']);
+                    ->whereIn('metric_type', $options['metric_types']);
             })
             ->orderBy('date', 'asc')
             ->get()
@@ -181,9 +189,9 @@ class MetricStatisticsService
                 $athleteData['latest_daily_metrics'] = $this->getLatestMetricsGroupedByDateForCollection($athleteMetrics, $options['period']);
             }
 
-            if (!empty($options['include_alerts'])) {
+            if (! empty($options['include_alerts'])) {
                 $period = $options['period'] ?? 'last_60_days';
-                $athleteData['alerts'] = $this->getAthleteAlertsForCollection($athlete, $athleteMetrics, $period);
+                $this->metricAlertsService->getAlerts($athlete, $athleteMetrics, $athletePlanWeeks, $period, $options);
             }
 
             if ($options['include_menstrual_cycle'] && $athlete->gender->value === 'w') {
@@ -191,7 +199,7 @@ class MetricStatisticsService
             }
 
             if ($options['include_readiness_status']) {
-                $athleteData['readiness_status'] = $this->getAthleteReadinessStatus($athlete, $athleteMetrics);
+                $athleteData['readiness_status'] = $this->metricReadinessService->getAthleteReadinessStatus($athlete, $athleteMetrics);
             }
 
             // Ajouter les données calculées à l'objet athlète
@@ -209,7 +217,7 @@ class MetricStatisticsService
         $startDate = $this->getStartDateFromPeriod($options['period']);
 
         // Si les tendances sont incluses, s'assurer d'avoir au moins 60 jours de données
-        if ($options['include_dashboard_metrics'] || $options['include_weekly_metrics'] || !empty($options['include_alerts'])) {
+        if ($options['include_dashboard_metrics'] || $options['include_weekly_metrics'] || ! empty($options['include_alerts'])) {
             $startDate = $startDate->min($now->copy()->subDays(60)->startOfDay());
         }
 
@@ -218,10 +226,6 @@ class MetricStatisticsService
 
     /**
      * Get latest metrics grouped by date for a collection of metrics.
-     *
-     * @param Collection $athleteMetrics
-     * @param string $period
-     * @return Collection
      */
     protected function getLatestMetricsGroupedByDateForCollection(Collection $athleteMetrics, string $period): Collection
     {
@@ -302,10 +306,10 @@ class MetricStatisticsService
 
             $athlete->metricsDataForDashboard = $metricsDataForDashboard;
 
-            $athlete->alerts = $this->getAthleteAlertsForCollection($athlete, $athleteMetrics, $period);
-            $athlete->menstrualCycleInfo = $this->deduceMenstrualCyclePhaseForCollection($athlete, $athleteMetrics);
-            $athlete->chargeAlerts = $this->getChargeAlertsForCollection($athlete, $athleteMetrics, $athletePlanWeeks, now()->startOfWeek(Carbon::MONDAY));
-            $athlete->readinessStatus = $this->getAthleteReadinessStatus($athlete, $athleteMetrics);
+            // $athlete->alerts = $this->getAthleteAlertsForCollection($athlete, $athleteMetrics, $period);
+            // $athlete->menstrualCycleInfo = $this->deduceMenstrualCyclePhaseForCollection($athlete, $athleteMetrics);
+            // $athlete->chargeAlerts = $this->getChargeAlertsForCollection($athlete, $athleteMetrics, $athletePlanWeeks, now()->startOfWeek(Carbon::MONDAY));
+            // $athlete->readinessStatus = $this->getAthleteReadinessStatus($athlete, $athleteMetrics);
 
             return $athlete;
         });
@@ -345,13 +349,13 @@ class MetricStatisticsService
         }
 
         if ($metricData['is_numerical']) {
-            $trends = $this->getMetricTrendsForCollection($metricsForPeriod, $metricType);
+            $trends = $this->metricTrendsService->getMetricTrendsForCollection($metricsForPeriod, $metricType);
             $metricData['average_7_days'] = $trends['averages']['Derniers 7 jours'] ?? null;
             $metricData['average_30_days'] = $trends['averages']['Derniers 30 jours'] ?? null;
             $metricData['formatted_average_7_days'] = $this->formatMetricValue($metricData['average_7_days'], $metricType);
             $metricData['formatted_average_30_days'] = $this->formatMetricValue($metricData['average_30_days'], $metricType);
 
-            $evolutionTrendData = $this->getEvolutionTrendForCollection($metricsForPeriod, $metricType);
+            $evolutionTrendData = $this->metricTrendsService->getEvolutionTrendForCollection($metricsForPeriod, $metricType);
             if ($metricData['average_7_days'] !== null && $evolutionTrendData['trend'] !== 'N/A') {
                 $optimalDirection = $metricType->getTrendOptimalDirection();
 
@@ -432,7 +436,7 @@ class MetricStatisticsService
                 CalculatedMetric::CIH_NORMALIZED           => $cihNormalized,
                 CalculatedMetric::RATIO_CIH_CPH            => $ratioCihCph,
                 CalculatedMetric::RATIO_CIH_NORMALIZED_CPH => $ratioCihNormalizedCph,
-                default                    => null,
+                default                                    => null,
             };
 
             if (is_numeric($value)) {
@@ -449,7 +453,7 @@ class MetricStatisticsService
         $dataFor30Days = $allWeeklyData->where('date', '>=', $now->copy()->subDays(30)->startOfDay());
         $average30Days = $dataFor30Days->isNotEmpty() ? $dataFor30Days->avg('value') : null;
 
-        $trend = $this->calculateTrendFromNumericCollection($allWeeklyData);
+        $trend = $this->metricTrendsService->calculateTrendFromNumericCollection($allWeeklyData);
         $changePercentage = 'N/A';
         if (is_numeric($average7Days) && is_numeric($average30Days) && $average30Days != 0) {
             $change = (($average7Days - $average30Days) / $average30Days) * 100;
@@ -480,30 +484,6 @@ class MetricStatisticsService
     }
 
     /**
-     * Récupère les alertes pour un athlète à partir d'une collection de métriques pré-chargée.
-     */
-    protected function getAthleteAlertsForCollection(Athlete $athlete, Collection $metrics, string $period = 'last_60_days'): array
-    {
-        return $this->getAthleteAlerts($athlete, $period, $metrics);
-    }
-
-    /**
-     * Déduit la phase du cycle menstruel d'un athlète féminin à partir d'une collection de métriques pré-chargée.
-     */
-    protected function deduceMenstrualCyclePhaseForCollection(Athlete $athlete, Collection $allMetrics): array
-    {
-        return $this->deduceMenstrualCyclePhase($athlete, $allMetrics);
-    }
-
-    /**
-     * Récupère les alertes de charge pour un athlète à partir de collections pré-chargées.
-     */
-    protected function getChargeAlertsForCollection(Athlete $athlete, Collection $allMetrics, Collection $planWeeks, Carbon $weekStartDate): array
-    {
-        return $this->getChargeAlerts($athlete, $weekStartDate, $allMetrics, $planWeeks);
-    }
-
-    /**
      * Obtient la date de début d'une période donnée.
      */
     public function getStartDateFromPeriod(string $period): Carbon
@@ -522,7 +502,6 @@ class MetricStatisticsService
             default         => $now->copy()->subDays(60)->startOfDay(),
         };
     }
-
 
     /**
      * Récupère les données de métriques pour un athlète donné, avec des filtres.
@@ -682,134 +661,6 @@ class MetricStatisticsService
     }
 
     /**
-     * Calcule la moyenne des métriques sur différentes périodes pour un athlète.
-     */
-    public function getMetricTrends(Athlete $athlete, MetricType $metricType): array
-    {
-        if ($metricType->getValueColumn() === 'note') {
-            return [
-                'metric_label' => $metricType->getLabel(),
-                'unit'         => $metricType->getUnit(),
-                'averages'     => [],
-                'reason'       => 'La métrique n\'est pas numérique et ne peut pas être moyennée.',
-            ];
-        }
-
-        $query = $athlete->metrics()
-            ->where('metric_type', $metricType->value)
-            ->orderBy('date', 'asc');
-
-        $metrics = $query->get();
-
-        return $this->getMetricTrendsForCollection($metrics, $metricType);
-    }
-
-    /**
-     * Calcule les tendances des métriques sur différentes périodes à partir d'une collection déjà filtrée.
-     *
-     * @param  Collection<Metric>  $metrics  La collection de métriques à analyser.
-     */
-    public function getMetricTrendsForCollection(Collection $metrics, MetricType $metricType): array
-    {
-        if ($metricType->getValueColumn() === 'note') {
-            return [
-                'metric_label' => $metricType->getLabel(),
-                'unit'         => $metricType->getUnit(),
-                'averages'     => [],
-                'reason'       => 'La métrique n\'est pas numérique et ne peut pas être moyennée.',
-            ];
-        }
-
-        $trends = [];
-        $valueColumn = $metricType->getValueColumn();
-        $periods = [
-            'Derniers 7 jours'  => 7,
-            'Derniers 14 jours' => 14,
-            'Derniers 30 jours' => 30,
-            'Derniers 90 jours' => 90,
-            'Derniers 6 mois'   => 180,
-            'Derniers 1 an'     => 365,
-        ];
-        $now = Carbon::now();
-
-        foreach ($periods as $label => $days) {
-            $startDate = $now->copy()->subDays($days)->startOfDay();
-            $average = $metrics->filter(fn ($m) => $m->date && $m->date->greaterThanOrEqualTo($startDate) && is_numeric($m->{$valueColumn}))->avg($valueColumn);
-            $trends[$label] = $average;
-        }
-
-        $allTimeAverage = $metrics->filter(fn ($m) => is_numeric($m->{$valueColumn}))->avg($valueColumn);
-        $trends['Total'] = $allTimeAverage;
-
-        return [
-            'metric_label' => $metricType->getLabel(),
-            'unit'         => $metricType->getUnit(),
-            'averages'     => $trends,
-        ];
-    }
-
-    /**
-     * Calcule la tendance d'évolution (accroissement/décroissement) pour une métrique sur une période.
-     * Compare la valeur moyenne au début et à la fin de la période ou la première/dernière valeur.
-     *
-     * @param  Collection<Metric>  $metrics  Collection de métriques déjà filtrée par type.
-     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
-     */
-    public function getEvolutionTrendForCollection(Collection $metrics, MetricType $metricType): array
-    {
-        if ($metricType->getValueColumn() === 'note') {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'La métrique n\'est pas numérique.'];
-        }
-
-        $valueColumn = $metricType->getValueColumn();
-        $numericMetrics = $metrics->filter(fn ($m) => is_numeric($m->{$valueColumn}))->sortBy('date');
-
-        if ($numericMetrics->count() < 2) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
-        }
-
-        $totalCount = $numericMetrics->count();
-        $segmentSize = floor($totalCount / 3); // Utilise le premier et le dernier tiers des points de données pour une tendance plus lisse.
-
-        if ($segmentSize === 0) {
-            // Si moins de 3 points de données, compare la première et la dernière valeur.
-            $firstValue = $numericMetrics->first()->{$valueColumn};
-            $lastValue = $numericMetrics->last()->{$valueColumn};
-        } else {
-            $firstSegment = $numericMetrics->take($segmentSize);
-            $lastSegment = $numericMetrics->slice($totalCount - $segmentSize);
-
-            $firstValue = $firstSegment->avg($valueColumn);
-            $lastValue = $lastSegment->avg($valueColumn);
-        }
-
-        if ($firstValue === null || $lastValue === null) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
-        }
-
-        if ($firstValue == 0 && $lastValue != 0) {
-            $change = 100; // Augmentation significative à partir de zéro.
-        } elseif ($firstValue == 0 && $lastValue == 0) {
-            $change = 0; // Aucun changement si les deux sont zéro.
-        } else {
-            $change = (($lastValue - $firstValue) / $firstValue) * 100;
-        }
-
-        $trend = 'stable';
-        // Définit un petit seuil pour considérer la tendance comme stable, afin d'éviter les micro-fluctuations.
-        if ($change > 0.5) {
-            $trend = 'increasing';
-        } elseif ($change < -0.5) {
-            $trend = 'decreasing';
-        }
-
-        return [
-            'trend'  => $trend,
-            'change' => $change,
-        ];
-    }
-
-    /**
      * Récupère les métriques les plus récentes groupées par date.
      *
      * Récupère les métriques les plus récentes groupées par date pour un athlète.
@@ -866,7 +717,7 @@ class MetricStatisticsService
         }
 
         if ($metricData['is_numerical']) {
-            $trends = $this->getMetricTrendsForCollection($metricsForPeriod, $metricType);
+            $trends = $this->metricTrendsService->getMetricTrendsForCollection($metricsForPeriod, $metricType);
 
             $metricData['average_7_days'] = $trends['averages']['Derniers 7 jours'] ?? null;
             $metricData['average_30_days'] = $trends['averages']['Derniers 30 jours'] ?? null;
@@ -874,7 +725,7 @@ class MetricStatisticsService
             $metricData['formatted_average_7_days'] = $this->formatMetricValue($metricData['average_7_days'], $metricType);
             $metricData['formatted_average_30_days'] = $this->formatMetricValue($metricData['average_30_days'], $metricType);
 
-            $evolutionTrendData = $this->getEvolutionTrendForCollection($metricsForPeriod, $metricType);
+            $evolutionTrendData = $this->metricTrendsService->getEvolutionTrendForCollection($metricsForPeriod, $metricType);
 
             if ($metricData['average_7_days'] !== null && $evolutionTrendData && isset($evolutionTrendData['trend'])) {
                 switch ($evolutionTrendData['trend']) {
@@ -924,186 +775,6 @@ class MetricStatisticsService
         $scale = $metricType->getScale();
 
         return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
-    }
-
-
-    public function calculateOverallReadinessScore(Athlete $athlete, Collection $allMetrics): int
-    {
-        $readinessScore = 100;
-
-        // 1. Impact du SBM (sur 10)
-        $sbmMetrics = $allMetrics->whereIn('metric_type', [
-            MetricType::MORNING_SLEEP_QUALITY,
-            MetricType::MORNING_GENERAL_FATIGUE,
-            MetricType::MORNING_PAIN,
-            MetricType::MORNING_MOOD_WELLBEING,
-        ])->filter(fn ($m) => $m->date->isToday()); // On prend les métriques du jour
-
-        // Calcul du SBM via votre méthode existante (assumée retourner sur 0-10)
-        $dailySbm = $this->metricCalculationService->calculateSbmForCollection($sbmMetrics);
-
-        if ($dailySbm !== null) {
-            // Impact du SBM : Plus le SBM est bas, plus le score de readiness diminue.
-            // Convertissons le SBM sur 10 en un impact sur 100 points de readiness.
-            // Si SBM = 10 (parfait), 0 pénalité. Si SBM = 0, pénalité maximale.
-            // Ex: (10 - SBM) * 5. Si SBM=10, (10-10)*5=0. Si SBM=0, (10-0)*5=50.
-            $readinessScore -= (10 - $dailySbm) * self::ALERT_THRESHOLDS['READINESS_SCORE']['sbm_penalty_factor'];
-        }
-
-        // 2. Impact de la VFC (HRV)
-        $hrvMetrics = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->sortByDesc('date');
-        $lastHrv = $hrvMetrics->first()?->value;
-
-        if ($lastHrv !== null) {
-            // Calcule la moyenne HRV des 7 derniers jours (hors aujourd'hui) pour la baseline
-            $hrv7DayAvg = $hrvMetrics->where('date', '>=', now()->subDays(7)->startOfDay())
-                ->where('date', '<', now()->startOfDay())
-                ->avg('value');
-
-            if ($hrv7DayAvg && $hrv7DayAvg > 0) {
-                $changePercent = (($lastHrv - $hrv7DayAvg) / $hrv7DayAvg) * 100;
-
-                if ($changePercent < self::ALERT_THRESHOLDS['READINESS_SCORE']['hrv_drop_severe_percent']) { // Chute de plus de 10%
-                    $readinessScore -= 20; // Cette valeur n'est pas dans ALERT_THRESHOLDS, mais elle est fixe.
-                } elseif ($changePercent < self::ALERT_THRESHOLDS['READINESS_SCORE']['hrv_drop_moderate_percent']) { // Chute de 5% à 10%
-                    $readinessScore -= 10; // Cette valeur n'est pas dans ALERT_THRESHOLDS, mais elle est fixe.
-                }
-                // Aucune pénalité si stable ou en hausse.
-            }
-        }
-
-        // 3. Impact de la Douleur (MORNING_PAIN)
-        $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
-            ->where('date', now()->startOfDay())
-            ->first()?->value;
-
-        if ($morningPain !== null && $morningPain > 0) {
-            // Pénalité plus forte pour la douleur
-            $readinessScore -= ($morningPain * self::ALERT_THRESHOLDS['READINESS_SCORE']['pain_penalty_factor']); // Ex: 4 points par niveau de douleur sur 10
-        }
-
-        // 4. Impact des métriques pré-session (remplies juste avant la session)
-        $preSessionEnergy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
-            ->where('date', now()->startOfDay())
-            ->first()?->value;
-
-        if ($preSessionEnergy !== null && $preSessionEnergy <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_energy_low']) { // Si l'énergie est très basse (1-4)
-            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_high'];
-        } elseif ($preSessionEnergy !== null && $preSessionEnergy <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_energy_medium']) { // Si l'énergie est moyenne (5-6)
-            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_medium'];
-        }
-
-        $preSessionLegFeel = $allMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL->value)
-            ->where('date', now()->startOfDay())
-            ->first()?->value;
-
-        if ($preSessionLegFeel !== null && $preSessionLegFeel <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_leg_feel_low']) { // Si les jambes sont très lourdes (1-4)
-            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_high'];
-        } elseif ($preSessionLegFeel !== null && $preSessionLegFeel <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_leg_feel_medium']) { // Si les jambes sont moyennes (5-6)
-            $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_medium'];
-        }
-
-        // 5. Impact du ratio de charge (CIH/CPH) - à évaluer sur la semaine en cours
-        $currentWeekStartDate = now()->startOfWeek(Carbon::MONDAY);
-        // Assurez-vous que athlete->currentTrainingPlan existe et que trainingPlanWeeks est une collection
-        $trainingPlanWeeks = $athlete->currentTrainingPlan?->weeks ?? collect();
-
-        $cihData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, CalculatedMetric::CIH, 'last_7_days', $trainingPlanWeeks);
-        $cphData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, CalculatedMetric::CPH, 'last_7_days', $trainingPlanWeeks);
-
-        // Récupérer la dernière valeur calculée pour la semaine en cours
-        $currentCih = end($cihData['chart_data']['data']) ?? 0;
-        $currentCph = end($cphData['chart_data']['data']) ?? 0;
-
-        if ($currentCih > 0 && $currentCph > 0) {
-            $ratio = $currentCih / $currentCph;
-            $overloadThreshold = self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_threshold'];
-
-            if ($ratio > $overloadThreshold) { // Surcharge
-                $readinessScore -= self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_penalty_factor'] * ($ratio - $overloadThreshold); // Pénalité croissante
-            }
-            // Pas de pénalité directe pour la sous-charge sur la readiness immédiate ici.
-        }
-
-        // Assurez-vous que le score reste entre 0 et 100
-        return max(0, min(100, (int) round($readinessScore)));
-    }
-
-    public function getAthleteReadinessStatus(Athlete $athlete, Collection $allMetrics): array
-    {
-        $readinessScore = 100; // Valeur par défaut, sera écrasée ou non calculée
-        $readinessThresholds = self::ALERT_THRESHOLDS['READINESS_SCORE'];
-
-        $status = [
-            'level'           => 'green',
-            'message'         => "L'athlète est prêt pour l'entraînement !",
-            'readiness_score' => null,
-            'recommendation'  => "Poursuivre l'entraînement planifié.",
-            'alerts'          => [],
-        ];
-
-        // Vérification des métriques quotidiennes manquantes
-        $missingDailyMetricsData = $this->checkMissingDailyReadinessMetrics($allMetrics);
-        $status['alerts'] = $missingDailyMetricsData['alerts'];
-        $missingCount = $missingDailyMetricsData['missing_count'];
-        $missingMetricNames = $missingDailyMetricsData['missing_metric_names'];
-
-        if ($missingCount > 3) {
-            $missingNamesString = implode(', ', $missingMetricNames);
-            $status['level'] = 'red';
-            $status['message'] = 'Score de readiness non calculable.';
-            $status['recommendation'] = "Trop de données essentielles sont manquantes pour aujourd'hui ({$missingCount} manquantes : {$missingNamesString}). Veuillez remplir toutes les métriques quotidiennes pour obtenir un score précis.";
-            $status['readiness_score'] = 'N/A'; // Indiquer que le score n'est pas disponible
-        } else {
-            // Calcul du score global de readiness UNIQUEMENT si pas trop de données manquantes
-            $readinessScore = $this->calculateOverallReadinessScore($athlete, $allMetrics);
-            $status['readiness_score'] = $readinessScore;
-
-            // Définition des règles pour les niveaux de readiness basées sur le score
-            if ($readinessScore < $readinessThresholds['level_red_threshold']) {
-                $status['level'] = 'red';
-                $status['message'] = 'Faible readiness. Risque accru de fatigue ou blessure.';
-                $status['recommendation'] = 'Repos complet, récupération active très légère, ou réévaluation du plan. Ne pas forcer un entraînement intense.';
-            } elseif ($readinessScore < $readinessThresholds['level_orange_threshold']) {
-                $status['level'] = 'orange';
-                $status['message'] = 'Readiness modérée. Signes de fatigue ou de stress.';
-                $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité ou privilégier la récupération.";
-            } elseif ($readinessScore < $readinessThresholds['level_yellow_threshold']) {
-                $status['level'] = 'yellow';
-                $status['message'] = 'Bonne readiness, quelques points à surveiller.';
-                $status['recommendation'] = 'Entraînement normal, mais rester attentif aux sensations et adapter si nécessaire.';
-            }
-            // Si >= 85, reste 'green' par default
-
-            // Règle d'exception pour la douleur sévère, qui peut surclasser le score
-            $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
-                ->where('date', now()->startOfDay())
-                ->first()?->value;
-            if ($morningPain !== null && $morningPain >= $readinessThresholds['severe_pain_threshold']) { // Douleur de 7/10 ou plus
-                $status['level'] = 'red';
-                $status['message'] = 'Douleur sévère signalée. Repos ou consultation médicale.';
-                $status['recommendation'] = "Absolument aucun entraînement intense. Focalisation sur la récupération et l'identification de la cause de la douleur.";
-            }
-
-            // Règle d'exception pour le premier jour des règles avec niveau d'énergie bas
-            $firstDayPeriod = $allMetrics->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
-                ->where('date', now()->startOfDay())
-                ->first()?->value;
-            $preSessionEnergy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
-                ->where('date', now()->startOfDay())
-                ->first()?->value;
-
-            if ($firstDayPeriod && ($preSessionEnergy !== null && $preSessionEnergy <= $readinessThresholds['menstrual_energy_low'])) {
-                // Si l'état n'est pas déjà rouge, on le passe à orange
-                if ($status['level'] !== 'red') {
-                    $status['level'] = 'orange';
-                    $status['message'] = "Premier jour des règles avec niveau d'énergie bas.";
-                    $status['recommendation'] = "Adapter l'entraînement aux sensations, privilégier des activités plus douces ou de la récupération active.";
-                }
-            }
-        }
-
-        return $status;
     }
 
     /**
@@ -1218,9 +889,9 @@ class MetricStatisticsService
         $currentWeekStartDate = $now->startOfWeek(Carbon::MONDAY);
 
         $metricData = [
-            'label' => $metricKey->getLabel(),
-            'short_label' => $metricKey->getLabelShort(),
-            'description' => $metricKey->getDescription(),
+            'label'                     => $metricKey->getLabel(),
+            'short_label'               => $metricKey->getLabelShort(),
+            'description'               => $metricKey->getDescription(),
             'unit'                      => null,
             'last_value'                => null,
             'formatted_last_value'      => 'N/A',
@@ -1281,7 +952,7 @@ class MetricStatisticsService
         $metricData['average_30_days'] = $average30Days;
         $metricData['formatted_average_30_days'] = is_numeric($average30Days) ? number_format($average30Days, 1) : 'N/A';
 
-        $evolutionTrendData = $this->calculateTrendFromNumericCollection($allWeeklyData);
+        $evolutionTrendData = $this->metricTrendsService->calculateTrendFromNumericCollection($allWeeklyData);
 
         if ($metricData['average_7_days'] !== null && $evolutionTrendData && isset($evolutionTrendData['trend'])) {
             switch ($evolutionTrendData['trend']) {
@@ -1319,35 +990,6 @@ class MetricStatisticsService
     }
 
     /**
-     * Détecte les alertes liées à la charge (CIH/CPH) et au bien-être (SBM) pour une semaine donnée.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $weekStartDate  La date de début de la semaine.
-     * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
-     * @param  Collection|null  $planWeeks  Collection des semaines de plan d'entraînement (optionnel, pour optimisation).
-     * @return array Un tableau d'alertes.
-     */
-    public function getChargeAlerts(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null, ?Collection $planWeeks = null): array
-    {
-        $alerts = [];
-
-        if (is_null($planWeeks)) {
-            $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
-        } else {
-            $assignedPlan = $athlete->currentTrainingPlan;
-            $trainingPlanWeek = $planWeeks->firstWhere('start_date', $weekStartDate->toDateString());
-        }
-
-        $alerts = array_merge($alerts, $this->analyzeChargeMetrics($athlete, $weekStartDate, $trainingPlanWeek, $allMetrics));
-
-        $alerts = array_merge($alerts, $this->analyzeSbmMetrics($athlete, $weekStartDate, $allMetrics));
-
-        $alerts = array_merge($alerts, $this->analyzeMultiWeekTrends($athlete, $weekStartDate, $allMetrics));
-
-        return $alerts;
-    }
-
-    /**
      * Récupère la TrainingPlanWeek pour un athlète et une date de début de semaine donnés.
      */
     public function getTrainingPlanWeekForAthlete(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
@@ -1364,195 +1006,163 @@ class MetricStatisticsService
     }
 
     /**
-     * Analyse les métriques de charge (CIH/CPH) et génère des alertes.
+     * Analyse les tendances des métriques et identifie des signaux d'alerte pour un athlète.
      *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $weekStartDate  La date de début de la semaine.
-     * @param  TrainingPlanWeek|null  $trainingPlanWeek  La semaine du plan d'entraînement.
-     * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
-     * @return array Un tableau d'alertes liées à la charge.
+     * @param  Athlete  $athlete  L'athlète pour lequel analyser les alertes.
+     * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months'). Par défaut à 'last_60_days'.
+     * @param  Collection|null  $metrics  Collection de métriques pré-chargée pour éviter des requêtes supplémentaires.
+     * @return array Des drapeaux et des messages d'alerte.
      */
-    protected function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
+    public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days', ?Collection $metrics = null): array
     {
         $alerts = [];
-        $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
-        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
-        $cph = $trainingPlanWeek ? $this->metricCalculationService->calculateCph($trainingPlanWeek) : 0.0;
-
-        $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
-
-        if ($cihNormalized > 0 && $cph > 0) {
-            $ratio = $this->metricCalculationService->calculateRatio($cihNormalized, $cph);
-
-            if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Sous-charge potentielle : Charge interne ('.number_format($cihNormalized, 1).") significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
-            } elseif ($ratio > $chargeThresholds['ratio_overload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Surcharge potentielle : Charge interne ('.number_format($cihNormalized, 1).") significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
-            } else {
-                $alerts[] = ['type' => 'success', 'message' => 'Charge interne ('.number_format($cihNormalized, 1).") en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
-            }
-        } elseif ($cihNormalized == 0) {
-            $alerts[] = ['type' => 'info', 'message' => 'Pas suffisamment de données "'.MetricType::POST_SESSION_SESSION_LOAD->getLabelShort().'" enregistrées cette semaine pour calculer le CIH Normalisée.'];
-        } elseif ($cph == 0) {
-            $alerts[] = ['type' => 'info', 'message' => "Pas de volume/intensité planifiés pour cette semaine ou CPH est à zéro. CPH: {$cph}."];
+        if (is_null($metrics)) {
+            $metrics = $this->getAthleteMetrics($athlete, ['period' => $period]);
         }
 
-        return $alerts;
-    }
+        // ** Alertes Générales (Hommes et Femmes) **
 
-    /**
-     * Analyse les métriques SBM et génère des alertes.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $weekStartDate  La date de début de la semaine.
-     * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
-     * @return array Un tableau d'alertes liées au SBM.
-     */
-    protected function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
-    {
-        $alerts = [];
-        $sbmSum = 0;
-        $sbmCount = 0;
-        $period = CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
-        foreach ($period as $date) {
-            if (is_null($allMetrics)) {
-                $sbmValue = $this->metricCalculationService->calculateSbm($athlete, $date);
-            } else {
-                $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $date->format('Y-m-d'));
-                $sbmValue = $this->metricCalculationService->calculateSbmForCollection($dailyMetrics);
+        // 1. Fatigue générale persistante (MORNING_GENERAL_FATIGUE)
+        $fatigueType = MetricType::MORNING_GENERAL_FATIGUE;
+        $fatigueMetrics = $metrics->filter(fn ($m) => $m->metric_type === $fatigueType);
+        $fatigueThresholds = self::ALERT_THRESHOLDS[$fatigueType->value];
+        if ($fatigueMetrics->count() > 5 && $fatigueType->getValueColumn() !== 'note') {
+            $averageFatigue7Days = $this->metricTrendsService->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 7 jours'] ?? null;
+            $averageFatigue30Days = $this->metricTrendsService->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 30 jours'] ?? null;
+
+            if ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['persistent_high_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['persistent_high_30d_min']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Fatigue générale très élevée persistante (moy. 7j: '.round($averageFatigue7Days).'/10). Potentiel signe de surentraînement ou manque de récupération.'];
+            } elseif ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['elevated_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['elevated_30d_min']) {
+                $alerts[] = ['type' => 'info', 'message' => 'Fatigue générale élevée (moy. 7j: '.round($averageFatigue7Days).'/10). Surveiller la récupération.'];
             }
-
-            if ($sbmValue !== null) {
-                $sbmSum += $sbmValue;
-                $sbmCount++;
-            }
-        }
-        $averageSbm = $sbmCount > 0 ? $sbmSum / $sbmCount : null;
-
-        if ($averageSbm !== null) {
-            $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
-            if ($averageSbm < $sbmThresholds['average_low_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'SBM faible pour la semaine (moy: '.number_format($averageSbm, 1).'/10). Surveiller la récupération.'];
-            } elseif ($averageSbm > $sbmThresholds['average_high_threshold']) {
-                $alerts[] = ['type' => 'info', 'message' => 'SBM élevé pour la semaine (moy: '.number_format($averageSbm, 1).'/10). Bonne récupération.'];
-            }
-        } else {
-            $alerts[] = ['type' => 'info', 'message' => 'Pas de données SBM pour cette semaine.'];
-        }
-
-        return $alerts;
-    }
-
-    /**
-     * Analyse les tendances SBM et VFC sur plusieurs semaines et génère des alertes.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $currentWeekStartDate  La date de début de la semaine actuelle.
-     * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
-     * @return array Un tableau d'alertes liées aux tendances SBM et VFC.
-     */
-    protected function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
-    {
-        $alerts = [];
-
-        $period = 'last_30_days';
-        $startDate = Carbon::now()->subDays(30)->startOfDay();
-        $endDate = Carbon::now()->endOfDay();
-
-        $sbmDataCollection = new Collection;
-        $currentDate = $startDate->copy();
-        while ($currentDate->lessThanOrEqualTo($endDate)) {
-            if (is_null($allMetrics)) {
-                $sbmValue = $this->metricCalculationService->calculateSbm($athlete, $currentDate);
-            } else {
-                $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $currentDate->format('Y-m-d'));
-                $sbmValue = $this->metricCalculationService->calculateSbmForCollection($dailyMetrics);
-            }
-
-            if ($sbmValue !== null && $sbmValue !== 0.0) {
-                $sbmDataCollection->push((object) ['date' => $currentDate->copy(), 'value' => $sbmValue]);
-            }
-            $currentDate->addDay();
-        }
-
-        if ($sbmDataCollection->count() > 5) {
-            $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
-            $sbmTrend = $this->calculateTrendFromNumericCollection($sbmDataCollection);
-            if ($sbmTrend['trend'] === 'decreasing' && $sbmTrend['change'] < $sbmThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Baisse significative du SBM ('.number_format($sbmTrend['change'], 1).'%) sur les 30 derniers jours.'];
+            $fatigueTrend = $this->metricTrendsService->getEvolutionTrendForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE);
+            if ($fatigueTrend['trend'] === 'increasing' && $fatigueTrend['change'] > $fatigueThresholds['trend_increase_percent']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative de la fatigue générale (+'.number_format($fatigueTrend['change'], 1).'%).'];
             }
         }
 
-        if (is_null($allMetrics)) {
-            $hrvMetrics = $this->getAthleteMetrics($athlete, ['metric_type' => MetricType::MORNING_HRV->value, 'period' => $period]);
-        } else {
-            $hrvMetrics = $allMetrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_HRV);
+        // 2. Diminution de la qualité du sommeil (MORNING_SLEEP_QUALITY)
+        $sleepMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_SLEEP_QUALITY);
+        $sleepThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_SLEEP_QUALITY->value];
+        if ($sleepMetrics->count() > 5) {
+            $averageSleep7Days = $this->metricTrendsService->getMetricTrendsForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 7 jours'] ?? null;
+            $averageSleep30Days = $this->metricTrendsService->getMetricTrendsForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 30 jours'] ?? null;
+
+            if ($averageSleep7Days !== null && $averageSleep7Days <= $sleepThresholds['persistent_low_7d_max'] && $averageSleep30Days <= $sleepThresholds['persistent_low_30d_max']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Qualité de sommeil très faible persistante (moy. 7j: '.round($averageSleep7Days).'/10). Peut affecter la récupération et la performance.'];
+            }
+            $sleepTrend = $this->metricTrendsService->getEvolutionTrendForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY);
+            if ($sleepTrend['trend'] === 'decreasing' && $sleepTrend['change'] < $sleepThresholds['trend_decrease_percent']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la qualité du sommeil ('.number_format($sleepTrend['change'], 1).'%).'];
+            }
         }
 
+        // 3. Douleurs persistantes (MORNING_PAIN)
+        $painMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_PAIN);
+        $painThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_PAIN->value];
+        if ($painMetrics->count() > 5) {
+            $averagePain7Days = $this->metricTrendsService->getMetricTrendsForCollection($painMetrics, MetricType::MORNING_PAIN)['averages']['Derniers 7 jours'] ?? null;
+            if ($averagePain7Days !== null && $averagePain7Days >= $painThresholds['persistent_high_7d_min']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Douleurs musculaires/articulaires persistantes (moy. 7j: '.round($averagePain7Days)."/10). Évaluer la cause et la nécessité d'un repos."];
+            }
+            $painTrend = $this->metricTrendsService->getEvolutionTrendForCollection($painMetrics, MetricType::MORNING_PAIN);
+            if ($painTrend['trend'] === 'increasing' && $painTrend['change'] > $painThresholds['trend_increase_percent']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative des douleurs (+'.number_format($painTrend['change'], 1).'%).'];
+            }
+        }
+
+        // 4. Baisse de la VFC (MORNING_HRV) - indicateur de stress ou de fatigue
+        $hrvMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_HRV);
+        $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
         if ($hrvMetrics->count() > 5) {
-            $hrvTrend = $this->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
-            $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
+            $hrvTrend = $this->metricTrendsService->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
             if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < $hrvThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%) sur les 30 derniers jours.'];
+                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%). Peut indiquer un stress ou une fatigue accrue.'];
             }
+        }
+
+        // 5. Baisse du ressenti de performance (POST_SESSION_PERFORMANCE_FEEL)
+        $perfFeelMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::POST_SESSION_PERFORMANCE_FEEL);
+        $perfFeelThresholds = self::ALERT_THRESHOLDS[MetricType::POST_SESSION_PERFORMANCE_FEEL->value];
+        if ($perfFeelMetrics->count() > 5) {
+            $perfFeelTrend = $this->metricTrendsService->getEvolutionTrendForCollection($perfFeelMetrics, MetricType::POST_SESSION_PERFORMANCE_FEEL);
+            if ($perfFeelTrend['trend'] === 'decreasing' && $perfFeelTrend['change'] < $perfFeelThresholds['trend_decrease_percent']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative du ressenti de performance en séance ('.number_format($perfFeelTrend['change'], 1).'%).'];
+            }
+        }
+
+        // 6. Faible poids corporel ou perte de poids rapide (MORNING_BODY_WEIGHT_KG)
+        $weightMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_BODY_WEIGHT_KG);
+        $weightThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_BODY_WEIGHT_KG->value];
+        if ($weightMetrics->count() > 5) {
+            $weightTrend = $this->metricTrendsService->getEvolutionTrendForCollection($weightMetrics, MetricType::MORNING_BODY_WEIGHT_KG);
+            if ($weightTrend['trend'] === 'decreasing' && $weightTrend['change'] < $weightThresholds['trend_decrease_percent']) {
+                $alerts[] = ['type' => 'warning', 'message' => 'Perte de poids significative ('.number_format(abs($weightTrend['change']), 1).'%). Peut être un signe de déficit énergétique.'];
+            }
+        }
+
+        // ** Alertes Spécifiques aux Femmes (potentiels signes de RED-S) **
+        if ($athlete->gender->value === 'w') {
+            $menstrualThresholds = self::ALERT_THRESHOLDS['MENSTRUAL_CYCLE'];
+            $cycleData = $this->deduceMenstrualCyclePhase($athlete);
+
+            // 1. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)
+            if ($cycleData['phase'] === 'Aménorrhée' || $cycleData['phase'] === 'Oligoménorrhée') {
+                $alerts[] = [
+                    'type'    => 'danger',
+                    'message' => "Cycle menstruel irrégulier (moy. {$cycleData['cycle_length_avg']} jours). Il est suggéré de consulter pour évaluer un potentiel RED-S.",
+                ];
+            }
+            // 2. Absence de règles prolongée sans données de cycle moyen (cas où 'deduceMenstrualCyclePhase' n'aurait pas pu déterminer la phase 'Aménorrhée' faute de données de moyenne)
+            elseif ($cycleData['cycle_length_avg'] === null && $cycleData['last_period_start']) {
+                $daysSinceLastPeriod = Carbon::parse($cycleData['last_period_start'])->diffInDays(Carbon::now());
+                if ($daysSinceLastPeriod > $menstrualThresholds['prolonged_absence_no_avg']) {
+                    $alerts[] = ['type' => 'danger', 'message' => 'Absence de règles prolongée ('.$daysSinceLastPeriod.' jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative.'];
+                }
+            }
+            // 3. Potentiel retard ou cycle long avec une moyenne de cycle NORMAL (21-35 jours)
+            elseif ($cycleData['phase'] === 'Potentiel retard ou cycle long'
+                && $cycleData['cycle_length_avg'] >= $menstrualThresholds['oligomenorrhea_min_cycle']
+                && $cycleData['cycle_length_avg'] <= $menstrualThresholds['oligomenorrhea_max_cycle']) {
+                $alerts[] = [
+                    'type'    => 'warning',
+                    'message' => "Retard du cycle menstruel (moy. {$cycleData['cycle_length_avg']} jours). Suggéré de surveiller.",
+                ];
+            }
+            // 4. Phase 'Inconnue' en raison de l'absence de données J1 (priorité faible)
+            elseif ($cycleData['phase'] === 'Inconnue' && $cycleData['reason'] === 'Enregistrez au moins deux J1 pour calculer la durée moyenne de votre cycle.') {
+                $alerts[] = ['type' => 'info', 'message' => 'Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé.'];
+            }
+
+            // 5. Corrélation entre phase menstruelle et performance/fatigue
+            if ($cycleData['phase'] === 'Menstruelle') {
+                $currentDayFatigue = $metrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value;
+                $currentDayPerformanceFeel = $metrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)?->value;
+
+                if ($currentDayFatigue !== null && $currentDayFatigue >= $menstrualThresholds['menstrual_fatigue_min']) {
+                    $alerts[] = ['type' => 'info', 'message' => 'Fatigue élevée ('.$currentDayFatigue."/10) pendant la phase menstruelle. Adapter l'entraînement peut être bénéfique."];
+                }
+                if ($currentDayPerformanceFeel !== null && $currentDayPerformanceFeel <= $menstrualThresholds['menstrual_perf_feel_max']) {
+                    $alerts[] = ['type' => 'info', 'message' => 'Performance ressentie faible ('.$currentDayPerformanceFeel."/10) pendant la phase menstruelle. Évaluer l'intensité de l'entraînement."];
+                }
+            }
+        }
+
+        // Gérer les cas où aucune alerte spécifique n'a été détectée.
+        // On vérifie d'abord s'il y a suffisamment de données pour une analyse.
+        if ($metrics->isEmpty() || $metrics->count() < 5) {
+            $alerts[] = ['type' => 'info', 'message' => 'Pas encore suffisamment de données enregistrées pour une analyse complète sur la période : '.str_replace('_', ' ', $period).'.'];
         }
 
         return $alerts;
     }
 
     /**
-     * Calcule la tendance d'évolution pour une collection de valeurs numériques et de dates.
-     * Cette méthode est utilisée pour les métriques synthétiques comme le SBM qui ne sont pas directement des "MetricType".
-     *
-     * @param  Collection<object|array>  $dataCollection  Collection d'objets/tableaux avec 'date' et 'value'.
-     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
+     * Retourne la direction optimale de la tendance pour une métrique hebdomadaire.
      */
-    public function calculateTrendFromNumericCollection(Collection $dataCollection): array
+    protected function getWeeklyMetricOptimalDirection(CalculatedMetric $metricKey): string
     {
-        $numericData = $dataCollection->filter(fn ($item) => is_numeric($item->value ?? $item['value'] ?? null))
-            ->sortBy(fn ($item) => $item->date ?? $item['date']);
-
-        if ($numericData->count() < 2) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
-        }
-
-        $totalCount = $numericData->count();
-        $segmentSize = floor($totalCount / 3);
-
-        if ($segmentSize === 0) {
-            $firstValue = $numericData->first()->value ?? $numericData->first()['value'];
-            $lastValue = $numericData->last()->value ?? $numericData->last()['value'];
-        } else {
-            $firstSegment = $numericData->take($segmentSize);
-            $lastSegment = $numericData->slice($totalCount - $segmentSize);
-
-            $firstValue = $firstSegment->avg(fn ($item) => $item->value ?? $item['value']);
-            $lastValue = $lastSegment->avg(fn ($item) => $item->value ?? $item['value']);
-        }
-
-        if ($firstValue === null || $lastValue === null) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
-        }
-
-        if ($firstValue == 0 && $lastValue != 0) {
-            $change = 100;
-        } elseif ($firstValue == 0 && $lastValue == 0) {
-            $change = 0;
-        } else {
-            $change = (($lastValue - $firstValue) / $firstValue) * 100;
-        }
-
-        $trend = 'stable';
-        if ($change > 0.5) {
-            $trend = 'increasing';
-        } elseif ($change < -0.5) {
-            $trend = 'decreasing';
-        }
-
-        return [
-            'trend'  => $trend,
-            'change' => $change,
-        ];
+        return $metricKey->getTrendOptimalDirection();
     }
 
     /**
@@ -1661,200 +1271,5 @@ class MetricStatisticsService
             'cycle_length_avg'  => $averageCycleLength !== null ? round($averageCycleLength) : null,
             'last_period_start' => $lastPeriodStart ? $lastPeriodStart->format('d.m.Y') : null,
         ];
-    }
-
-    /**
-     * Analyse les tendances des métriques et identifie des signaux d'alerte pour un athlète.
-     *
-     * @param  Athlete  $athlete  L'athlète pour lequel analyser les alertes.
-     * @param  string  $period  Période pour l'analyse (ex: 'last_30_days', 'last_6_months'). Par défaut à 'last_60_days'.
-     * @param  Collection|null  $metrics  Collection de métriques pré-chargée pour éviter des requêtes supplémentaires.
-     * @return array Des drapeaux et des messages d'alerte.
-     */
-    public function getAthleteAlerts(Athlete $athlete, string $period = 'last_60_days', ?Collection $metrics = null): array
-    {
-        $alerts = [];
-        if (is_null($metrics)) {
-            $metrics = $this->getAthleteMetrics($athlete, ['period' => $period]);
-        }
-
-        // ** Alertes Générales (Hommes et Femmes) **
-
-        // 1. Fatigue générale persistante (MORNING_GENERAL_FATIGUE)
-        $fatigueType = MetricType::MORNING_GENERAL_FATIGUE;
-        $fatigueMetrics = $metrics->filter(fn ($m) => $m->metric_type === $fatigueType);
-        $fatigueThresholds = self::ALERT_THRESHOLDS[$fatigueType->value];
-        if ($fatigueMetrics->count() > 5 && $fatigueType->getValueColumn() !== 'note') {
-            $averageFatigue7Days = $this->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 7 jours'] ?? null;
-            $averageFatigue30Days = $this->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 30 jours'] ?? null;
-
-            if ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['persistent_high_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['persistent_high_30d_min']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Fatigue générale très élevée persistante (moy. 7j: '.round($averageFatigue7Days).'/10). Potentiel signe de surentraînement ou manque de récupération.'];
-            } elseif ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['elevated_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['elevated_30d_min']) {
-                $alerts[] = ['type' => 'info', 'message' => 'Fatigue générale élevée (moy. 7j: '.round($averageFatigue7Days).'/10). Surveiller la récupération.'];
-            }
-            $fatigueTrend = $this->getEvolutionTrendForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE);
-            if ($fatigueTrend['trend'] === 'increasing' && $fatigueTrend['change'] > $fatigueThresholds['trend_increase_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative de la fatigue générale (+'.number_format($fatigueTrend['change'], 1).'%).'];
-            }
-        }
-
-        // 2. Diminution de la qualité du sommeil (MORNING_SLEEP_QUALITY)
-        $sleepMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_SLEEP_QUALITY);
-        $sleepThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_SLEEP_QUALITY->value];
-        if ($sleepMetrics->count() > 5) {
-            $averageSleep7Days = $this->getMetricTrendsForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 7 jours'] ?? null;
-            $averageSleep30Days = $this->getMetricTrendsForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 30 jours'] ?? null;
-
-            if ($averageSleep7Days !== null && $averageSleep7Days <= $sleepThresholds['persistent_low_7d_max'] && $averageSleep30Days <= $sleepThresholds['persistent_low_30d_max']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Qualité de sommeil très faible persistante (moy. 7j: '.round($averageSleep7Days).'/10). Peut affecter la récupération et la performance.'];
-            }
-            $sleepTrend = $this->getEvolutionTrendForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY);
-            if ($sleepTrend['trend'] === 'decreasing' && $sleepTrend['change'] < $sleepThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la qualité du sommeil ('.number_format($sleepTrend['change'], 1).'%).'];
-            }
-        }
-
-        // 3. Douleurs persistantes (MORNING_PAIN)
-        $painMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_PAIN);
-        $painThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_PAIN->value];
-        if ($painMetrics->count() > 5) {
-            $averagePain7Days = $this->getMetricTrendsForCollection($painMetrics, MetricType::MORNING_PAIN)['averages']['Derniers 7 jours'] ?? null;
-            if ($averagePain7Days !== null && $averagePain7Days >= $painThresholds['persistent_high_7d_min']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Douleurs musculaires/articulaires persistantes (moy. 7j: '.round($averagePain7Days)."/10). Évaluer la cause et la nécessité d'un repos."];
-            }
-            $painTrend = $this->getEvolutionTrendForCollection($painMetrics, MetricType::MORNING_PAIN);
-            if ($painTrend['trend'] === 'increasing' && $painTrend['change'] > $painThresholds['trend_increase_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative des douleurs (+'.number_format($painTrend['change'], 1).'%).'];
-            }
-        }
-
-        // 4. Baisse de la VFC (MORNING_HRV) - indicateur de stress ou de fatigue
-        $hrvMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_HRV);
-        $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
-        if ($hrvMetrics->count() > 5) {
-            $hrvTrend = $this->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
-            if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < $hrvThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%). Peut indiquer un stress ou une fatigue accrue.'];
-            }
-        }
-
-        // 5. Baisse du ressenti de performance (POST_SESSION_PERFORMANCE_FEEL)
-        $perfFeelMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::POST_SESSION_PERFORMANCE_FEEL);
-        $perfFeelThresholds = self::ALERT_THRESHOLDS[MetricType::POST_SESSION_PERFORMANCE_FEEL->value];
-        if ($perfFeelMetrics->count() > 5) {
-            $perfFeelTrend = $this->getEvolutionTrendForCollection($perfFeelMetrics, MetricType::POST_SESSION_PERFORMANCE_FEEL);
-            if ($perfFeelTrend['trend'] === 'decreasing' && $perfFeelTrend['change'] < $perfFeelThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative du ressenti de performance en séance ('.number_format($perfFeelTrend['change'], 1).'%).'];
-            }
-        }
-
-        // 6. Faible poids corporel ou perte de poids rapide (MORNING_BODY_WEIGHT_KG)
-        $weightMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_BODY_WEIGHT_KG);
-        $weightThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_BODY_WEIGHT_KG->value];
-        if ($weightMetrics->count() > 5) {
-            $weightTrend = $this->getEvolutionTrendForCollection($weightMetrics, MetricType::MORNING_BODY_WEIGHT_KG);
-            if ($weightTrend['trend'] === 'decreasing' && $weightTrend['change'] < $weightThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Perte de poids significative ('.number_format(abs($weightTrend['change']), 1).'%). Peut être un signe de déficit énergétique.'];
-            }
-        }
-
-        // ** Alertes Spécifiques aux Femmes (potentiels signes de RED-S) **
-        if ($athlete->gender->value === 'w') {
-            $menstrualThresholds = self::ALERT_THRESHOLDS['MENSTRUAL_CYCLE'];
-            $cycleData = $this->deduceMenstrualCyclePhase($athlete);
-
-            // 1. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)
-            if ($cycleData['phase'] === 'Aménorrhée' || $cycleData['phase'] === 'Oligoménorrhée') {
-                $alerts[] = [
-                    'type'    => 'danger',
-                    'message' => "Cycle menstruel irrégulier (moy. {$cycleData['cycle_length_avg']} jours). Il est suggéré de consulter pour évaluer un potentiel RED-S.",
-                ];
-            }
-            // 2. Absence de règles prolongée sans données de cycle moyen (cas où 'deduceMenstrualCyclePhase' n'aurait pas pu déterminer la phase 'Aménorrhée' faute de données de moyenne)
-            elseif ($cycleData['cycle_length_avg'] === null && $cycleData['last_period_start']) {
-                $daysSinceLastPeriod = Carbon::parse($cycleData['last_period_start'])->diffInDays(Carbon::now());
-                if ($daysSinceLastPeriod > $menstrualThresholds['prolonged_absence_no_avg']) {
-                    $alerts[] = ['type' => 'danger', 'message' => 'Absence de règles prolongée ('.$daysSinceLastPeriod.' jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative.'];
-                }
-            }
-            // 3. Potentiel retard ou cycle long avec une moyenne de cycle NORMAL (21-35 jours)
-            elseif ($cycleData['phase'] === 'Potentiel retard ou cycle long'
-                && $cycleData['cycle_length_avg'] >= $menstrualThresholds['oligomenorrhea_min_cycle']
-                && $cycleData['cycle_length_avg'] <= $menstrualThresholds['oligomenorrhea_max_cycle']) {
-                $alerts[] = [
-                    'type'    => 'warning',
-                    'message' => "Retard du cycle menstruel (moy. {$cycleData['cycle_length_avg']} jours). Suggéré de surveiller.",
-                ];
-            }
-            // 4. Phase 'Inconnue' en raison de l'absence de données J1 (priorité faible)
-            elseif ($cycleData['phase'] === 'Inconnue' && $cycleData['reason'] === 'Enregistrez au moins deux J1 pour calculer la durée moyenne de votre cycle.') {
-                $alerts[] = ['type' => 'info', 'message' => 'Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé.'];
-            }
-
-            // 5. Corrélation entre phase menstruelle et performance/fatigue
-            if ($cycleData['phase'] === 'Menstruelle') {
-                $currentDayFatigue = $metrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value;
-                $currentDayPerformanceFeel = $metrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)?->value;
-
-                if ($currentDayFatigue !== null && $currentDayFatigue >= $menstrualThresholds['menstrual_fatigue_min']) {
-                    $alerts[] = ['type' => 'info', 'message' => 'Fatigue élevée ('.$currentDayFatigue."/10) pendant la phase menstruelle. Adapter l'entraînement peut être bénéfique."];
-                }
-                if ($currentDayPerformanceFeel !== null && $currentDayPerformanceFeel <= $menstrualThresholds['menstrual_perf_feel_max']) {
-                    $alerts[] = ['type' => 'info', 'message' => 'Performance ressentie faible ('.$currentDayPerformanceFeel."/10) pendant la phase menstruelle. Évaluer l'intensité de l'entraînement."];
-                }
-            }
-        }
-
-        // Gérer les cas où aucune alerte spécifique n'a été détectée.
-        // On vérifie d'abord s'il y a suffisamment de données pour une analyse.
-        if ($metrics->isEmpty() || $metrics->count() < 5) {
-            $alerts[] = ['type' => 'info', 'message' => 'Pas encore suffisamment de données enregistrées pour une analyse complète sur la période : '.str_replace('_', ' ', $period).'.'];
-        }
-
-        return $alerts;
-    }
-
-    /**
-     * Retourne la direction optimale de la tendance pour une métrique hebdomadaire.
-     */
-    protected function getWeeklyMetricOptimalDirection(CalculatedMetric $metricKey): string
-    {
-        return $metricKey->getTrendOptimalDirection();
-    }
-
-    protected function checkMissingDailyReadinessMetrics(Collection $allMetrics): array
-    {
-        $missingAlerts = [];
-        $missingCount = 0;
-        $missingMetricNames = [];
-        $today = now()->startOfDay();
-
-        foreach (self::ESSENTIAL_DAILY_READINESS_METRICS as $metricType) {
-            $metricExists = $allMetrics->where('metric_type', $metricType->value)
-                                       ->where('date', $today)
-                                       ->isNotEmpty();
-
-            if (! $metricExists) {
-                $missingAlerts[] = [
-                    'type'    => 'info',
-                    'message' => "Donnée manquante : La métrique \"{$metricType->getLabel()}\" n'a pas été enregistrée pour aujourd'hui. Veuillez la remplir pour un calcul complet du score de readiness.",
-                ];
-                $missingCount++;
-                $missingMetricNames[] = $metricType->getLabel();
-            }
-        }
-
-        // Cas spécifique pour le CIH/CPH qui est hebdomadaire mais dépend des données quotidiennes
-        $sessionLoadMetricsThisWeek = $allMetrics->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
-                                                 ->whereBetween('date', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
-        if ($sessionLoadMetricsThisWeek->isEmpty()) {
-            $missingAlerts[] = [
-                'type'    => 'info',
-                'message' => "Donnée manquante : Aucune \"Charge de Session\" n'a été enregistrée cette semaine. Le calcul du ratio Charge Réelle/Planifiée sera incomplet.",
-            ];
-        }
-
-        return ['alerts' => $missingAlerts, 'missing_count' => $missingCount, 'missing_metric_names' => $missingMetricNames];
     }
 }
