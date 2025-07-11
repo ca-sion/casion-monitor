@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CalculatedMetric;
 use Carbon\Carbon;
 use App\Models\Metric;
 use App\Models\Athlete;
@@ -9,9 +10,18 @@ use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Builder;
+use App\Services\MetricCalculationService;
 
 class MetricStatisticsService
 {
+    protected MetricCalculationService $metricCalculationService;
+
+    public function __construct(MetricCalculationService $metricCalculationService)
+    {
+        $this->metricCalculationService = $metricCalculationService;
+    }
+
     private const ALERT_THRESHOLDS = [
         MetricType::MORNING_GENERAL_FATIGUE->value => [
             'persistent_high_7d_min'  => 7,
@@ -236,7 +246,7 @@ class MetricStatisticsService
             $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
             $metricsForWeek = $allAthleteMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
 
-            $cih = $this->calculateCihForCollection($metricsForWeek);
+            $cih = $this->metricCalculationService->calculateCihForCollection($metricsForWeek);
 
             $sbmSum = 0;
             $sbmCount = 0;
@@ -251,7 +261,7 @@ class MetricStatisticsService
             foreach ($dayPeriod as $date) {
                 $dateStr = $date->format('Y-m-d');
                 if ($sbmMetricsForWeek->has($dateStr)) {
-                    $sbmValue = $this->calculateSbmForCollection($sbmMetricsForWeek->get($dateStr));
+                    $sbmValue = $this->metricCalculationService->calculateSbmForCollection($sbmMetricsForWeek->get($dateStr));
                     if ($sbmValue > 0) {
                         $sbmSum += $sbmValue;
                         $sbmCount++;
@@ -261,11 +271,11 @@ class MetricStatisticsService
             $sbm = $sbmCount > 0 ? $sbmSum / $sbmCount : null;
 
             $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
-            $cph = $planWeek ? $this->calculateCph($planWeek) : 0.0;
+            $cph = $planWeek ? $this->metricCalculationService->calculateCph($planWeek) : 0.0;
 
-            $cihNormalized = $this->calculateCihNormalizedForCollection($metricsForWeek);
-            $ratioCihCph = ($cih > 0 && $cph > 0) ? $this->calculateRatio($cih, $cph) : null;
-            $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->calculateRatio($cihNormalized, $cph) : null;
+            $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek, self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days']);
+            $ratioCihCph = ($cih > 0 && $cph > 0) ? $this->metricCalculationService->calculateRatio($cih, $cph) : null;
+            $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->metricCalculationService->calculateRatio($cihNormalized, $cph) : null;
 
             $value = match ($metricKey) {
                 'cih'                      => $cih,
@@ -365,44 +375,6 @@ class MetricStatisticsService
         };
     }
 
-    /**
-     * Calcule le Score de Bien-être Matinal (SBM) pour un seul jour à partir d'une collection de métriques.
-     */
-    public function calculateSbmForCollection(Collection $dailyMetrics): ?float
-    {
-        $sbmSum = 0;
-        $maxPossibleSbm = 0;
-
-        $sleepQuality = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY)?->value;
-        if ($sleepQuality !== null) {
-            $sbmSum += $sleepQuality;
-            $maxPossibleSbm += 10;
-        }
-
-        $generalFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value;
-        if ($generalFatigue !== null) {
-            $sbmSum += (10 - $generalFatigue);
-            $maxPossibleSbm += 10;
-        }
-
-        $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN)?->value;
-        if ($pain !== null) {
-            $sbmSum += (10 - $pain);
-            $maxPossibleSbm += 10;
-        }
-
-        $moodWellbeing = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING)?->value;
-        if ($moodWellbeing !== null) {
-            $sbmSum += $moodWellbeing;
-            $maxPossibleSbm += 10;
-        }
-
-        if ($maxPossibleSbm === 0) {
-            return null; // Toutes les métriques sont manquantes
-        }
-
-        return (float) (($sbmSum / $maxPossibleSbm) * 10);
-    }
 
     /**
      * Récupère les données de métriques pour un athlète donné, avec des filtres.
@@ -806,142 +778,6 @@ class MetricStatisticsService
         return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
     }
 
-    /**
-     * Calcule la Charge Subjective Réelle par Séance (CSR-S) pour une métrique de RPE donnée.
-     *
-     * @param  Metric  $rpeMetric  La métrique de RPE (Rate of Perceived Exertion).
-     * @return float La Charge Subjective Réelle par Séance (CSR-S).
-     */
-    public function calculateCsrS(Metric $rpeMetric): float
-    {
-        if ($rpeMetric->metric_type !== MetricType::POST_SESSION_SESSION_LOAD || ! is_numeric($rpeMetric->value)) {
-            return 0.0;
-        }
-
-        return (float) $rpeMetric->value;
-    }
-
-    /**
-     * Calcule la Charge Interne Hebdomadaire (CIH) pour une semaine donnée et un athlète.
-     * CIH est la somme des Charges Subjectives Réelles par Séance (CSR-S) pour chaque séance de la semaine.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $weekStartDate  La date de début de la semaine.
-     * @return float La Charge Interne Hebdomadaire (CIH).
-     */
-    protected function calculateCihForCollection(Collection $metricsForWeek): float
-    {
-        $cih = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
-
-        return (float) $cih;
-    }
-
-    /**
-     * Calcule la Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED) pour une semaine donnée à partir d'une collection de métriques.
-     * CIH_NORMALIZED est calculée comme : (Somme des POST_SESSION_SESSION_LOAD / Nombre de jours avec POST_SESSION_SESSION_LOAD) * 4.
-     *
-     * @param  Collection<Metric>  $metricsForWeek  La collection de métriques pour la semaine.
-     * @return float La Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED).
-     */
-    protected function calculateCihNormalizedForCollection(Collection $metricsForWeek): float
-    {
-        $rpeMetrics = $metricsForWeek->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value);
-
-        if ($rpeMetrics->isEmpty()) {
-            return 0.0;
-        }
-
-        $sumRpe = $rpeMetrics->sum('value');
-        $distinctDays = $rpeMetrics->pluck('date')->unique()->count();
-
-        if ($distinctDays === 0) {
-            return 0.0;
-        }
-
-        $averageSessionLoad = $sumRpe / $distinctDays;
-
-        $normalizationDays = self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days'];
-
-        return (float) ($averageSessionLoad * $normalizationDays);
-    }
-
-    /**
-     * Calcule le Score de Bien-être Matinal (SBM) pour un jour donné et un athlète.
-     * SBM est calculé comme suit : MORNING_SLEEP_QUALITY + (10 - MORNING_GENERAL_FATIGUE) + (10 - MORNING_PAIN) + MORNING_MOOD_WELLBEING.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $date  La date pour laquelle calculer le SBM.
-     * @return float Le Score de Bien-être Matinal (SBM).
-     */
-    public function calculateSbm(Athlete $athlete, Carbon $date): ?float
-    {
-        $sbmSum = 0;
-        $maxPossibleSbm = 0;
-
-        $sleepQuality = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)->first()?->value;
-        if ($sleepQuality !== null) {
-            $sbmSum += $sleepQuality;
-            $maxPossibleSbm += 10;
-        }
-
-        $generalFatigue = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_GENERAL_FATIGUE->value)->first()?->value;
-        if ($generalFatigue !== null) {
-            $sbmSum += (10 - $generalFatigue);
-            $maxPossibleSbm += 10;
-        }
-
-        $pain = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_PAIN->value)->first()?->value;
-        if ($pain !== null) {
-            $sbmSum += (10 - $pain);
-            $maxPossibleSbm += 10;
-        }
-
-        $moodWellbeing = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)->first()?->value;
-        if ($moodWellbeing !== null) {
-            $sbmSum += $moodWellbeing;
-            $maxPossibleSbm += 10;
-        }
-
-        if ($maxPossibleSbm === 0) {
-            return null; // Toutes les métriques sont manquantes
-        }
-
-        return (float) (($sbmSum / $maxPossibleSbm) * 10);
-    }
-
-    /**
-     * Calcule la Charge Planifiée Hebdomadaire (CPH) pour une semaine donnée.
-     * CPH est calculée comme : volume_planned * (intensity_planned / 10).
-     *
-     * @param  TrainingPlanWeek  $planWeek  La semaine du plan d'entraînement.
-     * @return float La Charge Planifiée Hebdomadaire (CPH).
-     */
-    public function calculateCph(TrainingPlanWeek $planWeek): float
-    {
-        $volumePlanned = $planWeek->volume_planned ?? 0;
-        $intensityPlanned = $planWeek->intensity_planned ?? 0;
-        $normalizedIntensity = $intensityPlanned / 10;
-
-        $cph = $volumePlanned * $normalizedIntensity;
-
-        return (float) $cph;
-    }
-
-    /**
-     * Calcule le Ratio CIH / CPH.
-     *
-     * @param  float  $cih  Charge Interne Hebdomadaire.
-     * @param  float  $cph  Charge Planifiée Hebdomadaire.
-     * @return float Le ratio CIH/CPH. Retourne 0.0 si CPH est zéro pour éviter une division par zéro.
-     */
-    public function calculateRatio(float $cih, float $cph): float
-    {
-        if ($cph === 0.0) {
-            return 0.0;
-        }
-
-        return $cih / $cph;
-    }
 
     public function calculateOverallReadinessScore(Athlete $athlete, Collection $allMetrics): int
     {
@@ -956,7 +792,7 @@ class MetricStatisticsService
         ])->filter(fn ($m) => $m->date->isToday()); // On prend les métriques du jour
 
         // Calcul du SBM via votre méthode existante (assumée retourner sur 0-10)
-        $dailySbm = $this->calculateSbmForCollection($sbmMetrics);
+        $dailySbm = $this->metricCalculationService->calculateSbmForCollection($sbmMetrics);
 
         if ($dailySbm !== null) {
             // Impact du SBM : Plus le SBM est bas, plus le score de readiness diminue.
@@ -1132,14 +968,14 @@ class MetricStatisticsService
         $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
         $metricsForWeek = $allMetrics ? $allMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]) : $athlete->metrics()->whereBetween('date', [$weekStartDate, $weekEndDate])->get();
 
-        $cih = $this->calculateCihForCollection($metricsForWeek);
+        $cih = $this->metricCalculationService->calculateCihForCollection($metricsForWeek);
 
         $sbmSum = 0;
         $sbmCount = 0;
         $periodCarbon = \Carbon\CarbonPeriod::create($weekStartDate, '1 day', $weekEndDate);
         foreach ($periodCarbon as $date) {
             $dailyMetrics = $metricsForWeek->filter(fn ($m) => $m->date->format('Y-m-d') === $date->format('Y-m-d'));
-            $sbmValue = $this->calculateSbmForCollection($dailyMetrics);
+            $sbmValue = $this->metricCalculationService->calculateSbmForCollection($dailyMetrics);
             if ($sbmValue !== null) {
                 $sbmSum += $sbmValue;
                 $sbmCount++;
@@ -1148,12 +984,12 @@ class MetricStatisticsService
         $sbm = $sbmCount > 0 ? round($sbmSum / $sbmCount, 1) : 'N/A';
 
         $trainingPlanWeek = $this->getTrainingPlanWeekForAthlete($athlete, $weekStartDate);
-        $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
+        $cph = $trainingPlanWeek ? $this->metricCalculationService->calculateCph($trainingPlanWeek) : 0.0;
 
-        $ratioCihCph = ($cih > 0 && $cph > 0) ? round($this->calculateRatio($cih, $cph), 2) : 'N/A';
+        $ratioCihCph = ($cih > 0 && $cph > 0) ? round($this->metricCalculationService->calculateRatio($cih, $cph), 2) : 'N/A';
 
-        $cihNormalized = $this->calculateCihNormalizedForCollection($metricsForWeek);
-        $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? round($this->calculateRatio($cihNormalized, $cph), 2) : 'N/A';
+        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek, self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days']);
+        $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? round($this->metricCalculationService->calculateRatio($cihNormalized, $cph), 2) : 'N/A';
 
         return [
             'cih'                      => $cih,
@@ -1424,13 +1260,13 @@ class MetricStatisticsService
     {
         $alerts = [];
         $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
-        $cihNormalized = $this->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
-        $cph = $trainingPlanWeek ? $this->calculateCph($trainingPlanWeek) : 0.0;
+        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]), self::ALERT_THRESHOLDS['CIH_NORMALIZED']['normalization_days']);
+        $cph = $trainingPlanWeek ? $this->metricCalculationService->calculateCph($trainingPlanWeek) : 0.0;
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
 
         if ($cihNormalized > 0 && $cph > 0) {
-            $ratio = $this->calculateRatio($cihNormalized, $cph);
+            $ratio = $this->metricCalculationService->calculateRatio($cihNormalized, $cph);
 
             if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Sous-charge potentielle : Charge interne ('.number_format($cihNormalized, 1).") significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
@@ -1464,10 +1300,10 @@ class MetricStatisticsService
         $period = CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
         foreach ($period as $date) {
             if (is_null($allMetrics)) {
-                $sbmValue = $this->calculateSbm($athlete, $date);
+                $sbmValue = $this->metricCalculationService->calculateSbm($athlete, $date);
             } else {
                 $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $date->format('Y-m-d'));
-                $sbmValue = $this->calculateSbmForCollection($dailyMetrics);
+                $sbmValue = $this->metricCalculationService->calculateSbmForCollection($dailyMetrics);
             }
 
             if ($sbmValue !== null) {
@@ -1511,10 +1347,10 @@ class MetricStatisticsService
         $currentDate = $startDate->copy();
         while ($currentDate->lessThanOrEqualTo($endDate)) {
             if (is_null($allMetrics)) {
-                $sbmValue = $this->calculateSbm($athlete, $currentDate);
+                $sbmValue = $this->metricCalculationService->calculateSbm($athlete, $currentDate);
             } else {
                 $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $currentDate->format('Y-m-d'));
-                $sbmValue = $this->calculateSbmForCollection($dailyMetrics);
+                $sbmValue = $this->metricCalculationService->calculateSbmForCollection($dailyMetrics);
             }
 
             if ($sbmValue !== null && $sbmValue !== 0.0) {
