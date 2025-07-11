@@ -36,7 +36,7 @@ class BaseDataSeeder extends Seeder
         }
 
         // Création de l'athlète Guenièvre (ID 2)
-        $guenievre = Athlete::find(1);
+        $guenievre = Athlete::find(2);
         if (! $guenievre) {
             $guenievre = Athlete::factory()->create([
                 'id'         => 2,
