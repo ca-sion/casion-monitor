@@ -49,7 +49,7 @@ class MetricReadinessService
         ],
     ];
 
-    private const ESSENTIAL_DAILY_READINESS_METRICS = [
+    public const ESSENTIAL_DAILY_READINESS_METRICS = [
         MetricType::MORNING_SLEEP_QUALITY,
         MetricType::MORNING_GENERAL_FATIGUE,
         MetricType::PRE_SESSION_ENERGY_LEVEL,
@@ -137,12 +137,14 @@ class MetricReadinessService
         // Assurez-vous que athlete->currentTrainingPlan existe et que trainingPlanWeeks est une collection
         $trainingPlanWeeks = $athlete->currentTrainingPlan?->weeks ?? collect();
 
-        $cihData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, CalculatedMetric::CIH, 'last_7_days', $trainingPlanWeeks);
-        $cphData = $this->getDashboardWeeklyMetricDataForCollection($athlete, $allMetrics, CalculatedMetric::CPH, 'last_7_days', $trainingPlanWeeks);
+        // Trouver la TrainingPlanWeek pour la semaine en cours
+        $currentTrainingPlanWeek = $trainingPlanWeeks->firstWhere('start_date', $currentWeekStartDate->toDateString());
 
-        // Récupérer la dernière valeur calculée pour la semaine en cours
-        $currentCih = end($cihData['chart_data']['data']) ?? 0;
-        $currentCph = end($cphData['chart_data']['data']) ?? 0;
+        // Filtrer les métriques pour la semaine en cours
+        $metricsForCurrentWeek = $allMetrics->whereBetween('date', [$currentWeekStartDate, $currentWeekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]);
+
+        $currentCih = $this->metricCalculationService->calculateCihForCollection($metricsForCurrentWeek);
+        $currentCph = $currentTrainingPlanWeek ? $this->metricCalculationService->calculateCph($currentTrainingPlanWeek) : 0;
 
         if ($currentCih > 0 && $currentCph > 0) {
             $ratio = $currentCih / $currentCph;

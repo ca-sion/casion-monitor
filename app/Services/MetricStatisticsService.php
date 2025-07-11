@@ -123,21 +123,37 @@ class MetricStatisticsService
             return collect();
         }
 
+        // 0. Déterminer les métriques brutes
+        $metricTypes = $options['metric_types'];
+
+        if ($options['include_readiness_status']) {
+            $existingMetricValues = array_map(fn ($metricType) => $metricType->value, $metricTypes);
+            $essentialMetricValues = array_map(fn ($metricType) => $metricType->value, $this->metricReadinessService::ESSENTIAL_DAILY_READINESS_METRICS);
+            
+            $combinedMetricValues = array_unique(array_merge($existingMetricValues, $essentialMetricValues));
+            $metricTypes = array_map(fn ($value) => MetricType::from($value), $combinedMetricValues);
+        }
+
         // 1. Déterminer la période maximale de récupération des métriques brutes
         $maxStartDate = $this->determineMaxStartDate($options);
 
         // 2. Pré-charger toutes les métriques et les semaines de plan d'entraînement
         // Si le cycle menstruel est inclus, s'assurer d'avoir 1-2 ans de données pour les métriques J1
-        $allMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
-            ->when($options['include_menstrual_cycle'], function (Builder $query) {
-                $query->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
-                    ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD);
-            }, function (Builder $query) use ($maxStartDate, $options) {
-                $query->where('date', '>=', $maxStartDate)
-                    ->whereIn('metric_type', $options['metric_types']);
-            })
-            ->orderBy('date', 'asc')
-            ->get()
+        $allMetrics = Metric::whereIn('athlete_id', $athleteIds)
+            ->where('date', '>=', $maxStartDate)
+            ->whereIn('metric_type', $options['metric_types'])
+            ->orderBy('date', 'asc')->get();
+            
+        $allMenstrualMetrics = collect();
+        if ($options['include_menstrual_cycle']) {
+            $allMenstrualMetrics = Metric::whereIn('athlete_id', $athleteIds)
+                ->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
+                ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD)
+                ->orderBy('date', 'asc')->get();
+        }
+        
+        $allMetricsByAthlete = $allMetrics
+            ->merge($allMenstrualMetrics)
             ->groupBy('athlete_id');
 
         $athletesTrainingPlansIds = $athletes->pluck('current_training_plan.id')->filter()->values();
