@@ -111,7 +111,7 @@ class MetricAlertsService
         // Gérer les cas où aucune alerte spécifique n'a été détectée.
         // On vérifie d'abord s'il y a suffisamment de données pour une analyse.
         if ($metrics->isEmpty() || $metrics->count() < 5) {
-            $alerts[] = ['type' => 'info', 'message' => 'Pas encore suffisamment de données enregistrées pour une analyse complète.'];
+            $this->addAlert($alerts, 'info', 'Pas encore suffisamment de données enregistrées pour une analyse complète.');
         }
 
         return $alerts;
@@ -136,7 +136,7 @@ class MetricAlertsService
         $alerts = [];
         $readinessStatus = $this->metricReadinessService->getAthleteReadinessStatus($athlete, $athleteMetrics);
         if ($readinessStatus['level'] !== 'green') {
-            $alerts[] = ['type' => $readinessStatus['level'], 'message' => $readinessStatus['message']];
+            $this->addAlert($alerts, $readinessStatus['level'], $readinessStatus['message']);
         }
 
         return $alerts;
@@ -150,30 +150,24 @@ class MetricAlertsService
 
         // 1. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)
         if ($cycleData['phase'] === 'Aménorrhée' || $cycleData['phase'] === 'Oligoménorrhée') {
-            $alerts[] = [
-                'type'    => 'danger',
-                'message' => sprintf('Cycle menstruel irrégulier (moy. %d jours). Il est suggéré de consulter pour évaluer un potentiel RED-S.', $cycleData['cycle_length_avg']),
-            ];
+            $this->addAlert($alerts, 'danger', 'Cycle menstruel irrégulier (moy. ' . $cycleData['cycle_length_avg'] . ' jours). Il est suggéré de consulter pour évaluer un potentiel RED-S.');
         }
         // 2. Absence de règles prolongée sans données de cycle moyen (cas où 'deduceMenstrualCyclePhase' n'aurait pas pu déterminer la phase 'Aménorrhée' faute de données de moyenne)
         elseif ($cycleData['cycle_length_avg'] === null && $cycleData['last_period_start']) {
             $daysSinceLastPeriod = Carbon::parse($cycleData['last_period_start'])->diffInDays(Carbon::now());
             if ($daysSinceLastPeriod > $menstrualThresholds['prolonged_absence_no_avg']) {
-                $alerts[] = ['type' => 'danger', 'message' => sprintf('Absence de règles prolongée (%d jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative.', $daysSinceLastPeriod)];
+                $this->addAlert($alerts, 'danger', 'Absence de règles prolongée (' . $daysSinceLastPeriod . ' jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative.');
             }
         }
         // 3. Potentiel retard ou cycle long avec une moyenne de cycle NORMAL (21-35 jours)
         elseif ($cycleData['phase'] === 'Potentiel retard ou cycle long'
             && $cycleData['cycle_length_avg'] >= $menstrualThresholds['oligomenorrhea_min_cycle']
             && $cycleData['cycle_length_avg'] <= $menstrualThresholds['oligomenorrhea_max_cycle']) {
-            $alerts[] = [
-                'type'    => 'warning',
-                'message' => sprintf('Retard du cycle menstruel (moy. %d jours). Suggéré de surveiller.', $cycleData['cycle_length_avg']),
-            ];
+            $this->addAlert($alerts, 'warning', 'Retard du cycle menstruel (moy. ' . $cycleData['cycle_length_avg'] . ' jours). Suggéré de surveiller.');
         }
         // 4. Phase 'Inconnue' en raison de l'absence de données J1 (priorité faible)
         elseif ($cycleData['phase'] === 'Inconnue' && $cycleData['reason'] === 'Enregistrez au moins deux J1 pour calculer la durée moyenne de votre cycle.') {
-            $alerts[] = ['type' => 'info', 'message' => 'Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé.'];
+            $this->addAlert($alerts, 'info', 'Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé.');
         }
 
         // 5. Corrélation entre phase menstruelle et performance/fatigue
@@ -182,10 +176,10 @@ class MetricAlertsService
             $currentDayPerformanceFeel = $athleteMetrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)?->value;
 
             if ($currentDayFatigue !== null && $currentDayFatigue >= $menstrualThresholds['menstrual_fatigue_min']) {
-                $alerts[] = ['type' => 'info', 'message' => sprintf('Fatigue élevée (%d/10) pendant la phase menstruelle. Adapter l\'entraînement peut être bénéfique.', $currentDayFatigue)];
+                $this->addAlert($alerts, 'info', 'Fatigue élevée (' . $currentDayFatigue . '/10) pendant la phase menstruelle. Adapter l\'entraînement peut être bénéfique.');
             }
             if ($currentDayPerformanceFeel !== null && $currentDayPerformanceFeel <= $menstrualThresholds['menstrual_perf_feel_max']) {
-                $alerts[] = ['type' => 'info', 'message' => sprintf('Performance ressentie faible (%d/10) pendant la phase menstruelle. Évaluer l\'intensité de l\'entraînement.', $currentDayPerformanceFeel)];
+                $this->addAlert($alerts, 'info', 'Performance ressentie faible (' . $currentDayPerformanceFeel . '/10) pendant la phase menstruelle. Évaluer l\'intensité de l\'entraînement.');
             }
         }
 
@@ -214,16 +208,16 @@ class MetricAlertsService
             $ratio = $this->metricCalculationService->calculateRatio($cihNormalized, $cph);
 
             if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Sous-charge potentielle : Charge interne ('.number_format($cihNormalized, 1).") significativement inférieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
+                $this->addAlert($alerts, 'warning', 'Sous-charge potentielle : Charge interne (' . number_format($cihNormalized, 1) . ') significativement inférieure au plan (' . $cph . '). Ratio: ' . number_format($ratio, 2) . '.');
             } elseif ($ratio > $chargeThresholds['ratio_overload_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Surcharge potentielle : Charge interne ('.number_format($cihNormalized, 1).") significativement supérieure au plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
+                $this->addAlert($alerts, 'warning', 'Surcharge potentielle : Charge interne (' . number_format($cihNormalized, 1) . ') significativement supérieure au plan (' . $cph . '). Ratio: ' . number_format($ratio, 2) . '.');
             } else {
-                $alerts[] = ['type' => 'success', 'message' => 'Charge interne ('.number_format($cihNormalized, 1).") en adéquation avec le plan ({$cph}). Ratio: ".number_format($ratio, 2).'.'];
+                $this->addAlert($alerts, 'success', 'Charge interne (' . number_format($cihNormalized, 1) . ') en adéquation avec le plan (' . $cph . '). Ratio: ' . number_format($ratio, 2) . '.');
             }
         } elseif ($cihNormalized == 0) {
-            $alerts[] = ['type' => 'info', 'message' => sprintf('Pas suffisamment de données "%s" enregistrées cette semaine pour calculer le CIH Normalisée.', MetricType::POST_SESSION_SESSION_LOAD->getLabelShort())];
+            $this->addAlert($alerts, 'info', 'Pas suffisamment de données "' . MetricType::POST_SESSION_SESSION_LOAD->getLabelShort() . '" enregistrées cette semaine pour calculer le CIH Normalisée.');
         } elseif ($cph == 0) {
-            $alerts[] = ['type' => 'info', 'message' => "Pas de volume/intensité planifiés pour cette semaine ou CPH est à zéro. CPH: {$cph}."];
+            $this->addAlert($alerts, 'info', 'Pas de volume/intensité planifiés pour cette semaine ou CPH est à zéro. CPH: ' . $cph . '.');
         }
 
         return $alerts;
@@ -261,12 +255,12 @@ class MetricAlertsService
         if ($averageSbm !== null) {
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
             if ($averageSbm < $sbmThresholds['average_low_threshold']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('SBM faible pour la semaine (moy: %.1f/10). Surveiller la récupération.', $averageSbm)];
+                $this->addAlert($alerts, 'warning', 'SBM faible pour la semaine (moy: ' . number_format($averageSbm, 1) . '/10). Surveiller la récupération.');
             } elseif ($averageSbm > $sbmThresholds['average_high_threshold']) {
-                $alerts[] = ['type' => 'info', 'message' => sprintf('SBM élevé pour la semaine (moy: %.1f/10). Bonne récupération.', $averageSbm)];
+                $this->addAlert($alerts, 'info', 'SBM élevé pour la semaine (moy: ' . number_format($averageSbm, 1) . '/10). Bonne récupération.');
             }
         } else {
-            $alerts[] = ['type' => 'info', 'message' => 'Pas de données SBM pour cette semaine.'];
+            $this->addAlert($alerts, 'info', 'Pas de données SBM pour cette semaine.');
         }
 
         return $alerts;
@@ -308,7 +302,7 @@ class MetricAlertsService
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
             $sbmTrend = $this->metricTrendsService->calculateGenericNumericTrend($sbmDataCollection);
             if ($sbmTrend['trend'] === 'decreasing' && $sbmTrend['change'] < $sbmThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Baisse significative du SBM ('.number_format($sbmTrend['change'], 1).'%) sur les 30 derniers jours.'];
+                $this->addAlert($alerts, 'warning', 'Baisse significative du SBM (' . number_format($sbmTrend['change'], 1) . '%) sur les 30 derniers jours.');
             }
         }
 
@@ -318,7 +312,7 @@ class MetricAlertsService
             $hrvTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($hrvMetrics, MetricType::MORNING_HRV);
             $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
             if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < $hrvThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%) sur les 30 derniers jours.'];
+                $this->addAlert($alerts, 'warning', 'Diminution significative de la VFC (' . number_format($hrvTrend['change'], 1) . '%) sur les 30 derniers jours.');
             }
         }
 
@@ -336,13 +330,13 @@ class MetricAlertsService
             $averageFatigue30Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($fatigueMetrics, $fatigueType)['averages']['Derniers 30 jours'] ?? null;
 
             if ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['persistent_high_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['persistent_high_30d_min']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Fatigue générale très élevée persistante (moy. 7j: %d/10). Potentiel signe de surentraînement ou manque de récupération.', round($averageFatigue7Days))];
+                $this->addAlert($alerts, 'warning', 'Fatigue générale très élevée persistante (moy. ' . round($averageFatigue7Days) . '/10). Potentiel signe de surentraînement ou manque de récupération.');
             } elseif ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['elevated_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['elevated_30d_min']) {
-                $alerts[] = ['type' => 'info', 'message' => sprintf('Fatigue générale élevée (moy. 7j: %d/10). Surveiller la récupération.', round($averageFatigue7Days))];
+                $this->addAlert($alerts, 'info', 'Fatigue générale élevée (moy. ' . round($averageFatigue7Days) . '/10). Surveiller la récupération.');
             }
             $fatigueTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($fatigueMetrics, $fatigueType);
             if ($fatigueTrend['trend'] === 'increasing' && $fatigueTrend['change'] > $fatigueThresholds['trend_increase_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Augmentation significative de la fatigue générale (+%.1f%%).', $fatigueTrend['change'])];
+                $this->addAlert($alerts, 'warning', 'Augmentation significative de la fatigue générale (+' . number_format($fatigueTrend['change'], 1) . '%).');
             }
         }
     }
@@ -357,11 +351,11 @@ class MetricAlertsService
             $averageSleep30Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($sleepMetrics, $sleepType)['averages']['Derniers 30 jours'] ?? null;
 
             if ($averageSleep7Days !== null && $averageSleep7Days <= $sleepThresholds['persistent_low_7d_max'] && $averageSleep30Days <= $sleepThresholds['persistent_low_30d_max']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Qualité de sommeil très faible persistante (moy. 7j: %d/10). Peut affecter la récupération et la performance.', round($averageSleep7Days))];
+                $this->addAlert($alerts, 'warning', 'Qualité de sommeil très faible persistante (moy. ' . round($averageSleep7Days) . '/10). Peut affecter la récupération et la performance.');
             }
             $sleepTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($sleepMetrics, $sleepType);
             if ($sleepTrend['trend'] === 'decreasing' && $sleepTrend['change'] < $sleepThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Diminution significative de la qualité du sommeil (%.1f%%).', $sleepTrend['change'])];
+                $this->addAlert($alerts, 'warning', 'Diminution significative de la qualité du sommeil (' . number_format($sleepTrend['change'], 1) . '%).');
             }
         }
     }
@@ -374,11 +368,11 @@ class MetricAlertsService
         if ($painMetrics->count() > 5) {
             $averagePain7Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($painMetrics, $painType)['averages']['Derniers 7 jours'] ?? null;
             if ($averagePain7Days !== null && $averagePain7Days >= $painThresholds['persistent_high_7d_min']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Douleurs musculaires/articulaires persistantes (moy. 7j: %d/10). Évaluer la cause et la nécessité d\'un repos.', round($averagePain7Days))];
+                $this->addAlert($alerts, 'warning', 'Douleurs musculaires/articulaires persistantes (moy. ' . round($averagePain7Days) . '/10). Évaluer la cause et la nécessité d\'un repos.');
             }
             $painTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($painMetrics, $painType);
             if ($painTrend['trend'] === 'increasing' && $painTrend['change'] > $painThresholds['trend_increase_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Augmentation significative des douleurs (+%.1f%%).', $painTrend['change'])];
+                $this->addAlert($alerts, 'warning', 'Augmentation significative des douleurs (+' . number_format($painTrend['change'], 1) . '%).');
             }
         }
     }
@@ -391,7 +385,7 @@ class MetricAlertsService
         if ($hrvMetrics->count() > 5) {
             $hrvTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($hrvMetrics, $hrvType);
             if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < $hrvThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Diminution significative de la VFC (%.1f%%). Peut indiquer un stress ou une fatigue accrue.', $hrvTrend['change'])];
+                $this->addAlert($alerts, 'warning', 'Diminution significative de la VFC (' . number_format($hrvTrend['change'], 1) . '%). Peut indiquer un stress ou une fatigue accrue.');
             }
         }
     }
@@ -404,7 +398,7 @@ class MetricAlertsService
         if ($perfFeelMetrics->count() > 5) {
             $perfFeelTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($perfFeelMetrics, $perfFeelType);
             if ($perfFeelTrend['trend'] === 'decreasing' && $perfFeelTrend['change'] < $perfFeelThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Diminution significative du ressenti de performance en séance (%.1f%%).', $perfFeelTrend['change'])];
+                $this->addAlert($alerts, 'warning', 'Diminution significative du ressenti de performance en séance (' . number_format($perfFeelTrend['change'], 1) . '%).');
             }
         }
     }
@@ -417,8 +411,13 @@ class MetricAlertsService
         if ($weightMetrics->count() > 5) {
             $weightTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($weightMetrics, $weightType);
             if ($weightTrend['trend'] === 'decreasing' && $weightTrend['change'] < $weightThresholds['trend_decrease_percent']) {
-                $alerts[] = ['type' => 'warning', 'message' => sprintf('Perte de poids significative (%.1f%%). Peut être un signe de déficit énergétique.', abs($weightTrend['change']))];
+                $this->addAlert($alerts, 'warning', 'Perte de poids significative (' . number_format(abs($weightTrend['change']), 1) . '%). Peut être un signe de déficit énergétique.');
             }
         }
+    }
+
+    protected function addAlert(array &$alerts, string $type, string $message): void
+    {
+        $alerts[] = ['type' => $type, 'message' => $message];
     }
 }
