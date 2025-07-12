@@ -288,30 +288,6 @@ class MetricAlertsService
     }
 
     /**
-     * Récupère les alertes pour un athlète à partir d'une collection de métriques pré-chargée.
-     */
-    // protected function getAthleteAlertsForCollection(Athlete $athlete, Collection $metrics, string $period = 'last_60_days'): array
-    // {
-    //     return $this->getAthleteAlerts($athlete, $period, $metrics);
-    // }
-
-    /**
-     * Déduit la phase du cycle menstruel d'un athlète féminin à partir d'une collection de métriques pré-chargée.
-     */
-    // protected function deduceMenstrualCyclePhaseForCollection(Athlete $athlete, Collection $allMetrics): array
-    // {
-    //     return $this->deduceMenstrualCyclePhase($athlete, $allMetrics);
-    // }
-
-    /**
-     * Récupère les alertes de charge pour un athlète à partir de collections pré-chargées.
-     */
-    // protected function getChargeAlertsForCollection(Athlete $athlete, Collection $allMetrics, Collection $planWeeks, Carbon $weekStartDate): array
-    // {
-    //     return $this->getChargeAlerts($athlete, $weekStartDate, $allMetrics, $planWeeks);
-    // }
-
-    /**
      * Analyse les métriques de charge (CIH/CPH) et génère des alertes.
      *
      * @param  Athlete  $athlete  L'athlète concerné.
@@ -326,7 +302,6 @@ class MetricAlertsService
         $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
         $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
         $cph = $trainingPlanWeek ? $this->metricCalculationService->calculateCph($trainingPlanWeek) : 0.0;
-        $cph = number_format($cph, 1);
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
 

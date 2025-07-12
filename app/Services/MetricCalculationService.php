@@ -48,7 +48,11 @@ class MetricCalculationService
             return null;
         }
 
-        return (float) (($sbmSum / $maxPossibleSbm) * 10);
+        $smb = (($sbmSum / $maxPossibleSbm) * 10);
+
+        $sbm = number_format($smb, 1);
+
+        return (float) $smb;
     }
 
     /**
@@ -95,6 +99,8 @@ class MetricCalculationService
 
         $averageSessionLoad = $sumRpe / $distinctDays;
 
+        $averageSessionLoad = number_format($averageSessionLoad, 1);
+
         return (float) ($averageSessionLoad);
     }
 
@@ -135,7 +141,11 @@ class MetricCalculationService
             return null;
         }
 
-        return (float) (($sbmSum / $maxPossibleSbm) * 10);
+        $smb = (($sbmSum / $maxPossibleSbm) * 10);
+
+        $sbm = number_format($smb, 1);
+
+        return (float) $smb;
     }
 
     /**
@@ -152,6 +162,8 @@ class MetricCalculationService
         $scale = CalculatedMetric::CPH->getScale();
 
         $cph = (($normalizedVolume * $normalizedIntensity) ** 0.5) * $scale;
+
+        $cph = number_format($cph, 1);
 
         return (float) $cph;
     }

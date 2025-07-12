@@ -57,11 +57,11 @@ enum CalculatedMetric: string implements HasLabel
     {
         return match ($this) {
             self::CIH                      => 70,
-            self::CIH_NORMALIZED           => 40,
+            self::CIH_NORMALIZED           => 10,
             self::SBM                      => 10,
             self::CPH                      => 10,
-            self::RATIO_CIH_CPH            => 1.4,
-            self::RATIO_CIH_NORMALIZED_CPH => 0.8,
+            self::RATIO_CIH_CPH            => 1,
+            self::RATIO_CIH_NORMALIZED_CPH => 1,
             self::READINESS_SCORE          => 100,
         };
     }
