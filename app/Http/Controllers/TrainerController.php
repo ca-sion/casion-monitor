@@ -37,10 +37,13 @@ class TrainerController extends Controller
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
-            MetricType::POST_SESSION_SESSION_LOAD,
-            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
@@ -109,28 +112,30 @@ class TrainerController extends Controller
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
-            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
-            MetricType::MORNING_BODY_WEIGHT_KG,
             MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::MORNING_PAIN,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
             MetricType::PRE_SESSION_ENERGY_LEVEL,
             MetricType::PRE_SESSION_LEG_FEEL,
-            MetricType::POST_SESSION_SESSION_LOAD,
-            MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
         // Définir les types de métriques à afficher dans le tableau des données quotidiennes
         $displayTableMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
-            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
-            MetricType::MORNING_BODY_WEIGHT_KG,
             MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::MORNING_PAIN,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
             MetricType::PRE_SESSION_ENERGY_LEVEL,
             MetricType::PRE_SESSION_LEG_FEEL,
-            MetricType::POST_SESSION_SESSION_LOAD,
-            MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
         // Déterminer le type de métrique pour le graphique détaillé
@@ -161,27 +166,12 @@ class TrainerController extends Controller
         $chartData = $athleteData->chart_data ?? ['labels' => [], 'data' => [], 'unit' => null, 'label' => null];
 
         // Traiter l'historique des métriques pour la préparation du tableau
-        $processedDailyMetrics = $latestDailyMetrics->map(function ($metricDates, $date) use ($displayTableMetricTypes, $athleteData) {
-            $rowData = [
-                'date'      => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'),
-                'metrics'   => [],
-                'edit_link' => null,
-            ];
-
-            foreach ($displayTableMetricTypes as $metricType) {
-                $metric = $metricDates->where('metric_type', $metricType->value)->first();
-                $rowData['metrics'][$metricType->value] = $metric ? $this->metricStatisticsService->formatMetricDisplayValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
-            }
-
-            $firstMetricOfDay = $metricDates->first();
-            if ($firstMetricOfDay && isset($firstMetricOfDay->metadata['edit_link'])) {
-                $rowData['edit_link'] = $firstMetricOfDay->metadata['edit_link'];
-            } elseif ($firstMetricOfDay) {
-                $rowData['edit_link'] = '#'; // Placeholder
-            }
-
-            return $rowData;
-        });
+        $processedDailyMetrics = $this->metricStatisticsService->prepareDailyMetricsForTableView(
+            $latestDailyMetrics,
+            $displayTableMetricTypes,
+            $athleteData,
+            true
+        );
 
         // Options de période pour le sélecteur du graphique et le sélecteur principal
         $periodOptions = [

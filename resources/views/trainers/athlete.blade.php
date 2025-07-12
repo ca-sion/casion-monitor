@@ -324,11 +324,9 @@
                             />
                         </flux:table.column>
                     @endforeach
-                    <flux:table.column class="text-center w-24">Actions</flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
-                    {{-- Utilisation de $processed_daily_metrics_for_table --}}
                     @forelse ($daily_metrics_grouped_by_date as $date => $rowData)
                         <flux:table.row>
                             <flux:table.cell class="z-1 sticky left-0 bg-white dark:bg-zinc-900 font-semibold">
@@ -345,13 +343,6 @@
                                     @endif
                                 </flux:table.cell>
                             @endforeach
-                            <flux:table.cell class="text-center">
-                                @if ($rowData['edit_link'])
-                                    <flux:link href="{{ $rowData['edit_link'] }}">Modifier</flux:link>
-                                @else
-                                    <flux:text class="text-zinc-400">N/A</flux:text>
-                                @endif
-                            </flux:table.cell>
                         </flux:table.row>
                     @empty
                         <flux:table.row>

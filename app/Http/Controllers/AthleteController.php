@@ -36,11 +36,12 @@ class AthleteController extends Controller
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
             MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::MORNING_PAIN,
+            MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            MetricType::POST_SESSION_SESSION_LOAD,
-            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
@@ -48,14 +49,15 @@ class AthleteController extends Controller
         $displayTableMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
-            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
-            MetricType::MORNING_BODY_WEIGHT_KG,
             MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::MORNING_PAIN,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
             MetricType::PRE_SESSION_ENERGY_LEVEL,
             MetricType::PRE_SESSION_LEG_FEEL,
-            MetricType::POST_SESSION_SESSION_LOAD,
-            MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
         // Préparer les options pour l'appel unique à getAthletesData
@@ -87,20 +89,12 @@ class AthleteController extends Controller
         $weeklyPlannedIntensity = 0; // L'intensité planifiée n'est pas directement dans les métriques calculées, à revoir si nécessaire
 
         // Traiter l'historique des métriques pour la préparation du tableau
-        $processedDailyMetricsForTable = $latestDailyMetrics->map(function ($metricDates, $date) use ($displayTableMetricTypes, $athlete) {
-            $rowData = [
-                'date'      => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'),
-                'metrics'   => [],
-                'edit_link' => route('athletes.metrics.daily.form', ['hash' => $athlete->hash, 'd' => $date]),
-            ];
-
-            foreach ($displayTableMetricTypes as $metricType) {
-                $metric = $metricDates->where('metric_type', $metricType->value)->first();
-                $rowData['metrics'][$metricType->value] = $metric ? $this->metricStatisticsService->formatMetricDisplayValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
-            }
-
-            return $rowData;
-        });
+        $processedDailyMetricsForTable = $this->metricStatisticsService->prepareDailyMetricsForTableView(
+            $latestDailyMetrics,
+            $displayTableMetricTypes,
+            $athlete,
+            false
+        );
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',

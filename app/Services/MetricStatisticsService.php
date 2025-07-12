@@ -720,4 +720,42 @@ class MetricStatisticsService
             default      => 'minus', // stable ou N/A
         };
     }
+
+    /**
+     * Prépare les données des métriques quotidiennes pour l'affichage dans un tableau.
+     *
+     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<\App\Models\Metric>>  $latestDailyMetrics  Métriques groupées par date.
+     * @param  array<\App\Enums\MetricType>  $displayTableMetricTypes  Types de métriques à afficher.
+     * @param  \App\Models\Athlete  $athlete  L'athlète concerné.
+     * @param  bool  $isTrainerContext  Indique si l'appel provient du contexte entraîneur.
+     * @return \Illuminate\Support\Collection<int, array>
+     */
+    public function prepareDailyMetricsForTableView(Collection $latestDailyMetrics, array $displayTableMetricTypes, Athlete $athlete, bool $isTrainerContext = false): Collection
+    {
+        return $latestDailyMetrics->map(function ($metricDates, $date) use ($displayTableMetricTypes, $athlete, $isTrainerContext) {
+            $rowData = [
+                'date'      => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'),
+                'metrics'   => [],
+                'edit_link' => null,
+            ];
+
+            foreach ($displayTableMetricTypes as $metricType) {
+                $metric = $metricDates->where('metric_type', $metricType->value)->first();
+                $rowData['metrics'][$metricType->value] = $metric ? $this->formatMetricDisplayValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
+            }
+
+            if ($isTrainerContext) {
+                $firstMetricOfDay = $metricDates->first();
+                if ($firstMetricOfDay && isset($firstMetricOfDay->metadata['edit_link'])) {
+                    $rowData['edit_link'] = $firstMetricOfDay->metadata['edit_link'];
+                } elseif ($firstMetricOfDay) {
+                    $rowData['edit_link'] = null;
+                }
+            } else {
+                $rowData['edit_link'] = route('athletes.metrics.daily.form', ['hash' => $athlete->hash, 'd' => $date]);
+            }
+
+            return $rowData;
+        });
+    }
 }
