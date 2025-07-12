@@ -326,6 +326,7 @@ class MetricAlertsService
         $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
         $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
         $cph = $trainingPlanWeek ? $this->metricCalculationService->calculateCph($trainingPlanWeek) : 0.0;
+        $cph = number_format($cph, 1);
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
 
