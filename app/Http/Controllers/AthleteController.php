@@ -28,6 +28,9 @@ class AthleteController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
+        $period = $request->input('period', 'last_30_days');
+
+        // Définir les types de métriques "brutes" à afficher dans les cartes individuelles
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
@@ -41,35 +44,7 @@ class AthleteController extends Controller
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
-        $period = $request->input('period', 'last_30_days');
-        $days = match ($period) {
-            'last_7_days'   => 7,
-            'last_14_days'  => 14,
-            'last_30_days'  => 30,
-            'last_90_days'  => 90,
-            'last_6_months' => 180,
-            'last_year'     => 365,
-            'all_time'      => 500, // A large number to signify "all time" for daily metrics history
-            default         => 50
-        };
-
-        $metricsDataForDashboard = [];
-        foreach ($dashboardMetricTypes as $metricType) {
-            $metricsDataForDashboard[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
-        }
-
-        // Fetch alerts for the athlete
-        $alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, 'last_60_days');
-
-        // Fetch menstrual cycle info if applicable
-        $menstrualCycleInfo = null;
-        if ($athlete->gender->value === 'w') {
-            $menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
-        }
-
-        // --- Préparation des données pour le tableau des métriques quotidiennes (maximum de calculs dans le contrôleur) ---
-        $dailyMetricsGroupedByDate = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, $days);
-
+        // Définir les types de métriques à afficher dans le tableau des données quotidiennes
         $displayTableMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
@@ -81,30 +56,51 @@ class AthleteController extends Controller
             MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            // Ajoutez d'autres types de métriques si nécessaire pour le tableau détaillé
         ];
 
-        $processedDailyMetricsForTable = collect([]);
+        // Préparer les options pour l'appel unique à getAthletesData
+        $options = [
+            'period'                       => $period,
+            'metric_types'                 => $dashboardMetricTypes,
+            'include_dashboard_metrics'    => true,
+            'include_latest_daily_metrics' => true,
+            'include_alerts'               => ['general', 'charge', 'readiness', 'menstrual'],
+            'include_menstrual_cycle'      => true,
+            'include_readiness_status'     => false,
+            'include_weekly_metrics'       => true, // Pour les métriques hebdomadaires (volume, intensité)
+        ];
 
-        foreach ($dailyMetricsGroupedByDate as $date => $metricsOnDate) {
-            $currentDate = Carbon::parse($date);
+        // Appel unique pour avoir toutes les données de l'athlète
+        $athleteData = $this->metricStatisticsService->getAthletesData(collect([$athlete]), $options)->first();
+
+        // Extraire les données de l'athlète enrichi
+        $metricsDataForDashboard = $athleteData->dashboard_metrics_data ?? [];
+        $alerts = $athleteData->alerts ?? [];
+        $menstrualCycleInfo = $athleteData->menstrual_cycle_info ?? null;
+        $readinessStatus = $athleteData->readiness_status ?? null;
+        $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
+        $weeklyMetricsData = collect($athleteData->weekly_metrics_data ?? []); // Données hebdomadaires
+
+        // Récupérer le volume et l'intensité planifiés pour la semaine en cours
+        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
+        $weeklyPlannedVolume = $weeklyMetricsData->get($currentWeekStartDate)['cph'] ?? 0; // CPH est le volume planifié
+        $weeklyPlannedIntensity = 0; // L'intensité planifiée n'est pas directement dans les métriques calculées, à revoir si nécessaire
+
+        // Traiter l'historique des métriques pour la préparation du tableau
+        $processedDailyMetricsForTable = $latestDailyMetrics->map(function ($metricDates, $date) use ($displayTableMetricTypes, $athlete) {
             $rowData = [
-                'date'      => $currentDate->locale('fr_CH')->isoFormat('L'), // Formatage de la date ici
+                'date'      => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'),
                 'metrics'   => [],
-                'edit_link' => route('athletes.metrics.daily.form', ['hash' => $athlete->hash, 'd' => $currentDate->format('Y-m-d')]), // Lien d'édition par jour
+                'edit_link' => route('athletes.metrics.daily.form', ['hash' => $athlete->hash, 'd' => $date]),
             ];
 
             foreach ($displayTableMetricTypes as $metricType) {
-                $metric = $metricsOnDate->where('metric_type', $metricType->value)->first();
-                if ($metric) {
-                    // Formatage de la valeur de la métrique ici
-                    $rowData['metrics'][$metricType->value] = $this->metricStatisticsService->formatMetricValue($metric->{$metricType->getValueColumn()}, $metricType);
-                } else {
-                    $rowData['metrics'][$metricType->value] = 'N/A';
-                }
+                $metric = $metricDates->where('metric_type', $metricType->value)->first();
+                $rowData['metrics'][$metricType->value] = $metric ? $this->metricStatisticsService->formatMetricValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
             }
-            $processedDailyMetricsForTable->put($date, $rowData);
-        }
+
+            return $rowData;
+        });
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
@@ -116,20 +112,18 @@ class AthleteController extends Controller
             'all_time'      => 'Depuis le début',
         ];
 
-        $currentWeekStartDate = \Carbon\Carbon::now()->startOfWeek(\Carbon\Carbon::MONDAY);
-        $trainingPlanWeek = $this->metricStatisticsService->getTrainingPlanWeekForAthlete($athlete, $currentWeekStartDate);
-
         $data = [
             'athlete'                       => $athlete,
             'dashboard_metrics_data'        => $metricsDataForDashboard,
             'alerts'                        => $alerts,
             'menstrualCycleInfo'            => $menstrualCycleInfo,
+            'readinessStatus'               => $readinessStatus, // Ajouté le statut de readiness
             'period_label'                  => $period,
             'period_options'                => $periodOptions,
-            'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable, // Renommé et pré-traité
+            'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable,
             'display_table_metric_types'    => $displayTableMetricTypes,
-            'weekly_planned_volume'         => $trainingPlanWeek->volume_planned ?? 0,
-            'weekly_planned_intensity'      => $trainingPlanWeek->intensity_planned ?? 0,
+            'weekly_planned_volume'         => $weeklyPlannedVolume,
+            'weekly_planned_intensity'      => $weeklyPlannedIntensity,
         ];
 
         if ($request->expectsJson()) {

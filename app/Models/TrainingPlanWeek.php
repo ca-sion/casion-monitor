@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\CalculatedMetric;
 use Illuminate\Database\Eloquent\Model;
-use App\Services\MetricStatisticsService;
+use App\Services\MetricCalculationService;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,7 +39,7 @@ class TrainingPlanWeek extends Model
     protected function cph(): Attribute
     {
         return Attribute::make(
-            get: fn () => resolve(MetricStatisticsService::class)->calculateCph($this),
+            get: fn () => resolve(MetricCalculationService::class)->calculateCph($this)
         );
     }
 

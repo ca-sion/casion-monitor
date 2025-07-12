@@ -70,8 +70,8 @@ class TrainerController extends Controller
             'include_dashboard_metrics'    => true,
             'include_weekly_metrics'       => true,
             'include_latest_daily_metrics' => true,
-            // 'include_alerts'             => [],
-            'include_menstrual_cycle'  => true,
+            'include_alerts'               => ['general', 'charge', 'menstrual'],
+            'include_menstrual_cycle'  => $showMenstrualCycle,
             'include_readiness_status' => true,
         ]);
 
@@ -105,7 +105,7 @@ class TrainerController extends Controller
         $period = request()->input('period', 'last_60_days');
         $selectedMetricType = request()->input('metric_type');
 
-        // Définir les types de métriques pour le dashboard (cartes individuelles)
+        // Définir les types de métriques "brutes" à afficher dans les cartes individuelles
         $dashboardMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
@@ -119,20 +119,7 @@ class TrainerController extends Controller
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
         ];
 
-        $dashboard_metrics_data = [];
-        foreach ($dashboardMetricTypes as $metricType) {
-            $dashboard_metrics_data[$metricType->value] = $this->metricStatisticsService->getDashboardMetricData($athlete, $metricType, $period);
-        }
-
-        // Alertes et le cycle menstruel
-        $alerts = $this->metricStatisticsService->getAthleteAlerts($athlete, $period);
-        $menstrualCycleInfo = $this->metricStatisticsService->deduceMenstrualCyclePhase($athlete);
-
-        // Alertes de charge pour la semaine en cours de l'athlète spécifique
-        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $chargeAlerts = $this->metricStatisticsService->getChargeAlerts($athlete, $currentWeekStartDate);
-
-        // Définir les types de métriques à afficher dans le tableau
+        // Définir les types de métriques à afficher dans le tableau des données quotidiennes
         $displayTableMetricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
@@ -144,16 +131,39 @@ class TrainerController extends Controller
             MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            // Ajoutez d'autres types de métriques si nécessaire pour les colonnes du tableau
         ];
 
-        // Récupérer l'historique des métriques pour le tableau (peut être paginé)
-        $dailyMetricsGroupedByDate = $this->metricStatisticsService->getLatestMetricsGroupedByDate($athlete, 50); // Utilise la même variable que le dashboard athlète
+        // Déterminer le type de métrique pour le graphique détaillé
+        $chartMetricType = MetricType::tryFrom($selectedMetricType) ?? MetricType::MORNING_HRV;
+
+        // Préparer les options pour l'appel unique à getAthletesData
+        $options = [
+            'period'                       => $period,
+            'metric_types'                 => $dashboardMetricTypes, // Pour les cartes du dashboard
+            'include_dashboard_metrics'    => true,
+            'include_latest_daily_metrics' => true, // Pour le tableau des données quotidiennes
+            'include_alerts'               => ['general', 'charge', 'menstrual'],
+            'include_menstrual_cycle'      => true,
+            'include_readiness_status'     => true,
+            'chart_metric_type'            => $chartMetricType->value, // Pour le graphique détaillé
+            'chart_period'                 => $period, // Utiliser la même période pour le graphique
+        ];
+
+        // Appel unique pour avoir toutes les données de l'athlète
+        $athleteData = $this->metricStatisticsService->getAthletesData(collect([$athlete]), $options)->first();
+
+        // Extraire les données de l'athlète enrichi
+        $dashboard_metrics_data = $athleteData->dashboard_metrics_data ?? [];
+        $alerts = $athleteData->alerts ?? [];
+        $menstrualCycleInfo = $athleteData->menstrual_cycle_info ?? null;
+        $readinessStatus = $athleteData->readiness_status ?? null;
+        $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
+        $chartData = $athleteData->chart_data ?? ['labels' => [], 'data' => [], 'unit' => null, 'label' => null];
 
         // Traiter l'historique des métriques pour la préparation du tableau
-        $processedDailyMetrics = $dailyMetricsGroupedByDate->map(function ($metricDates, $date) use ($displayTableMetricTypes) {
+        $processedDailyMetrics = $latestDailyMetrics->map(function ($metricDates, $date) use ($displayTableMetricTypes, $athleteData) {
             $rowData = [
-                'date'      => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'), // Renommé pour correspondre à la vue dashboard
+                'date'      => \Carbon\Carbon::parse($date)->locale('fr_CH')->isoFormat('L'),
                 'metrics'   => [],
                 'edit_link' => null,
             ];
@@ -173,21 +183,6 @@ class TrainerController extends Controller
             return $rowData;
         });
 
-        // Préparer les données pour le graphique détaillé d'une métrique spécifique
-        $chartMetricType = null;
-        $chartData = ['labels' => [], 'data' => [], 'unit' => null, 'label' => null];
-
-        if ($selectedMetricType && MetricType::tryFrom($selectedMetricType)) {
-            $chartMetricType = MetricType::tryFrom($selectedMetricType);
-            $metricsForChart = $this->metricStatisticsService->getAthleteMetrics($athlete, ['metric_type' => $selectedMetricType, 'period' => $period]);
-            $chartData = $this->metricStatisticsService->prepareChartDataForSingleMetric($metricsForChart, $chartMetricType);
-        } else {
-            // Par défaut, afficher le HRV si aucune métrique n'est sélectionnée pour le graphique
-            $chartMetricType = MetricType::MORNING_HRV;
-            $metricsForChart = $this->metricStatisticsService->getAthleteMetrics($athlete, ['metric_type' => MetricType::MORNING_HRV->value, 'period' => $period]);
-            $chartData = $this->metricStatisticsService->prepareChartDataForSingleMetric($metricsForChart, MetricType::MORNING_HRV);
-        }
-
         // Options de période pour le sélecteur du graphique et le sélecteur principal
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
@@ -200,26 +195,23 @@ class TrainerController extends Controller
             'all_time'      => 'Depuis le début',
         ];
 
-        // Types de métriques disponibles pour la sélection du graphique
-        $availableMetricTypesForChart = collect(MetricType::cases())
-            ->filter(fn ($mt) => $mt->getValueColumn() !== 'note')
-            ->mapWithKeys(fn ($mt) => [$mt->value => $mt->getLabel()])
-            ->toArray();
-
         return view('trainers.athlete', [
             'trainer'                          => $trainer,
             'athlete'                          => $athlete,
-            'dashboard_metrics_data'           => $dashboard_metrics_data, // Ajouté pour les cartes de métriques
-            'alerts'                           => $alerts, // Ajouté pour la section alertes
-            'menstrualCycleInfo'               => $menstrualCycleInfo, // Ajouté pour le cycle menstruel
-            'chargeAlerts'                     => $chargeAlerts, // Ajouté pour les alertes de charge
-            'daily_metrics_grouped_by_date'    => $processedDailyMetrics, // Renommé pour correspondre à la vue dashboard
+            'dashboard_metrics_data'           => $dashboard_metrics_data,
+            'alerts'                           => $alerts,
+            'menstrualCycleInfo'               => $menstrualCycleInfo,
+            'readinessStatus'                  => $readinessStatus,
+            'daily_metrics_grouped_by_date'    => $processedDailyMetrics,
             'display_table_metric_types'       => $displayTableMetricTypes,
             'chart_data'                       => $chartData,
             'chart_metric_type'                => $chartMetricType,
             'period_label'                     => $period,
             'period_options'                   => $periodOptions,
-            'available_metric_types_for_chart' => $availableMetricTypesForChart,
+            'available_metric_types_for_chart' => collect(MetricType::cases())
+                                                    ->filter(fn ($mt) => $mt->getValueColumn() !== 'note')
+                                                    ->mapWithKeys(fn ($mt) => [$mt->value => $mt->getLabel()])
+                                                    ->toArray(),
         ]);
     }
 
