@@ -13,12 +13,16 @@
             </a>
 
             <flux:navlist variant="outline">
-                <flux:navlist.group :heading="__('Platform')" class="grid">
+                <flux:navlist.group heading="Suivi des entraînements" class="grid">
                     <flux:navlist.item icon="home" :href="route('athletes.dashboard', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.dashboard')" wire:navigate>Tableau de bord</flux:navlist.item>
                     <flux:navlist.item icon="queue-list" :href="route('athletes.feedbacks', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.feedbacks')" wire:navigate>Journal</flux:navlist.item>
-                    <flux:navlist.item icon="clipboard-document-list" :href="route('athletes.injuries.index', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.injuries.index')" wire:navigate>Blessures</flux:navlist.item>
                     <flux:navlist.item icon="plus" :href="route('athletes.metrics.daily.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.daily.form')" wire:navigate>Quotidien</flux:navlist.item>
                     <flux:navlist.item icon="plus" :href="route('athletes.metrics.monthly.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.monthly.form')" wire:navigate>Mensuel</flux:navlist.item>
+                </flux:navlist.group>
+                <flux:navlist.group heading="Suivi médical" class="grid">
+                    <flux:navlist.item icon="clipboard-document-list" :href="route('athletes.injuries.index', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.injuries.index')" wire:navigate>Tableau de bord</flux:navlist.item>
+                    <flux:navlist.item icon="plus" :href="route('athletes.recovery-protocols.create', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.recovery-protocols.create')" wire:navigate>Récupération</flux:navlist.item>
+                    <flux:navlist.item icon="plus" :href="route('athletes.injuries.create', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.injuries.create')" wire:navigate>Douleur/blessure</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 

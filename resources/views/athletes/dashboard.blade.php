@@ -36,20 +36,6 @@
         </flux:card>
     </a>
 
-    {{-- Section pour voir les blessures --}}
-    <a href="{{ route('athletes.injuries.index', ['hash' => $athlete->hash]) }}" aria-label="Voir mes blessures">
-        <flux:card class="bg-rose-50! border-rose-400! my-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
-            size="sm"
-            color="rose">
-            <flux:heading class="flex items-center gap-2">Mes Blessures
-                <flux:icon class="ml-auto text-rose-600"
-                    name="clipboard-document-list"
-                    variant="micro" />
-            </flux:heading>
-            <flux:text class="mt-2">Consulte la liste de tes blessures déclarées et leur statut.</flux:text>
-        </flux:card>
-    </a>
-
     {{-- Section Volume et Intensité Planifiés de la semaine en cours --}}
     @if ($weekly_planned_volume || $weekly_planned_intensity)
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
@@ -127,22 +113,18 @@
     {{-- Section Protocoles de Récupération --}}
     <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
         <div class="flex justify-between items-center mb-4">
-            <flux:heading size="lg" level="2">🧘 Tes Protocoles de Récupération</flux:heading>
-            <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}"
-               class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Ajouter un protocole
-            </a>
+            <flux:heading size="lg" level="2">🧘 Tes protocoles de récupération</flux:heading>
+            <flux:button variant="filled" icon="plus" href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}">Ajouter un protocole</flux:button>
         </div>
         @if ($recoveryProtocols->isEmpty())
-            <div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                <p class="mt-2 text-sm text-gray-600">Aucun protocole de récupération enregistré.</p>
-                <p class="text-xs text-gray-500 mt-1">Enregistre tes séances de récupération pour les suivre ici.</p>
+            <div class="p-8">
+                <flux:callout icon="chat-bubble-left-right">
+                    <flux:callout.heading>Aucun protocole de récupération enregistré.</flux:callout.heading>
+
+                    <flux:callout.text>
+                        Enregistre tes séances de récupération pour les suivre ici.
+                    </flux:callout.text>
+                </flux:callout>
             </div>
         @else
             <div class="space-y-4">
