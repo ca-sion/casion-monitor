@@ -138,6 +138,12 @@ class TrainerController extends Controller
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
+        // Définir les types de métriques à sélectionner pour le graphique
+        $availableMetricTypesForChart = collect(MetricType::cases())
+                                                    ->filter(fn ($mt) => $mt->getValueColumn() !== 'note')
+                                                    ->mapWithKeys(fn ($mt) => [$mt->value => $mt->getLabel()])
+                                                    ->toArray();
+
         // Déterminer le type de métrique pour le graphique détaillé
         $chartMetricType = MetricType::tryFrom($selectedMetricType) ?? MetricType::MORNING_HRV;
 
@@ -163,7 +169,7 @@ class TrainerController extends Controller
         $menstrualCycleInfo = $athleteData->menstrual_cycle_info ?? null;
         $readinessStatus = $athleteData->readiness_status ?? null;
         $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
-        $chartData = $athleteData->chart_data ?? ['labels' => [], 'data' => [], 'unit' => null, 'label' => null];
+        $chartData = data_get($dashboard_metrics_data, $chartMetricType->value.'.chart_data') ?? ['labels' => [], 'data' => [], 'unit' => null, 'label' => null];
 
         // Traiter l'historique des métriques pour la préparation du tableau
         $processedDailyMetrics = $this->metricStatisticsService->prepareDailyMetricsForTableView(
@@ -198,10 +204,7 @@ class TrainerController extends Controller
             'chart_metric_type'                => $chartMetricType,
             'period_label'                     => $period,
             'period_options'                   => $periodOptions,
-            'available_metric_types_for_chart' => collect(MetricType::cases())
-                                                    ->filter(fn ($mt) => $mt->getValueColumn() !== 'note')
-                                                    ->mapWithKeys(fn ($mt) => [$mt->value => $mt->getLabel()])
-                                                    ->toArray(),
+            'available_metric_types_for_chart' => $availableMetricTypesForChart,
         ]);
     }
 

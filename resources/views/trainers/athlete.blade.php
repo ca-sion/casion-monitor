@@ -189,7 +189,7 @@
             <flux:card class="p-4 transform transition-transform duration-200 hover:scale-105 hover:shadow-xl" size="sm">
                 <div class="flex items-center justify-between mb-2">
                         <div>
-                            <flux:text class="text-xs font-semibold uppercase text-zinc-500 inline">{{ $metricData['short_label'] }}</flux:text>
+                            <flux:link class="text-xs font-semibold uppercase text-zinc-500 inline" variant="ghost" href="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $athlete->id, 'metric_type' => $metricTypeKey, 'period' => request()->input('period') ?? null]) }}#metric-chart">{{ $metricData['short_label'] }}</flux:link>
                             <x-filament::icon-button
                                 class="inline ms-1"
                                 style="vertical-align: text-bottom;"
