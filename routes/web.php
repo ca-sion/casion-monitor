@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Livewire\AthleteInjuryForm;
 use App\Livewire\AthleteMonthlyForm;
 use App\Livewire\TrainerFeedbackForm;
 use Illuminate\Support\Facades\Route;
@@ -29,19 +30,5 @@ Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}/metrics/daily/form', AthleteDailyMetricForm::class)->name('athletes.metrics.daily.form');
     Route::get('/a/{hash}/metrics/monthly/form', AthleteMonthlyForm::class)->name('athletes.metrics.monthly.form');
     Route::get('/a/{hash}/feedbacks', [AthleteController::class, 'feedbacks'])->name('athletes.feedbacks');
-});
-
-Route::prefix('api')->group(function () {
-    Route::prefix('athletes')->group(function () {
-        // Route pour obtenir les statistiques d'UNE seule métrique pour un athlète
-        // Exemple : /api/athletes/1/metrics/morning_hrv/statistics?period=last_30_days
-        Route::get('{athlete}/metrics/{metricTypeValue}/statistics', [AthleteMetricController::class, 'showSingleMetricStatistics']);
-
-        // Route pour obtenir les statistiques de PLUSIEURS métriques pour un athlète (pour un graphique multi-séries)
-        // Exemple : /api/athletes/1/metrics/multi-statistics?metric_types[]=post_session_subjective_fatigue&metric_types[]=morning_hrv&period=last_30_days
-        Route::get('{athlete}/metrics/multi-statistics', [AthleteMetricController::class, 'showMultipleMetricStatistics']);
-    });
-    // Route pour obtenir la liste de tous les MetricTypes disponibles
-    // Exemple : /api/metrics/available-types
-    Route::get('metrics/available-types', [AthleteMetricController::class, 'getAvailableMetricTypes']);
+    Route::get('/a/{hash}/injuries/create', AthleteInjuryForm::class)->name('athletes.injuries.create');
 });

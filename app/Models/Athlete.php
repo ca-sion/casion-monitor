@@ -16,6 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use MichaelRavedoni\LaravelValueObjects\Casts\ValueObjectCast;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use App\Models\Injury;
+use App\Models\RecoveryProtocol;
+use App\Enums\InjuryStatus;
 
 class Athlete extends Model implements AuthenticatableContract, AuthorizableContract
 {
@@ -95,6 +98,30 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     {
         return $this->hasMany(Feedback::class);
     }
+
+   /**
+    * Get the injuries for the athlete.
+    */
+   public function injuries(): HasMany
+   {
+       return $this->hasMany(Injury::class);
+   }
+
+   /**
+    * Get the recovery protocols for the athlete.
+    */
+   public function recoveryProtocols(): HasMany
+   {
+       return $this->hasMany(RecoveryProtocol::class);
+   }
+
+   /**
+    * Check if the athlete has any active injuries.
+    */
+   public function hasActiveInjuries(): bool
+   {
+       return $this->injuries()->whereNot('status', InjuryStatus::RESOLVED)->exists();
+   }
 
     /**
      * Get the athlete's current training plan.

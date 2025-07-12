@@ -8,10 +8,12 @@ use Livewire\Component;
 use App\Models\Feedback;
 use App\Enums\MetricType;
 use App\Enums\FeedbackType;
+use Filament\Actions\Action;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Url;
 use Illuminate\Support\Carbon;
 use App\Enums\CalculatedMetric;
+use App\Services\MetricService;
 use Livewire\Attributes\Layout;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Contracts\View\View;
@@ -19,11 +21,12 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
-use App\Services\MetricService;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 
 class AthleteDailyMetricForm extends Component implements HasSchemas
@@ -141,6 +144,26 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ])
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
+                        ToggleButtons::make(MetricType::MORNING_PAIN->value)
+                            ->label(MetricType::MORNING_PAIN->getLabel())
+                            ->helperText(MetricType::MORNING_PAIN->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_PAIN->getHint()),
+                            ])
+                            ->inline()
+                            ->grouped()
+                            ->options(fn () => array_combine(range(1, 10), range(1, 10))),
+                        TextInput::make(MetricType::MORNING_PAIN_LOCATION->value)
+                            ->label(MetricType::MORNING_PAIN_LOCATION->getLabel())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_PAIN_LOCATION->getHint()),
+                            ])
+                            ->visible(fn (Get $get) => $get(MetricType::MORNING_PAIN->value) > 3)
+                            ->maxLength(255),
                         ToggleButtons::make(MetricType::MORNING_FIRST_DAY_PERIOD->value)
                             ->label(MetricType::MORNING_FIRST_DAY_PERIOD->getLabel())
                             ->helperText(MetricType::MORNING_FIRST_DAY_PERIOD->getScaleHint())
@@ -243,6 +266,17 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
+                        ToggleButtons::make(MetricType::POST_SESSION_PAIN->value)
+                            ->label(MetricType::POST_SESSION_PAIN->getLabel())
+                            ->helperText(MetricType::POST_SESSION_PAIN->getScaleHint())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::POST_SESSION_PAIN->getHint()),
+                            ])
+                            ->inline()
+                            ->grouped()
+                            ->options(fn () => array_combine(range(1, 10), range(1, 10))),
                         Textarea::make(FeedbackType::POST_SESSION_SENSATION->value)
                             ->label(FeedbackType::POST_SESSION_SENSATION->getLabel())
                             ->afterLabel([
@@ -283,6 +317,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             }
         }
 
+        $this->suggestInjuryDeclaration();
     }
 
     private function desiredMetricTypes(): array
@@ -295,9 +330,12 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             MetricType::MORNING_FIRST_DAY_PERIOD->value,
             MetricType::PRE_SESSION_ENERGY_LEVEL->value,
             MetricType::PRE_SESSION_LEG_FEEL->value,
+            MetricType::MORNING_PAIN->value,
+            MetricType::MORNING_PAIN_LOCATION->value,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value,
             MetricType::POST_SESSION_SESSION_LOAD->value,
             MetricType::POST_SESSION_PERFORMANCE_FEEL->value,
+            MetricType::POST_SESSION_PAIN->value,
         ];
     }
 
@@ -313,5 +351,64 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
     public function render(): View
     {
         return view('livewire.athlete-daily-metric-form');
+    }
+
+    private function suggestInjuryDeclaration(): void
+    {
+        $data = $this->form->getState();
+        $postSessionPain = data_get($data, MetricType::POST_SESSION_PAIN->value);
+        $morningPain = data_get($data, MetricType::MORNING_PAIN->value);
+
+        // Suggestion basée sur POST_SESSION_PAIN
+        if ($postSessionPain && $postSessionPain > 5) {
+            Notification::make()
+                ->title('Douleur importante après la séance !')
+                ->body('Souhaitez-vous déclarer une blessure liée à cette douleur ?')
+                ->warning()
+                ->actions([
+                    Action::make('declare_injury')
+                        ->label('Déclarer une blessure')
+                        ->button()
+                        ->url(route('athletes.injuries.create', [
+                            'hash'                => $this->athlete->hash,
+                            'athlete_id'          => $this->athlete->id,
+                            'pain_intensity'      => $postSessionPain,
+                            'onset_circumstances' => 'Douleur apparue pendant/après la séance du '.$this->date->format('Y-m-d'),
+                            'session_related'     => true,
+                            'session_date'        => $this->date->format('Y-m-d'),
+                            'immediate_onset'     => true,
+                        ])),
+                ])
+                ->send();
+        }
+
+        // Suggestion basée sur MORNING_PAIN persistant
+        if ($morningPain && $morningPain > 3) {
+            $previousDayPain = Metric::where('athlete_id', $this->athlete->id)
+                ->where('metric_type', MetricType::MORNING_PAIN)
+                ->whereDate('date', $this->date->copy()->subDay())
+                ->first();
+
+            if ($previousDayPain && $previousDayPain->value > 3) {
+                Notification::make()
+                    ->title('Douleur matinale persistante !')
+                    ->body('Votre douleur matinale est élevée depuis au moins deux jours. Souhaitez-vous déclarer une blessure ?')
+                    ->warning()
+                    ->actions([
+                        Action::make('declare_injury')
+                            ->label('Déclarer une blessure')
+                            ->button()
+                            ->url(route('athletes.injuries.create', [
+                                'hash'                => $this->athlete->hash,
+                                'athlete_id'          => $this->athlete->id,
+                                'pain_intensity'      => $morningPain,
+                                'onset_circumstances' => 'Douleur persistante depuis au moins deux jours',
+                                'session_related'     => false,
+                                'immediate_onset'     => false,
+                            ])),
+                    ])
+                    ->send();
+            }
+        }
     }
 }

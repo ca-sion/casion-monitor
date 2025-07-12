@@ -24,6 +24,7 @@ enum MetricType: string implements HasLabel
     case POST_SESSION_SESSION_LOAD = 'post_session_session_load';
     case POST_SESSION_PERFORMANCE_FEEL = 'post_session_performance_feel';
     case POST_SESSION_SUBJECTIVE_FATIGUE = 'post_session_subjective_fatigue';
+    case POST_SESSION_PAIN = 'post_session_pain';
 
     public function getLabel(): ?string
     {
@@ -43,6 +44,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => 'Ressenti de la charge',
             self::POST_SESSION_PERFORMANCE_FEEL   => 'Évaluation de la performance',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'Evaluation de la fatigue',
+            self::POST_SESSION_PAIN               => 'Douleurs après séance',
         };
     }
 
@@ -64,6 +66,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => 'Ress. charge',
             self::POST_SESSION_PERFORMANCE_FEEL   => 'Éval. perf.',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'Eval. fatigue post',
+            self::POST_SESSION_PAIN               => 'Douleurs post',
         };
     }
 
@@ -85,6 +88,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => 'Évaluation subjective de la charge après la session.',
             self::POST_SESSION_PERFORMANCE_FEEL   => 'Évaluation subjective du ressenti de la performance après la session.',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'Évaluation subjective de la fatigue après la session.',
+            self::POST_SESSION_PAIN               => 'Évaluation de l\'intensité des douleurs ressenties après la session.',
         };
     }
 
@@ -106,6 +110,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => 10,
             self::POST_SESSION_PERFORMANCE_FEEL   => 10,
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 10,
+            self::POST_SESSION_PAIN               => 10,
         };
     }
 
@@ -127,6 +132,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => 'value',
             self::POST_SESSION_PERFORMANCE_FEEL   => 'value',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'value',
+            self::POST_SESSION_PAIN               => 'value',
         };
     }
 
@@ -148,6 +154,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => null,
             self::POST_SESSION_PERFORMANCE_FEEL   => null,
             self::POST_SESSION_SUBJECTIVE_FATIGUE => null,
+            self::POST_SESSION_PAIN               => null,
         };
     }
 
@@ -183,6 +190,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD       => 'basse ➝ très haute',
             self::POST_SESSION_PERFORMANCE_FEEL   => 'mauvais ➝ excellent',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'aucune ➝ extrême',
+            self::POST_SESSION_PAIN               => 'aucune ➝ très fortes',
         };
     }
 
@@ -234,6 +242,7 @@ enum MetricType: string implements HasLabel
                 1 = Aucune fatigue, tu pourrais refaire une session.
                 5 = Fatigue modérée, tu sens que tu as travaillé.
                 10 = Fatigue extrême, tu es vidé(e), tu as besoin de repos immédiat.',
+            self::POST_SESSION_PAIN               => "As-tu des douleurs musculaires ou articulaires après cette séance ? Évalue l'intensité de tes douleurs sur une échelle de 1 à 10. 1 = Aucune douleur. 5 = Douleur légère mais présente, tu la sens un peu. 10 = Douleur très forte, ça t'empêche de bouger normalement ou de te sentir bien.",
         };
     }
 
@@ -256,7 +265,8 @@ enum MetricType: string implements HasLabel
             self::MORNING_GENERAL_FATIGUE,
             self::MORNING_PAIN,
             self::POST_SESSION_SUBJECTIVE_FATIGUE,
-            self::POST_SESSION_SESSION_LOAD => 'bad',
+            self::POST_SESSION_SESSION_LOAD,
+            self::POST_SESSION_PAIN => 'bad',
 
             self::MORNING_BODY_WEIGHT_KG,
             self::MORNING_PAIN_LOCATION,
