@@ -45,8 +45,15 @@ class MetricStatisticsService
             'include_alerts'               => ['general', 'charge', 'readiness', 'menstrual'],
             'include_menstrual_cycle'      => false,
             'include_readiness_status'     => false,
+            'chart_metric_type'            => null, // Nouvelle option pour le type de métrique du graphique
+            'chart_period'                 => null, // Nouvelle option pour la période du graphique
         ];
         $options = array_merge($defaultOptions, $options);
+
+        // Assurer que chart_period est défini si chart_metric_type l'est
+        if ($options['chart_metric_type'] && ! $options['chart_period']) {
+            $options['chart_period'] = $options['period'];
+        }
 
         $athleteIds = $athletes->pluck('id');
         if ($athleteIds->isEmpty()) {
@@ -154,6 +161,15 @@ class MetricStatisticsService
             // Ajouter les données calculées à l'objet athlète
             foreach ($athleteData as $key => $value) {
                 $athlete->{$key} = $value;
+            }
+
+            if ($options['chart_metric_type']) {
+                $chartMetricType = MetricType::tryFrom($options['chart_metric_type']);
+                if ($chartMetricType) {
+                    $metricsForChart = $athleteMetrics->where('metric_type', $chartMetricType->value)
+                        ->where('date', '>=', $this->getStartDateFromPeriod($options['chart_period']));
+                    $athleteData['chart_data'] = $this->prepareChartDataForSingleMetric($metricsForChart, $chartMetricType);
+                }
             }
 
             return $athlete;
