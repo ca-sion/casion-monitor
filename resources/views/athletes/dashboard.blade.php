@@ -36,6 +36,20 @@
         </flux:card>
     </a>
 
+    {{-- Section pour voir les blessures --}}
+    <a href="{{ route('athletes.injuries.index', ['hash' => $athlete->hash]) }}" aria-label="Voir mes blessures">
+        <flux:card class="bg-rose-50! border-rose-400! my-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+            size="sm"
+            color="rose">
+            <flux:heading class="flex items-center gap-2">Mes Blessures
+                <flux:icon class="ml-auto text-rose-600"
+                    name="clipboard-document-list"
+                    variant="micro" />
+            </flux:heading>
+            <flux:text class="mt-2">Consulte la liste de tes blessures déclarées et leur statut.</flux:text>
+        </flux:card>
+    </a>
+
     {{-- Section Volume et Intensité Planifiés de la semaine en cours --}}
     @if ($weekly_planned_volume || $weekly_planned_intensity)
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">

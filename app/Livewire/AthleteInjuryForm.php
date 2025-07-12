@@ -113,6 +113,7 @@ class AthleteInjuryForm extends Component implements HasForms
     public function save(): void
     {
         $data = $this->form->getState();
+        $data['athlete_id'] = $this->athlete->id;
 
         Injury::create($data);
 
