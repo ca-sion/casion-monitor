@@ -45,8 +45,8 @@ class MetricStatisticsService
             'include_alerts'               => ['general', 'charge', 'readiness', 'menstrual'],
             'include_menstrual_cycle'      => false,
             'include_readiness_status'     => false,
-            'chart_metric_type'            => null, // Nouvelle option pour le type de métrique du graphique
-            'chart_period'                 => null, // Nouvelle option pour la période du graphique
+            'chart_metric_type'            => null,
+            'chart_period'                 => null,
         ];
         $options = array_merge($defaultOptions, $options);
 
@@ -60,7 +60,7 @@ class MetricStatisticsService
             return collect();
         }
 
-        // 0. Déterminer les métriques brutes
+        // Déterminer les types de métriques brutes à récupérer, en incluant les métriques essentielles pour le statut de readiness si nécessaire.
         $metricTypes = $options['metric_types'];
 
         if ($options['include_readiness_status']) {
@@ -71,27 +71,25 @@ class MetricStatisticsService
             $metricTypes = array_map(fn ($value) => MetricType::from($value), $combinedMetricValues);
         }
 
-        // 1. Déterminer la période maximale de récupération des métriques brutes
+        // Déterminer la date de début maximale pour la collecte des métriques brutes, en fonction de la période et des options d'inclusion.
         $maxStartDate = $this->determineMetricCollectionStartDate($options);
 
-        // 2. Pré-charger toutes les métriques et les semaines de plan d'entraînement
-        // Si le cycle menstruel est inclus, s'assurer d'avoir 1-2 ans de données pour les métriques J1
-        $allMetrics = Metric::whereIn('athlete_id', $athleteIds)
+        // Pré-charger toutes les métriques brutes et les semaines de plan d'entraînement pour tous les athlètes.
+        // Les métriques menstruelles (J1) sont incluses si l'option est activée, avec une période de 2 ans.
+        $allMetricsQuery = Metric::whereIn('athlete_id', $athleteIds)
             ->where('date', '>=', $maxStartDate)
-            ->whereIn('metric_type', $options['metric_types'])
-            ->orderBy('date', 'asc')->get();
+            ->whereIn('metric_type', array_map(fn ($metricType) => $metricType->value, $metricTypes))
+            ->orderBy('date', 'asc');
 
-        $allMenstrualMetrics = collect();
         if ($options['include_menstrual_cycle']) {
-            $allMenstrualMetrics = Metric::whereIn('athlete_id', $athleteIds)
-                ->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
-                ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD)
-                ->orderBy('date', 'asc')->get();
+            $allMetricsQuery->orWhere(function ($query) use ($athleteIds) {
+                $query->whereIn('athlete_id', $athleteIds)
+                    ->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
+                    ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD);
+            });
         }
 
-        $allMetricsByAthlete = $allMetrics
-            ->merge($allMenstrualMetrics)
-            ->groupBy('athlete_id');
+        $allMetricsByAthlete = $allMetricsQuery->get()->groupBy('athlete_id');
 
         $athletesTrainingPlansIds = $athletes->pluck('current_training_plan.id')->filter()->values();
         $allTrainingPlanWeeksByAthleteTrainingPlanId = TrainingPlanWeek::whereIn('training_plan_id', $athletesTrainingPlansIds)
@@ -206,27 +204,18 @@ class MetricStatisticsService
 
                 $cih = $this->metricCalculationService->calculateCihForCollection($metricsForWeek);
 
-                $sbmSum = 0;
-                $sbmCount = 0;
-                $dayPeriod = CarbonPeriod::create($weekStartDate, '1 day', $weekEndDate);
-                $sbmMetricsForWeekGroupedByDate = $metricsForWeek->whereIn('metric_type', [
+                $sbmMetricsForWeek = $metricsForWeek->whereIn('metric_type', [
                     MetricType::MORNING_SLEEP_QUALITY,
                     MetricType::MORNING_GENERAL_FATIGUE,
                     MetricType::MORNING_PAIN,
                     MetricType::MORNING_MOOD_WELLBEING,
-                ])->groupBy(fn ($m) => $m->date->format('Y-m-d'));
+                ]);
 
-                foreach ($dayPeriod as $date) {
-                    $dateStr = $date->format('Y-m-d');
-                    if ($sbmMetricsForWeekGroupedByDate->has($dateStr)) {
-                        $sbmValue = $this->metricCalculationService->calculateSbmForCollection($sbmMetricsForWeekGroupedByDate->get($dateStr));
-                        if ($sbmValue > 0) {
-                            $sbmSum += $sbmValue;
-                            $sbmCount++;
-                        }
-                    }
-                }
-                $sbm = $sbmCount > 0 ? $sbmSum / $sbmCount : null;
+                $dailySbmValues = $sbmMetricsForWeek->groupBy(fn ($m) => $m->date->format('Y-m-d'))
+                    ->map(fn ($dailyMetrics) => $this->metricCalculationService->calculateSbmForCollection($dailyMetrics))
+                    ->filter(fn ($value) => $value > 0); // Filtrer les valeurs non valides ou nulles
+
+                $sbm = $dailySbmValues->isNotEmpty() ? $dailySbmValues->avg() : null;
 
                 $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
                 $cph = $planWeek ? $this->metricCalculationService->calculateCph($planWeek) : 0.0;
@@ -332,17 +321,9 @@ class MetricStatisticsService
             if ($metricData['average_7_days'] !== null && $evolutionTrendData['trend'] !== 'N/A') {
                 $optimalDirection = $metricType->getTrendOptimalDirection();
 
-                $metricData['trend_icon'] = match ($evolutionTrendData['trend']) {
-                    'increasing' => 'arrow-trending-up',
-                    'decreasing' => 'arrow-trending-down',
-                    default      => 'minus', // stable
-                };
+                $metricData['trend_icon'] = $this->getTrendIcon($evolutionTrendData['trend']);
 
-                $metricData['trend_color'] = match ($evolutionTrendData['trend']) {
-                    'increasing' => ($optimalDirection === 'good' ? 'lime' : ($optimalDirection === 'bad' ? 'rose' : 'zinc')),
-                    'decreasing' => ($optimalDirection === 'good' ? 'rose' : ($optimalDirection === 'bad' ? 'lime' : 'zinc')),
-                    default      => 'zinc', // stable
-                };
+                $metricData['trend_color'] = $this->determineTrendColor($evolutionTrendData['trend'], $optimalDirection);
             }
 
             if ($metricData['average_7_days'] !== null && $metricData['average_30_days'] !== null && $metricData['average_30_days'] != 0) {
@@ -396,14 +377,8 @@ class MetricStatisticsService
             'formatted_average_7_days'  => is_numeric($average7Days) ? number_format($average7Days, 1) : 'N/A',
             'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'N/A',
             'is_numerical'              => true,
-            'trend_icon'                => $trend['trend'] !== 'N/A' ? match ($trend['trend']) {
-                'increasing' => 'arrow-trending-up', 'decreasing' => 'arrow-trending-down', default => 'minus'
-            } : 'ellipsis-horizontal',
-            'trend_color' => $trend['trend'] !== 'N/A' ? match ($trend['trend']) {
-                'increasing' => ($metricKey->getTrendOptimalDirection() === 'good' ? 'lime' : ($metricKey->getTrendOptimalDirection() === 'bad' ? 'rose' : 'zinc')),
-                'decreasing' => ($metricKey->getTrendOptimalDirection() === 'good' ? 'rose' : ($metricKey->getTrendOptimalDirection() === 'bad' ? 'lime' : 'zinc')),
-                default      => 'zinc',
-            } : 'zinc',
+            'trend_icon'                => $trend['trend'] !== 'N/A' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
+            'trend_color' => $trend['trend'] !== 'N/A' ? $this->determineTrendColor($trend['trend'], $metricKey->getTrendOptimalDirection()) : 'zinc',
             'trend_percentage' => $changePercentage,
             'chart_data'       => [
                 'labels' => $allWeeklyData->pluck('date')->map(fn ($d) => $d->format('W Y'))->all(),
@@ -720,5 +695,29 @@ class MetricStatisticsService
         return TrainingPlanWeek::where('training_plan_id', $assignedPlan->id)
             ->where('start_date', $weekStartDate->toDateString())
             ->first();
+    }
+
+    /**
+     * Détermine la couleur de la tendance en fonction de la direction de la tendance et de la direction optimale.
+     */
+    protected function determineTrendColor(string $trend, string $optimalDirection): string
+    {
+        return match ($trend) {
+            'increasing' => ($optimalDirection === 'good' ? 'lime' : ($optimalDirection === 'bad' ? 'rose' : 'zinc')),
+            'decreasing' => ($optimalDirection === 'good' ? 'rose' : ($optimalDirection === 'bad' ? 'lime' : 'zinc')),
+            default      => 'zinc', // stable
+        };
+    }
+
+    /**
+     * Détermine l'icône de tendance en fonction de la direction de la tendance.
+     */
+    protected function getTrendIcon(string $trend): string
+    {
+        return match ($trend) {
+            'increasing' => 'arrow-trending-up',
+            'decreasing' => 'arrow-trending-down',
+            default      => 'minus', // stable ou N/A
+        };
     }
 }
