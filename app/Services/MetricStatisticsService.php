@@ -145,7 +145,7 @@ class MetricStatisticsService
 
             if (! empty($options['include_alerts'])) {
                 $period = $options['period'] ?? 'last_60_days';
-                $athleteData['alerts'] = $this->metricAlertsService->getAlerts($athlete, $athleteMetrics, $athletePlanWeeks, $period, $options);
+                $athleteData['alerts'] = $this->metricAlertsService->getAlerts($athlete, $athleteMetrics, $athletePlanWeeks, $options);
             }
 
             if ($options['include_menstrual_cycle'] && $athlete->gender->value === 'w') {
