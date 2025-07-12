@@ -54,7 +54,7 @@
                     <x-filament::icon-button
                         class="inline ms-1"
                         icon="heroicon-o-information-circle"
-                        tooltip="{{ $metric->getDescription() }}"
+                        tooltip="{!! $metric->getDescription() !!}"
                         label="{{ $metric->getDescription() }}"
                         color="gray"
                         size="sm"
@@ -70,7 +70,7 @@
                     <x-filament::icon-button
                         class="inline ms-1"
                         icon="heroicon-o-information-circle"
-                        tooltip="{{ $metricType->getDescription() }}"
+                        tooltip="{!! $metricType->getDescription() !!}"
                         label="{{ $metricType->getDescription() }}"
                         color="gray"
                         size="sm"

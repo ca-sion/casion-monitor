@@ -223,9 +223,9 @@ enum MetricType: string implements HasLabel
                 10 = Très légères, tes jambes sont fraîches et prêtes à performer !",
 
             self::POST_SESSION_SESSION_LOAD => "Après ta session, évalue la charge totale de ton entraînement. C'est une combinaison de l'intensité (à quel point c'était dur) et du volume (combien tu as fait). Sur une échelle de 1 à 10 :
-                1 = Très facile (échauffement léger, pas d'effort).
-                5 = Modéré (tu as fait un bon entraînement).
-                10 = Maximal (c'était la mort).",
+                1 = Très facile, échauffement léger, pas d'effort.
+                5 = Modéré, c'était un entraînement chargé, mais OK.
+                10 = Maximal, c'était la mort.",
             self::POST_SESSION_PERFORMANCE_FEEL => "Comment as-tu ressenti ta performance pendant la session ? Sur une échelle de 1 à 10.
                 1 = Mauvaise, tu n'étais pas dans le coup, rien n'allait.
                 5 = Moyenne, tu as fait ce que tu savais faire.
