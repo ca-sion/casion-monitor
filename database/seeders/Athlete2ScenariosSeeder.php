@@ -50,7 +50,7 @@ class Athlete2ScenariosSeeder extends Seeder
         // Scénarios d'alertes spécifiques (pour tester getAthleteAlerts)
         // $scenarioFactory->seedPersistentHighFatigueAlert($athlete->id);
         // $scenarioFactory->seedIncreasingFatigueTrendAlert($athlete->id);
-        // $scenarioFactory->seedPersistentLowSleepQualityAlert($athlete->id);
+        $scenarioFactory->seedPersistentLowSleepQualityAlert($athlete->id);
         // $scenarioFactory->seedDecreasingSleepQualityTrendAlert($athlete->id);
         // $scenarioFactory->seedPersistentPainAlert($athlete->id);
         // $scenarioFactory->seedIncreasingPainTrendAlert($athlete->id);
