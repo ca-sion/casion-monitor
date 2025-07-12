@@ -77,12 +77,14 @@ class AthleteMonthlyForm extends Component implements HasSchemas
     {
         $data = $this->form->getState();
 
-        Metric::create([
+        Metric::updateOrCreate([
             'athlete_id'  => $this->athlete->id,
             'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
-            'value'       => data_get($data, MetricType::MORNING_BODY_WEIGHT_KG->value),
             'date'        => $this->date,
-        ]);
+        ],
+    [
+            'value'       => data_get($data, MetricType::MORNING_BODY_WEIGHT_KG->value),
+    ]);
 
         Notification::make()
             ->title('Votre poids a été enregistré')
