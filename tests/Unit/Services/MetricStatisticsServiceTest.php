@@ -81,13 +81,13 @@ it('can calculate SBM with partial daily metrics', function () {
 it('can get start date from period', function () {
     Carbon::setTestNow(Carbon::parse('2025-07-01 12:00:00'));
 
-    $startDate7Days = $this->service->getStartDateFromPeriod('last_7_days');
+    $startDate7Days = $this->service->calculatePeriodStartDate('last_7_days');
     assertEquals(Carbon::parse('2025-06-24 00:00:00'), $startDate7Days);
 
-    $startDate30Days = $this->service->getStartDateFromPeriod('last_30_days');
+    $startDate30Days = $this->service->calculatePeriodStartDate('last_30_days');
     assertEquals(Carbon::parse('2025-06-01 00:00:00'), $startDate30Days);
 
-    $startDateAllTime = $this->service->getStartDateFromPeriod('all_time');
+    $startDateAllTime = $this->service->calculatePeriodStartDate('all_time');
     assertEquals(Carbon::createFromTimestamp(0), $startDateAllTime);
 
     Carbon::setTestNow(); // Reset Carbon
@@ -120,18 +120,18 @@ it('returns 0 CPH if volume or intensity is null', function () {
 
 it('can format metric value', function () {
     $metricType = MetricType::MORNING_BODY_WEIGHT_KG; // precision 1, unit kg
-    $formattedValue = $this->service->formatMetricValue(75.56, $metricType);
+    $formattedValue = $this->service->formatMetricDisplayValue(75.56, $metricType);
     assertEquals('75.56 kg', $formattedValue);
 
     $metricType = MetricType::MORNING_GENERAL_FATIGUE; // precision 0, no unit
-    $formattedValue = $this->service->formatMetricValue(8.2, $metricType);
+    $formattedValue = $this->service->formatMetricDisplayValue(8.2, $metricType);
     assertEquals('8/10', $formattedValue);
 
     $metricType = MetricType::MORNING_PAIN; // note type
-    $formattedValue = $this->service->formatMetricValue('Note text', $metricType);
+    $formattedValue = $this->service->formatMetricDisplayValue('Note text', $metricType);
     assertEquals('Note text', $formattedValue);
 
-    $formattedValue = $this->service->formatMetricValue(null, $metricType);
+    $formattedValue = $this->service->formatMetricDisplayValue(null, $metricType);
     assertEquals('N/A', $formattedValue);
 });
 
@@ -143,7 +143,7 @@ it('can prepare chart data for a single metric', function () {
         (object) ['date' => Carbon::parse('2025-07-03'), 'metric_type' => $metricType, 'value' => 48],
     ]);
 
-    $chartData = $this->service->prepareChartDataForSingleMetric($metrics, $metricType);
+    $chartData = $this->service->prepareSingleMetricChartData($metrics, $metricType);
 
     assertIsArray($chartData);
     assertEquals(['2025-07-01', '2025-07-02', '2025-07-03'], $chartData['labels']);
@@ -163,7 +163,7 @@ it('can calculate evolution trend from numeric collection', function () {
         (object) ['date' => Carbon::parse('2025-07-06'), 'value' => 20],
     ]);
 
-    $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);
+    $trend = $this->service->calculateGenericNumericTrend($dataCollection);
     assertEquals('increasing', $trend['trend']);
     assertNotNull($trend['change']);
 
@@ -176,7 +176,7 @@ it('can calculate evolution trend from numeric collection', function () {
         (object) ['date' => Carbon::parse('2025-07-06'), 'value' => 10],
     ]);
 
-    $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);
+    $trend = $this->service->calculateGenericNumericTrend($dataCollection);
     assertEquals('decreasing', $trend['trend']);
     assertNotNull($trend['change']);
 
@@ -186,7 +186,7 @@ it('can calculate evolution trend from numeric collection', function () {
         (object) ['date' => Carbon::parse('2025-07-03'), 'value' => 9.9],
     ]);
 
-    $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);
+    $trend = $this->service->calculateGenericNumericTrend($dataCollection);
     assertEquals('decreasing', $trend['trend']);
     assertNotNull($trend['change']);
 
@@ -194,7 +194,7 @@ it('can calculate evolution trend from numeric collection', function () {
         (object) ['date' => Carbon::parse('2025-07-01'), 'value' => 10],
     ]);
 
-    $trend = $this->service->calculateTrendFromNumericCollection($dataCollection);
+    $trend = $this->service->calculateGenericNumericTrend($dataCollection);
     assertEquals('N/A', $trend['trend']);
     assertNull($trend['change']);
 });

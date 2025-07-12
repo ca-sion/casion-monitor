@@ -13,7 +13,7 @@ class MetricTrendsService
     /**
      * Calcule la moyenne des métriques sur différentes périodes pour un athlète.
      */
-    public function getMetricTrends(Athlete $athlete, MetricType $metricType): array
+    public function calculateAthleteMetricAverages(Athlete $athlete, MetricType $metricType): array
     {
         if ($metricType->getValueColumn() === 'note') {
             return [
@@ -30,7 +30,7 @@ class MetricTrendsService
 
         $metrics = $query->get();
 
-        return $this->getMetricTrendsForCollection($metrics, $metricType);
+        return $this->calculateMetricAveragesFromCollection($metrics, $metricType);
     }
 
     /**
@@ -38,7 +38,7 @@ class MetricTrendsService
      *
      * @param  Collection<Metric>  $metrics  La collection de métriques à analyser.
      */
-    public function getMetricTrendsForCollection(Collection $metrics, MetricType $metricType): array
+    public function calculateMetricAveragesFromCollection(Collection $metrics, MetricType $metricType): array
     {
         if ($metricType->getValueColumn() === 'note') {
             return [
@@ -84,7 +84,7 @@ class MetricTrendsService
      * @param  Collection<Metric>  $metrics  Collection de métriques déjà filtrée par type.
      * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
      */
-    public function getEvolutionTrendForCollection(Collection $metrics, MetricType $metricType): array
+    public function calculateMetricEvolutionTrend(Collection $metrics, MetricType $metricType): array
     {
         if ($metricType->getValueColumn() === 'note') {
             return ['trend' => 'N/A', 'change' => null, 'reason' => 'La métrique n\'est pas numérique.'];
@@ -145,7 +145,7 @@ class MetricTrendsService
      * @param  Collection<object|array>  $dataCollection  Collection d'objets/tableaux avec 'date' et 'value'.
      * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
      */
-    public function calculateTrendFromNumericCollection(Collection $dataCollection): array
+    public function calculateGenericNumericTrend(Collection $dataCollection): array
     {
         $numericData = $dataCollection->filter(fn ($item) => is_numeric($item->value ?? $item['value'] ?? null))
             ->sortBy(fn ($item) => $item->date ?? $item['date']);

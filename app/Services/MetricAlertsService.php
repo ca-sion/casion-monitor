@@ -129,15 +129,15 @@ class MetricAlertsService
         $fatigueThresholds = self::ALERT_THRESHOLDS[$fatigueType->value];
 
         if ($fatigueMetrics->count() > 5 && $fatigueType->getValueColumn() !== 'note') {
-            $averageFatigue7Days = $this->metricTrendsService->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 7 jours'] ?? null;
-            $averageFatigue30Days = $this->metricTrendsService->getMetricTrendsForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 30 jours'] ?? null;
+            $averageFatigue7Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 7 jours'] ?? null;
+            $averageFatigue30Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE)['averages']['Derniers 30 jours'] ?? null;
 
             if ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['persistent_high_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['persistent_high_30d_min']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Fatigue générale très élevée persistante (moy. 7j: '.round($averageFatigue7Days).'/10). Potentiel signe de surentraînement ou manque de récupération.'];
             } elseif ($averageFatigue7Days !== null && $averageFatigue7Days >= $fatigueThresholds['elevated_7d_min'] && $averageFatigue30Days >= $fatigueThresholds['elevated_30d_min']) {
                 $alerts[] = ['type' => 'info', 'message' => 'Fatigue générale élevée (moy. 7j: '.round($averageFatigue7Days).'/10). Surveiller la récupération.'];
             }
-            $fatigueTrend = $this->metricTrendsService->getEvolutionTrendForCollection($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE);
+            $fatigueTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($fatigueMetrics, MetricType::MORNING_GENERAL_FATIGUE);
             if ($fatigueTrend['trend'] === 'increasing' && $fatigueTrend['change'] > $fatigueThresholds['trend_increase_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative de la fatigue générale (+'.number_format($fatigueTrend['change'], 1).'%).'];
             }
@@ -147,13 +147,13 @@ class MetricAlertsService
         $sleepMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_SLEEP_QUALITY);
         $sleepThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_SLEEP_QUALITY->value];
         if ($sleepMetrics->count() > 5) {
-            $averageSleep7Days = $this->metricTrendsService->getMetricTrendsForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 7 jours'] ?? null;
-            $averageSleep30Days = $this->metricTrendsService->getMetricTrendsForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 30 jours'] ?? null;
+            $averageSleep7Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 7 jours'] ?? null;
+            $averageSleep30Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY)['averages']['Derniers 30 jours'] ?? null;
 
             if ($averageSleep7Days !== null && $averageSleep7Days <= $sleepThresholds['persistent_low_7d_max'] && $averageSleep30Days <= $sleepThresholds['persistent_low_30d_max']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Qualité de sommeil très faible persistante (moy. 7j: '.round($averageSleep7Days).'/10). Peut affecter la récupération et la performance.'];
             }
-            $sleepTrend = $this->metricTrendsService->getEvolutionTrendForCollection($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY);
+            $sleepTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($sleepMetrics, MetricType::MORNING_SLEEP_QUALITY);
             if ($sleepTrend['trend'] === 'decreasing' && $sleepTrend['change'] < $sleepThresholds['trend_decrease_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la qualité du sommeil ('.number_format($sleepTrend['change'], 1).'%).'];
             }
@@ -163,11 +163,11 @@ class MetricAlertsService
         $painMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_PAIN);
         $painThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_PAIN->value];
         if ($painMetrics->count() > 5) {
-            $averagePain7Days = $this->metricTrendsService->getMetricTrendsForCollection($painMetrics, MetricType::MORNING_PAIN)['averages']['Derniers 7 jours'] ?? null;
+            $averagePain7Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($painMetrics, MetricType::MORNING_PAIN)['averages']['Derniers 7 jours'] ?? null;
             if ($averagePain7Days !== null && $averagePain7Days >= $painThresholds['persistent_high_7d_min']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Douleurs musculaires/articulaires persistantes (moy. 7j: '.round($averagePain7Days)."/10). Évaluer la cause et la nécessité d'un repos."];
             }
-            $painTrend = $this->metricTrendsService->getEvolutionTrendForCollection($painMetrics, MetricType::MORNING_PAIN);
+            $painTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($painMetrics, MetricType::MORNING_PAIN);
             if ($painTrend['trend'] === 'increasing' && $painTrend['change'] > $painThresholds['trend_increase_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Augmentation significative des douleurs (+'.number_format($painTrend['change'], 1).'%).'];
             }
@@ -177,7 +177,7 @@ class MetricAlertsService
         $hrvMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_HRV);
         $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
         if ($hrvMetrics->count() > 5) {
-            $hrvTrend = $this->metricTrendsService->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
+            $hrvTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($hrvMetrics, MetricType::MORNING_HRV);
             if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < $hrvThresholds['trend_decrease_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%). Peut indiquer un stress ou une fatigue accrue.'];
             }
@@ -187,7 +187,7 @@ class MetricAlertsService
         $perfFeelMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::POST_SESSION_PERFORMANCE_FEEL);
         $perfFeelThresholds = self::ALERT_THRESHOLDS[MetricType::POST_SESSION_PERFORMANCE_FEEL->value];
         if ($perfFeelMetrics->count() > 5) {
-            $perfFeelTrend = $this->metricTrendsService->getEvolutionTrendForCollection($perfFeelMetrics, MetricType::POST_SESSION_PERFORMANCE_FEEL);
+            $perfFeelTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($perfFeelMetrics, MetricType::POST_SESSION_PERFORMANCE_FEEL);
             if ($perfFeelTrend['trend'] === 'decreasing' && $perfFeelTrend['change'] < $perfFeelThresholds['trend_decrease_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative du ressenti de performance en séance ('.number_format($perfFeelTrend['change'], 1).'%).'];
             }
@@ -197,7 +197,7 @@ class MetricAlertsService
         $weightMetrics = $metrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_BODY_WEIGHT_KG);
         $weightThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_BODY_WEIGHT_KG->value];
         if ($weightMetrics->count() > 5) {
-            $weightTrend = $this->metricTrendsService->getEvolutionTrendForCollection($weightMetrics, MetricType::MORNING_BODY_WEIGHT_KG);
+            $weightTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($weightMetrics, MetricType::MORNING_BODY_WEIGHT_KG);
             if ($weightTrend['trend'] === 'decreasing' && $weightTrend['change'] < $weightThresholds['trend_decrease_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Perte de poids significative ('.number_format(abs($weightTrend['change']), 1).'%). Peut être un signe de déficit énergétique.'];
             }
@@ -219,9 +219,9 @@ class MetricAlertsService
 
         $trainingPlanWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
 
-        $alerts = array_merge($alerts, $this->analyzeChargeMetrics($athlete, $weekStartDate, $trainingPlanWeek, $athleteMetrics));
-        $alerts = array_merge($alerts, $this->analyzeSbmMetrics($athlete, $weekStartDate, $athleteMetrics));
-        $alerts = array_merge($alerts, $this->analyzeMultiWeekTrends($athlete, $weekStartDate, $athleteMetrics));
+        $alerts = array_merge($alerts, $this->evaluateCihCphRatioAlerts($athlete, $weekStartDate, $trainingPlanWeek, $athleteMetrics));
+        $alerts = array_merge($alerts, $this->evaluateWeeklySbmAlerts($athlete, $weekStartDate, $athleteMetrics));
+        $alerts = array_merge($alerts, $this->analyzeLongTermTrendsForAlerts($athlete, $weekStartDate, $athleteMetrics));
 
         return $alerts;
     }
@@ -296,7 +296,7 @@ class MetricAlertsService
      * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
      * @return array Un tableau d'alertes liées à la charge.
      */
-    protected function analyzeChargeMetrics(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
+    protected function evaluateCihCphRatioAlerts(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
     {
         $alerts = [];
         $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
@@ -332,7 +332,7 @@ class MetricAlertsService
      * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
      * @return array Un tableau d'alertes liées au SBM.
      */
-    protected function analyzeSbmMetrics(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
+    protected function evaluateWeeklySbmAlerts(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
     {
         $alerts = [];
         $sbmSum = 0;
@@ -375,7 +375,7 @@ class MetricAlertsService
      * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
      * @return array Un tableau d'alertes liées aux tendances SBM et VFC.
      */
-    protected function analyzeMultiWeekTrends(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
+    protected function analyzeLongTermTrendsForAlerts(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
     {
         $alerts = [];
 
@@ -401,7 +401,7 @@ class MetricAlertsService
 
         if ($sbmDataCollection->count() > 5) {
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
-            $sbmTrend = $this->metricTrendsService->calculateTrendFromNumericCollection($sbmDataCollection);
+            $sbmTrend = $this->metricTrendsService->calculateGenericNumericTrend($sbmDataCollection);
             if ($sbmTrend['trend'] === 'decreasing' && $sbmTrend['change'] < $sbmThresholds['trend_decrease_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Baisse significative du SBM ('.number_format($sbmTrend['change'], 1).'%) sur les 30 derniers jours.'];
             }
@@ -410,7 +410,7 @@ class MetricAlertsService
         $hrvMetrics = $allMetrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_HRV);
 
         if ($hrvMetrics->count() > 5) {
-            $hrvTrend = $this->metricTrendsService->getEvolutionTrendForCollection($hrvMetrics, MetricType::MORNING_HRV);
+            $hrvTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($hrvMetrics, MetricType::MORNING_HRV);
             $hrvThresholds = self::ALERT_THRESHOLDS[MetricType::MORNING_HRV->value];
             if ($hrvTrend['trend'] === 'decreasing' && $hrvTrend['change'] < $hrvThresholds['trend_decrease_percent']) {
                 $alerts[] = ['type' => 'warning', 'message' => 'Diminution significative de la VFC ('.number_format($hrvTrend['change'], 1).'%) sur les 30 derniers jours.'];

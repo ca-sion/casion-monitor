@@ -96,7 +96,7 @@ class AthleteController extends Controller
 
             foreach ($displayTableMetricTypes as $metricType) {
                 $metric = $metricDates->where('metric_type', $metricType->value)->first();
-                $rowData['metrics'][$metricType->value] = $metric ? $this->metricStatisticsService->formatMetricValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
+                $rowData['metrics'][$metricType->value] = $metric ? $this->metricStatisticsService->formatMetricDisplayValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
             }
 
             return $rowData;

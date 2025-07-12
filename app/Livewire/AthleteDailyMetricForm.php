@@ -61,7 +61,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         $this->canGetNextDay = $this->nextDate < now()->endOfDay();
 
         $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $this->athleteCurrentTrainingPlanWeek = resolve(MetricStatisticsService::class)->getTrainingPlanWeekForAthlete($this->athlete, $currentWeekStartDate);
+        $this->athleteCurrentTrainingPlanWeek = resolve(MetricStatisticsService::class)->retrieveAthleteTrainingPlanWeek($this->athlete, $currentWeekStartDate);
 
         $metrics = Metric::where('athlete_id', $this->athlete->id)
             ->whereDate('date', $this->date)
