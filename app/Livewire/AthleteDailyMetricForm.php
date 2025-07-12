@@ -20,7 +20,7 @@ use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
-use App\Services\MetricStatisticsService;
+use App\Services\MetricService;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\TextEntry;
@@ -61,7 +61,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         $this->canGetNextDay = $this->nextDate < now()->endOfDay();
 
         $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $this->athleteCurrentTrainingPlanWeek = resolve(MetricStatisticsService::class)->retrieveAthleteTrainingPlanWeek($this->athlete, $currentWeekStartDate);
+        $this->athleteCurrentTrainingPlanWeek = resolve(MetricService::class)->retrieveAthleteTrainingPlanWeek($this->athlete, $currentWeekStartDate);
 
         $metrics = Metric::where('athlete_id', $this->athlete->id)
             ->whereDate('date', $this->date)

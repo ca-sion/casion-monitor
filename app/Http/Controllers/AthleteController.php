@@ -9,15 +9,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Services\MetricStatisticsService;
+use App\Services\MetricService;
 
 class AthleteController extends Controller
 {
-    protected $metricStatisticsService;
+    protected MetricService $metricService;
 
-    public function __construct(MetricStatisticsService $metricStatisticsService)
+    public function __construct(MetricService $metricService)
     {
-        $this->metricStatisticsService = $metricStatisticsService;
+        $this->metricService = $metricService;
     }
 
     public function dashboard(Request $request): View|JsonResponse
@@ -73,7 +73,7 @@ class AthleteController extends Controller
         ];
 
         // Appel unique pour avoir toutes les données de l'athlète
-        $athleteData = $this->metricStatisticsService->getAthletesData(collect([$athlete]), $options)->first();
+        $athleteData = $this->metricService->getAthletesData(collect([$athlete]), $options)->first();
 
         // Extraire les données de l'athlète enrichi
         $metricsDataForDashboard = $athleteData->dashboard_metrics_data ?? [];
@@ -89,7 +89,7 @@ class AthleteController extends Controller
         $weeklyPlannedIntensity = 0; // L'intensité planifiée n'est pas directement dans les métriques calculées, à revoir si nécessaire
 
         // Traiter l'historique des métriques pour la préparation du tableau
-        $processedDailyMetricsForTable = $this->metricStatisticsService->prepareDailyMetricsForTableView(
+        $processedDailyMetricsForTable = $this->metricService->prepareDailyMetricsForTableView(
             $latestDailyMetrics,
             $displayTableMetricTypes,
             $athlete,

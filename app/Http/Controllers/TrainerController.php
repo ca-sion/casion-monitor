@@ -11,15 +11,15 @@ use Illuminate\Support\Carbon;
 use App\Enums\CalculatedMetric;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Services\MetricStatisticsService;
+use App\Services\MetricService;
 
 class TrainerController extends Controller
 {
-    protected $metricStatisticsService;
+    protected MetricService $metricService;
 
-    public function __construct(MetricStatisticsService $metricStatisticsService)
+    public function __construct(MetricService $metricService)
     {
-        $this->metricStatisticsService = $metricStatisticsService;
+        $this->metricService = $metricService;
     }
 
     public function dashboard(): View|JsonResponse
@@ -66,7 +66,7 @@ class TrainerController extends Controller
         ];
 
         // Appel unique pour avoir les données en une seule fois
-        $athletesOverviewData = $this->metricStatisticsService->getAthletesData($trainer->athletes, [
+        $athletesOverviewData = $this->metricService->getAthletesData($trainer->athletes, [
             'period' => 'last_60_days',
             // 'metric_types'               => [],
             // 'calculated_metrics'         => [],
@@ -161,7 +161,7 @@ class TrainerController extends Controller
         ];
 
         // Appel unique pour avoir toutes les données de l'athlète
-        $athleteData = $this->metricStatisticsService->getAthletesData(collect([$athlete]), $options)->first();
+        $athleteData = $this->metricService->getAthletesData(collect([$athlete]), $options)->first();
 
         // Extraire les données de l'athlète enrichi
         $dashboard_metrics_data = $athleteData->dashboard_metrics_data ?? [];
@@ -172,7 +172,7 @@ class TrainerController extends Controller
         $chartData = data_get($dashboard_metrics_data, $chartMetricType->value.'.chart_data') ?? ['labels' => [], 'data' => [], 'unit' => null, 'label' => null];
 
         // Traiter l'historique des métriques pour la préparation du tableau
-        $processedDailyMetrics = $this->metricStatisticsService->prepareDailyMetricsForTableView(
+        $processedDailyMetrics = $this->metricService->prepareDailyMetricsForTableView(
             $latestDailyMetrics,
             $displayTableMetricTypes,
             $athleteData,

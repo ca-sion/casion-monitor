@@ -11,7 +11,7 @@ use App\Enums\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
 
-class MetricStatisticsService
+class MetricService
 {
     protected MetricCalculationService $metricCalculationService;
 
