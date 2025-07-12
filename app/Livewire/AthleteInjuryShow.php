@@ -21,7 +21,7 @@ class AthleteInjuryShow extends Component
             throw new NotFoundHttpException();
         }
 
-        $this->injury = $injury;
+        $this->injury = $injury->load('medicalFeedbacks');
     }
 
     #[Layout('components.layouts.athlete')]

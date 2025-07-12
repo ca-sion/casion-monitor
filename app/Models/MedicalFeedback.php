@@ -11,6 +11,13 @@ class MedicalFeedback extends Model
 {
     use HasFactory;
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string|null
+     */
+    protected $table = 'medical_feedbacks';
+
     protected $guarded = [];
 
     protected function casts(): array
@@ -26,5 +33,10 @@ class MedicalFeedback extends Model
     public function injury(): BelongsTo
     {
         return $this->belongsTo(Injury::class);
+    }
+
+    public function trainer(): BelongsTo
+    {
+        return $this->belongsTo(Trainer::class);
     }
 }

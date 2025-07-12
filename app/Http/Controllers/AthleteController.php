@@ -118,6 +118,7 @@ class AthleteController extends Controller
             'display_table_metric_types'    => $displayTableMetricTypes,
             'weekly_planned_volume'         => $weeklyPlannedVolume,
             'weekly_planned_intensity'      => $weeklyPlannedIntensity,
+            'recoveryProtocols'             => $athlete->recoveryProtocols()->orderBy('date', 'desc')->get(),
         ];
 
         if ($request->expectsJson()) {

@@ -356,4 +356,113 @@
         </div>
     </flux:card>
 
+    <flux:separator variant="subtle" class="my-8" />
+
+    {{-- Section Blessures de l'athlète --}}
+    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
+        <flux:heading size="lg" level="2" class="mb-4 text-center">🤕 Blessures de {{ $athlete->first_name }}</flux:heading>
+        @if ($athlete->injuries->isEmpty())
+            <flux:text class="text-center text-zinc-500 italic">
+                Aucune blessure déclarée pour cet athlète.
+            </flux:text>
+        @else
+            <div class="space-y-6">
+                @foreach ($athlete->injuries as $injury)
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-900">
+                                    {{ $injury->injury_type?->getLabel() ?? 'Blessure' }} - {{ $injury->pain_location ?? 'Localisation non spécifiée' }}
+                                </h4>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    <p><strong>Date :</strong> {{ $injury->declaration_date->format('d/m/Y') }}</p>
+                                    <p><strong>Intensité :</strong> {{ $injury->pain_intensity ?? 'N/A' }}/10</p>
+                                    <p><strong>Statut :</strong>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $injury->status->getColor() }}">
+                                            {{ $injury->status->getLabel() }}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                            <a href="{{ route('trainers.injuries.feedback.create', ['hash' => $trainer->hash, 'injury' => $injury->id]) }}"
+                               class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Nouveau Feedback
+                            </a>
+                        </div>
+
+                        {{-- Feedbacks médicaux pour cette blessure --}}
+                        @if ($injury->medicalFeedbacks->isNotEmpty())
+                            <div class="mt-4">
+                                <h5 class="text-sm font-medium text-gray-700 mb-3">Feedbacks médicaux ({{ $injury->medicalFeedbacks->count() }})</h5>
+                                <div class="space-y-3">
+                                    @foreach ($injury->medicalFeedbacks->sortByDesc('feedback_date') as $feedback)
+                                        <div class="bg-white border border-gray-200 rounded-md p-3">
+                                            <div class="flex justify-between items-start">
+                                                <div class="flex-1">
+                                                    <div class="flex items-center space-x-2 mb-2">
+                                                        <span class="text-sm font-medium text-gray-900">
+                                                            {{ $feedback->professional_type->getLabel() }}
+                                                        </span>
+                                                        <span class="text-xs text-gray-500">
+                                                            {{ $feedback->feedback_date->format('d/m/Y') }}
+                                                        </span>
+                                                        @if ($feedback->reported_by_athlete)
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                                Athlète
+                                                            </span>
+                                                        @endif
+                                                        @if ($feedback->trainer)
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                                {{ $feedback->trainer->name }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    
+                                                    @if ($feedback->diagnosis)
+                                                        <p class="text-xs text-gray-600 mb-1">
+                                                            <strong>Diagnostic :</strong> {{ Str::limit($feedback->diagnosis, 100) }}
+                                                        </p>
+                                                    @endif
+                                                    
+                                                    @if ($feedback->training_limitations)
+                                                        <p class="text-xs text-gray-600 mb-1">
+                                                            <strong>Limitations :</strong> {{ Str::limit($feedback->training_limitations, 100) }}
+                                                        </p>
+                                                    @endif
+                                                    
+                                                    @if ($feedback->next_appointment_date)
+                                                        <p class="text-xs text-gray-600">
+                                                            <strong>Prochain RDV :</strong> {{ $feedback->next_appointment_date->format('d/m/Y') }}
+                                                        </p>
+                                                    @endif
+                                                </div>
+                                                <a href="{{ route('trainers.medical-feedbacks.edit', ['hash' => $trainer->hash, 'medicalFeedback' => $feedback->id]) }}"
+                                                   class="ml-3 inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                    </svg>
+                                                    Modifier
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @else
+                            <div class="mt-4 text-center py-4 bg-white border-2 border-dashed border-gray-300 rounded-lg">
+                                <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-600">Aucun feedback médical pour cette blessure</p>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </flux:card>
+
 </x-layouts.trainer>

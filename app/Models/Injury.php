@@ -21,6 +21,7 @@ class Injury extends Model
             'declaration_date' => 'date',
             'resolved_date' => 'date',
             'session_date' => 'date',
+            'injury_date' => 'date',
             'status' => InjuryStatus::class,
             'injury_type' => InjuryType::class,
             'session_related' => 'boolean',

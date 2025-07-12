@@ -105,6 +105,9 @@ class TrainerController extends Controller
             abort(403, 'Accès non autorisé à cet athlète.');
         }
 
+        // Charger les blessures de l'athlète
+        $athlete->load('injuries');
+
         $period = request()->input('period', 'last_60_days');
         $selectedMetricType = request()->input('metric_type');
 
