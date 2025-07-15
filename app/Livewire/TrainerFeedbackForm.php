@@ -209,17 +209,17 @@ class TrainerFeedbackForm extends Component implements HasSchemas
                 FeedbackType::POST_COMPETITION_SENSATION->value,
             ]);
         });
-
-        foreach ($feedbacksData as $feedbackType => $content) { // Renommé $feedback en $feedbackType pour clarté
+        
+        foreach ($feedbacksData as $feedbackType => $content) {
             if ($content != null && $content != '<p></p>') {
-                Feedback::updateOrCreate(
-                    ['athlete_id' => $data['athlete_id'], 'date' => $data['date'], 'type' => $feedbackType],
+                $f = Feedback::updateOrCreate(
+                    ['athlete_id' => $this->athlete_id, 'date' => $this->date->format('Y-m-d H:i:s'), 'type' => $feedbackType],
                     ['content' => $content, 'author_type' => 'trainer', 'trainer_id' => $this->trainer->id]
                 );
             } else {
                 // Si le contenu est vide, supprime le feedback existant
-                Feedback::where('athlete_id', $data['athlete_id'])
-                    ->where('date', $data['date'])
+                Feedback::where('athlete_id', $this->athlete_id)
+                    ->where('date', $this->date->format('Y-m-d H:i:s'))
                     ->where('type', $feedbackType)
                     ->delete();
             }
