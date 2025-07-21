@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Injury;
+use App\Enums\BodyPart;
 use App\Models\Athlete;
 use Livewire\Component;
 use App\Enums\InjuryType;
@@ -54,7 +55,8 @@ class AthleteInjuryForm extends Component implements HasForms
                     ->required(),
                 DatePicker::make('declaration_date')
                     ->label('Date de déclaration')
-                    ->default(now())
+                    ->native(false)
+                    ->displayFormat('d.m.Y')
                     ->required(),
                 Select::make('status')
                     ->label('Statut de la blessure')
@@ -67,13 +69,15 @@ class AthleteInjuryForm extends Component implements HasForms
                     ->inline()
                     ->grouped()
                     ->options(fn () => array_combine(range(1, 10), range(1, 10))),
-                TextInput::make('pain_location')
+                Select::make('pain_location')
                     ->label('Localisation de la douleur')
-                    ->maxLength(255)
-                    ->nullable(),
+                    ->required()
+                    ->searchable()
+                    ->options(BodyPart::class),
                 Select::make('injury_type')
                     ->label('Type de blessure')
                     ->options(InjuryType::class)
+                    ->required()
                     ->nullable(),
                 Textarea::make('onset_circumstances')
                     ->label("Circonstances d'apparition")

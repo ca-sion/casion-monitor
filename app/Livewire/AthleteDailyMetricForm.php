@@ -154,7 +154,8 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ])
                             ->inline()
                             ->grouped()
-                            ->options(fn () => array_combine(range(1, 10), range(1, 10))),
+                            ->options(fn () => array_combine(range(1, 10), range(1, 10)))
+                            ->live(),
                         TextInput::make(MetricType::MORNING_PAIN_LOCATION->value)
                             ->label(MetricType::MORNING_PAIN_LOCATION->getLabel())
                             ->afterLabel([
@@ -266,6 +267,14 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
+                        Textarea::make(FeedbackType::POST_SESSION_SENSATION->value)
+                            ->label(FeedbackType::POST_SESSION_SENSATION->getLabel())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(FeedbackType::POST_SESSION_SENSATION->getHint()),
+                            ])
+                            ->maxLength(255),
                         ToggleButtons::make(MetricType::POST_SESSION_PAIN->value)
                             ->label(MetricType::POST_SESSION_PAIN->getLabel())
                             ->helperText(MetricType::POST_SESSION_PAIN->getScaleHint())
@@ -277,14 +286,6 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->inline()
                             ->grouped()
                             ->options(fn () => array_combine(range(1, 10), range(1, 10))),
-                        Textarea::make(FeedbackType::POST_SESSION_SENSATION->value)
-                            ->label(FeedbackType::POST_SESSION_SENSATION->getLabel())
-                            ->afterLabel([
-                                Icon::make(Heroicon::OutlinedInformationCircle)
-                                    ->color('gray')
-                                    ->tooltip(FeedbackType::POST_SESSION_SENSATION->getHint()),
-                            ])
-                            ->maxLength(255),
                     ]),
             ])
             ->statePath('data');
@@ -373,7 +374,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             'hash'                => $this->athlete->hash,
                             'athlete_id'          => $this->athlete->id,
                             'pain_intensity'      => $postSessionPain,
-                            'onset_circumstances' => 'Douleur apparue pendant/après la séance du '.$this->date->format('Y-m-d'),
+                            'onset_circumstances' => 'Douleur apparue pendant/après la séance du '.$this->date->format('d.m.Y'),
                             'session_related'     => true,
                             'session_date'        => $this->date->format('Y-m-d'),
                             'immediate_onset'     => true,

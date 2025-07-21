@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BodyPart;
 use App\Enums\InjuryType;
 use App\Enums\InjuryStatus;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,7 @@ class Injury extends Model
             'injury_date'      => 'date',
             'status'           => InjuryStatus::class,
             'injury_type'      => InjuryType::class,
+            'pain_location'    => BodyPart::class,
             'session_related'  => 'boolean',
             'immediate_onset'  => 'boolean',
         ];

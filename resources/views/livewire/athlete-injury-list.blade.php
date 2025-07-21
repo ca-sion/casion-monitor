@@ -8,6 +8,7 @@
             <flux:table.columns>
                 <flux:table.column>Date de déclaration</flux:table.column>
                 <flux:table.column>Type</flux:table.column>
+                <flux:table.column>Localisation</flux:table.column>
                 <flux:table.column>Statut</flux:table.column>
                 <flux:table.column>Actions</flux:table.column>
             </flux:table.columns>
@@ -20,6 +21,9 @@
                         </flux:table.cell>
                         <flux:table.cell>
                             {{ $injury->injury_type?->getLabel() ?? 'N/A' }}
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            {{ $injury->pain_location?->getLabel() ?? 'N/A' }}
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm"

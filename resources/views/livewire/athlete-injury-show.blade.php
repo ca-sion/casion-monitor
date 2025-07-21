@@ -1,5 +1,5 @@
 <div class="container mx-auto">
-    <flux:heading size="xl">Détail de la blessure/douleur du {{ $injury->declaration_date->format('d.m.Y') }}</flux:heading>
+    <flux:heading size="xl">{{ $injury->injury_type?->getPrefixForLocation() }} - {{ $injury->pain_location?->getLabel() }} - {{ $injury->declaration_date->format('d.m.Y') }}</flux:heading>
     <flux:text class="mb-6 mt-2 text-base">Liste des blessures ou douleurs déclarées.</flux:text>
     <flux:separator class="my-8" variant="subtle" />
 

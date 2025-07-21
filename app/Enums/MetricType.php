@@ -121,7 +121,7 @@ enum MetricType: string implements HasLabel
             self::MORNING_HRV              => 'value',
             self::MORNING_SLEEP_QUALITY    => 'value',
             self::MORNING_GENERAL_FATIGUE  => 'value',
-            self::MORNING_PAIN             => 'note',
+            self::MORNING_PAIN             => 'value',
             self::MORNING_PAIN_LOCATION    => 'note',
             self::MORNING_MOOD_WELLBEING   => 'value',
             self::MORNING_FIRST_DAY_PERIOD => 'value',

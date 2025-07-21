@@ -26,4 +26,17 @@ enum InjuryType: string implements HasLabel
             self::OTHER           => 'Autre',
         };
     }
+
+    public function getPrefixForLocation(): ?string
+    {
+        return match ($this) {
+            self::MUSCULAR        => 'Douleur musculaire',
+            self::JOINT           => 'Douleur articulaire',
+            self::TENDINITIS      => 'Tendinite',
+            self::FRACTURE        => 'Fracture',
+            self::SPRAIN          => 'Entorse',
+            self::PERSISTENT_PAIN => 'Douleur persistante non diagnostiquée',
+            self::OTHER           => 'Autre',
+        };
+    }
 }

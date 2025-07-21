@@ -372,7 +372,7 @@
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <h4 class="text-lg font-semibold text-gray-900">
-                                    {{ $injury->injury_type?->getLabel() ?? 'Blessure' }} - {{ $injury->pain_location ?? 'Localisation non spécifiée' }}
+                                    {{ $injury->injury_type?->getPrefixForLocation() ?? 'Blessure' }} - {{ $injury->pain_location?->getLabel() ?? 'Localisation non spécifiée' }}
                                 </h4>
                                 <div class="text-sm text-gray-600 mt-1">
                                     <p><strong>Date :</strong> {{ $injury->declaration_date->format('d.m.Y') }}</p>
