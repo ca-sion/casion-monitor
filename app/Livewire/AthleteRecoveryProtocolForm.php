@@ -26,14 +26,19 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
     public Athlete $athlete;
     public ?Injury $injury = null; // Optionnel, si le protocole est lié à une blessure
 
-    public function mount(?Injury $injury = null): void
+    public function mount(Injury $injury): void
     {
         $this->athlete = auth('athlete')->user();
-        $this->injury = $injury;
+        
+        if ($injury->exists) {
+            $this->injury = $injury;
+        } else {
+            $this->injury = null;
+        }
 
         $this->form->fill([
             'athlete_id' => $this->athlete->id,
-            'date' => now()->format('Y-m-d'),
+            'date' => now()->startOfDay(),
             'related_injury_id' => $this->injury ? $this->injury->id : null,
         ]);
     }
@@ -49,8 +54,9 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
                     ->hidden(),
                 DatePicker::make('date')
                     ->label('Date du protocole')
-                    ->default(now())
-                    ->required(),
+                    ->required()
+                    ->native(false)
+                    ->displayFormat('d.m.Y'),
                 Select::make('recovery_type')
                     ->label('Type de récupération')
                     ->options(RecoveryType::class)

@@ -172,7 +172,7 @@
                                     {{ $feedback->professional_type->getLabel() }}
                                 </p>
                                 <p class="text-sm text-gray-500">
-                                    <span class="font-medium">Date:</span> {{ $feedback->feedback_date->format('d/m/Y') }}
+                                    <span class="font-medium">Date:</span> {{ $feedback->feedback_date->format('d.m.Y') }}
                                     @if ($feedback->reported_by_athlete)
                                         <span class="mx-2">•</span> Rapporté par l'athlète
                                     @endif
@@ -183,7 +183,7 @@
                             </div>
                             @if ($feedback->next_appointment_date)
                                 <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                                    Prochain RDV: {{ $feedback->next_appointment_date->format('d/m/Y') }}
+                                    Prochain RDV: {{ $feedback->next_appointment_date->format('d.m.Y') }}
                                 </span>
                             @endif
                         </div>
@@ -272,7 +272,7 @@
                                     {{ $protocol->recovery_type->getLabel() }}
                                 </p>
                                 <p class="text-sm text-gray-500">
-                                    <span class="font-medium">Date:</span> {{ $protocol->date->format('d/m/Y') }}
+                                    <span class="font-medium">Date:</span> {{ $protocol->date->format('d.m.Y') }}
                                     @if ($protocol->duration_minutes)
                                         <span class="mx-2">•</span> {{ $protocol->duration_minutes }} minutes
                                     @endif

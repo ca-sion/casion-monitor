@@ -7,7 +7,7 @@
             <div class="text-sm text-gray-600">
                 <p><strong>Athlète :</strong> {{ $medicalFeedback->injury->athlete->name }}</p>
                 <p><strong>Blessure :</strong> {{ $medicalFeedback->injury->type }} - {{ $medicalFeedback->injury->location }}</p>
-                <p><strong>Date de la blessure :</strong> {{ $medicalFeedback->injury->declaration_date->format('d/m/Y') }}</p>
+                <p><strong>Date de la blessure :</strong> {{ $medicalFeedback->injury->declaration_date->format('d.m.Y') }}</p>
                 <p><strong>Statut de la blessure :</strong> 
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                         @if($medicalFeedback->injury->status === \App\Enums\InjuryStatus::DECLARED) bg-red-100 text-red-800

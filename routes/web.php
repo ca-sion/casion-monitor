@@ -42,6 +42,6 @@ Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}/injuries/create', AthleteInjuryForm::class)->name('athletes.injuries.create');
     Route::get('/a/{hash}/injuries/{injury}', AthleteInjuryShow::class)->name('athletes.injuries.show');
     Route::get('/a/{hash}/injuries/{injury}/feedback/create', AthleteMedicalFeedbackForm::class)->name('athletes.injuries.feedback.create');
-    Route::get('/a/{hash}/recovery-protocols/create', AthleteRecoveryProtocolForm::class)->name('athletes.recovery-protocols.create');
     Route::get('/a/{hash}/injuries/{injury}/recovery-protocols/create', AthleteRecoveryProtocolForm::class)->name('athletes.injuries.recovery-protocols.create');
+    Route::get('/a/{hash}/recovery-protocols/create', AthleteRecoveryProtocolForm::class)->name('athletes.recovery-protocols.create');
 });

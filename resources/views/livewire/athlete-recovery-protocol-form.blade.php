@@ -5,7 +5,7 @@
     @if ($injury)
         <flux:card class="flex flex-col gap-2" size="sm">
             <flux:text class="flex"><span class="w-24">Blessure :</span> {{ $injury->type }} - {{ $injury->location }}</flux:text>
-            <flux:text class="flex"><span class="w-24">Déclaration :</span> {{ $injury->declaration_date->format('d/m/Y') }}</flux:text>
+            <flux:text class="flex"><span class="w-24">Déclaration :</span> {{ $injury->declaration_date->format('d.m.Y') }}</flux:text>
             <flux:text class="flex"><span class="w-24">Statut :</span>
                 <flux:badge size="sm"
                     inset="top bottom"

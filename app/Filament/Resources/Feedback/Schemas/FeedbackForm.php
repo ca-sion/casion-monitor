@@ -22,7 +22,9 @@ class FeedbackForm
                 Select::make('trainer_id')
                     ->relationship('trainer', 'id')
                     ->getOptionLabelFromRecordUsing(fn (Model $record) => "{$record->first_name} {$record->last_name}"),
-                DatePicker::make('date'),
+                DatePicker::make('date')
+                    ->native(false)
+                    ->displayFormat('d.m.Y'),
                 Select::make('type')
                     ->options(FeedbackType::class),
                 TextInput::make('author_type'),

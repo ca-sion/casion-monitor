@@ -375,7 +375,7 @@
                                     {{ $injury->injury_type?->getLabel() ?? 'Blessure' }} - {{ $injury->pain_location ?? 'Localisation non spécifiée' }}
                                 </h4>
                                 <div class="text-sm text-gray-600 mt-1">
-                                    <p><strong>Date :</strong> {{ $injury->declaration_date->format('d/m/Y') }}</p>
+                                    <p><strong>Date :</strong> {{ $injury->declaration_date->format('d.m.Y') }}</p>
                                     <p><strong>Intensité :</strong> {{ $injury->pain_intensity ?? 'N/A' }}/10</p>
                                     <p><strong>Statut :</strong>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $injury->status->getColor() }}">
@@ -407,7 +407,7 @@
                                                             {{ $feedback->professional_type->getLabel() }}
                                                         </span>
                                                         <span class="text-xs text-gray-500">
-                                                            {{ $feedback->feedback_date->format('d/m/Y') }}
+                                                            {{ $feedback->feedback_date->format('d.m.Y') }}
                                                         </span>
                                                         @if ($feedback->reported_by_athlete)
                                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -435,7 +435,7 @@
                                                     
                                                     @if ($feedback->next_appointment_date)
                                                         <p class="text-xs text-gray-600">
-                                                            <strong>Prochain RDV :</strong> {{ $feedback->next_appointment_date->format('d/m/Y') }}
+                                                            <strong>Prochain RDV :</strong> {{ $feedback->next_appointment_date->format('d.m.Y') }}
                                                         </p>
                                                     @endif
                                                 </div>

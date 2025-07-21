@@ -36,7 +36,9 @@ class MetricResource extends Resource
                 Select::make('athlete_id')
                     ->relationship('athlete', 'id')
                     ->getOptionLabelFromRecordUsing(fn (Model $record) => "{$record->first_name} {$record->last_name}"),
-                DatePicker::make('date'),
+                DatePicker::make('date')
+                    ->native(false)
+                    ->displayFormat('d.m.Y'),
                 TextInput::make('type'),
                 Select::make('metric_type')
                     ->options(MetricType::class),

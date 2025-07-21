@@ -136,7 +136,7 @@
                                     {{ $protocol->recovery_type->getLabel() }}
                                 </p>
                                 <p class="text-xs text-gray-500">
-                                    {{ $protocol->date->format('d/m/Y') }}
+                                    {{ $protocol->date->format('d.m.Y') }}
                                     @if ($protocol->duration_minutes)
                                         • {{ $protocol->duration_minutes }} minutes
                                     @endif

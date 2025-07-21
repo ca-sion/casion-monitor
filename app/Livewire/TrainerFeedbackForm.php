@@ -99,6 +99,8 @@ class TrainerFeedbackForm extends Component implements HasSchemas
             ->components([
                 DatePicker::make('date')
                     ->label('Date')
+                    ->native(false)
+                    ->displayFormat('d.m.Y')
                     ->live()
                     ->afterStateUpdated(function (Set $set, Get $get, ?Carbon $state) {
                         // Mettre à jour la date pour la navigation
