@@ -150,18 +150,19 @@ class MetricCalculationService
 
     /**
      * Calcule la Charge Planifiée Hebdomadaire (CPH) pour une semaine donnée.
-     * CPH est calculée comme : volume_planned * (intensity_planned / 10).
+     * CPH est calculée comme : CPH=(V+1)+(MAX(0,sqrt(I−50​))×0.25).
      */
     public function calculateCph(TrainingPlanWeek $planWeek): float
     {
         $volumePlanned = $planWeek->volume_planned ?? 0;
         $intensityPlanned = $planWeek->intensity_planned ?? 0;
-        $normalizedVolume = $volumePlanned / 5;
-        $normalizedIntensity = $intensityPlanned / 100;
+        $intensityWeight = 0.25;
 
-        $scale = CalculatedMetric::CPH->getScale();
+        if ($volumePlanned == 0 && $intensityPlanned == 0) {
+            return (float) 0.0;
+        }
 
-        $cph = (($normalizedVolume * $normalizedIntensity) ** 0.5) * $scale;
+        $cph = ($volumePlanned + 1) + max([0, (sqrt($intensityPlanned - 50) * $intensityWeight)]);
 
         $cph = number_format($cph, 1);
 
