@@ -378,9 +378,9 @@ class MetricService
             'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'N/A',
             'is_numerical'              => true,
             'trend_icon'                => $trend['trend'] !== 'N/A' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
-            'trend_color' => $trend['trend'] !== 'N/A' ? $this->determineTrendColor($trend['trend'], $metricKey->getTrendOptimalDirection()) : 'zinc',
-            'trend_percentage' => $changePercentage,
-            'chart_data'       => [
+            'trend_color'               => $trend['trend'] !== 'N/A' ? $this->determineTrendColor($trend['trend'], $metricKey->getTrendOptimalDirection()) : 'zinc',
+            'trend_percentage'          => $changePercentage,
+            'chart_data'                => [
                 'labels' => $allWeeklyData->pluck('date')->map(fn ($d) => $d->format('W Y'))->all(),
                 'data'   => $allWeeklyData->pluck('value')->all(),
             ],

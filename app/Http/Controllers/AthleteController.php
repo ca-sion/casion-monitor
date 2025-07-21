@@ -7,9 +7,9 @@ use Illuminate\View\View;
 use App\Enums\FeedbackType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use App\Services\MetricService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Services\MetricService;
 
 class AthleteController extends Controller
 {

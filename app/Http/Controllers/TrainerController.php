@@ -9,9 +9,9 @@ use Illuminate\View\View;
 use App\Enums\FeedbackType;
 use Illuminate\Support\Carbon;
 use App\Enums\CalculatedMetric;
+use App\Services\MetricService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Services\MetricService;
 
 class TrainerController extends Controller
 {
@@ -74,8 +74,8 @@ class TrainerController extends Controller
             'include_weekly_metrics'       => true,
             'include_latest_daily_metrics' => true,
             'include_alerts'               => ['general', 'charge', 'menstrual'],
-            'include_menstrual_cycle'  => $showMenstrualCycle,
-            'include_readiness_status' => true,
+            'include_menstrual_cycle'      => $showMenstrualCycle,
+            'include_readiness_status'     => true,
         ]);
 
         $data = [
@@ -143,9 +143,9 @@ class TrainerController extends Controller
 
         // Définir les types de métriques à sélectionner pour le graphique
         $availableMetricTypesForChart = collect(MetricType::cases())
-                                                    ->filter(fn ($mt) => $mt->getValueColumn() !== 'note')
-                                                    ->mapWithKeys(fn ($mt) => [$mt->value => $mt->getLabel()])
-                                                    ->toArray();
+            ->filter(fn ($mt) => $mt->getValueColumn() !== 'note')
+            ->mapWithKeys(fn ($mt) => [$mt->value => $mt->getLabel()])
+            ->toArray();
 
         // Déterminer le type de métrique pour le graphique détaillé
         $chartMetricType = MetricType::tryFrom($selectedMetricType) ?? MetricType::MORNING_HRV;

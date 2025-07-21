@@ -211,7 +211,7 @@ class TrainerFeedbackForm extends Component implements HasSchemas
                 FeedbackType::POST_COMPETITION_SENSATION->value,
             ]);
         });
-        
+
         foreach ($feedbacksData as $feedbackType => $content) {
             if ($content != null && $content != '<p></p>') {
                 $f = Feedback::updateOrCreate(

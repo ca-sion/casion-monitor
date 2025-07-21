@@ -4,19 +4,18 @@ use App\Livewire\Actions\Logout;
 use App\Livewire\AthleteInjuryForm;
 use App\Livewire\AthleteInjuryList;
 use App\Livewire\AthleteInjuryShow;
-use App\Livewire\AthleteMedicalFeedbackForm;
 use App\Livewire\AthleteMonthlyForm;
-use App\Livewire\AthleteRecoveryProtocolForm;
 use App\Livewire\MedicalFeedbackForm;
 use App\Livewire\TrainerFeedbackForm;
-use App\Livewire\TrainerMedicalFeedbackEdit;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\AthleteDailyMetricForm;
 use App\Http\Controllers\AthleteController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
-use App\Http\Controllers\AthleteMetricController;
+use App\Livewire\AthleteMedicalFeedbackForm;
+use App\Livewire\TrainerMedicalFeedbackEdit;
+use App\Livewire\AthleteRecoveryProtocolForm;
 
 Route::get('/', function () {
     return view('welcome');

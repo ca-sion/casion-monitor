@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use App\Enums\InjuryStatus;
 use App\Enums\InjuryType;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\InjuryStatus;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Injury extends Model
 {
@@ -19,13 +19,13 @@ class Injury extends Model
     {
         return [
             'declaration_date' => 'date',
-            'resolved_date' => 'date',
-            'session_date' => 'date',
-            'injury_date' => 'date',
-            'status' => InjuryStatus::class,
-            'injury_type' => InjuryType::class,
-            'session_related' => 'boolean',
-            'immediate_onset' => 'boolean',
+            'resolved_date'    => 'date',
+            'session_date'     => 'date',
+            'injury_date'      => 'date',
+            'status'           => InjuryStatus::class,
+            'injury_type'      => InjuryType::class,
+            'session_related'  => 'boolean',
+            'immediate_onset'  => 'boolean',
         ];
     }
 

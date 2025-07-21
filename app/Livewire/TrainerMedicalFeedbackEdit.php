@@ -2,27 +2,27 @@
 
 namespace App\Livewire;
 
-use App\Models\MedicalFeedback;
 use App\Models\Trainer;
-use App\Enums\ProfessionalType;
 use Livewire\Component;
-use Livewire\Attributes\Layout;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Form;
 use Filament\Schemas\Schema;
+use App\Enums\ProfessionalType;
+use App\Models\MedicalFeedback;
+use Livewire\Attributes\Layout;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Concerns\InteractsWithForms;
 
 class TrainerMedicalFeedbackEdit extends Component implements HasForms
 {
     use InteractsWithForms;
 
     public ?array $data = [];
+
     public MedicalFeedback $medicalFeedback;
+
     public Trainer $trainer;
 
     public function mount(MedicalFeedback $medicalFeedback): void
@@ -32,19 +32,19 @@ class TrainerMedicalFeedbackEdit extends Component implements HasForms
 
         // Vérifier que l'entraîneur a accès à cette blessure
         $injury = $this->medicalFeedback->injury;
-        if (!$this->trainer->athletes->contains($injury->athlete_id)) {
+        if (! $this->trainer->athletes->contains($injury->athlete_id)) {
             abort(403, 'Accès non autorisé à ce feedback médical.');
         }
 
         $this->form->fill([
-            'feedback_date' => $this->medicalFeedback->feedback_date?->format('Y-m-d'),
-            'professional_type' => $this->medicalFeedback->professional_type,
-            'diagnosis' => $this->medicalFeedback->diagnosis,
-            'treatment_plan' => $this->medicalFeedback->treatment_plan,
-            'rehab_progress' => $this->medicalFeedback->rehab_progress,
-            'training_limitations' => $this->medicalFeedback->training_limitations,
+            'feedback_date'         => $this->medicalFeedback->feedback_date?->format('Y-m-d'),
+            'professional_type'     => $this->medicalFeedback->professional_type,
+            'diagnosis'             => $this->medicalFeedback->diagnosis,
+            'treatment_plan'        => $this->medicalFeedback->treatment_plan,
+            'rehab_progress'        => $this->medicalFeedback->rehab_progress,
+            'training_limitations'  => $this->medicalFeedback->training_limitations,
             'next_appointment_date' => $this->medicalFeedback->next_appointment_date?->format('Y-m-d'),
-            'notes' => $this->medicalFeedback->notes,
+            'notes'                 => $this->medicalFeedback->notes,
         ]);
     }
 
@@ -110,8 +110,8 @@ class TrainerMedicalFeedbackEdit extends Component implements HasForms
 
         // Rediriger vers la page de l'athlète
         $this->redirect(route('trainers.athlete', [
-            'hash' => $this->trainer->hash, 
-            'athlete' => $this->medicalFeedback->injury->athlete_id
+            'hash'    => $this->trainer->hash,
+            'athlete' => $this->medicalFeedback->injury->athlete_id,
         ]));
     }
 

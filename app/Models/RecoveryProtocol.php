@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Enums\RecoveryType;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class RecoveryProtocol extends Model
 {
@@ -16,10 +16,10 @@ class RecoveryProtocol extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
-            'recovery_type' => RecoveryType::class,
+            'date'                     => 'date',
+            'recovery_type'            => RecoveryType::class,
             'effect_on_pain_intensity' => 'integer',
-            'effectiveness_rating' => 'integer',
+            'effectiveness_rating'     => 'integer',
         ];
     }
 

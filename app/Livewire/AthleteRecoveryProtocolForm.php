@@ -10,7 +10,6 @@ use Filament\Schemas\Schema;
 use Livewire\Attributes\Layout;
 use App\Models\RecoveryProtocol;
 use Filament\Forms\Components\Select;
-use Filament\Schemas\Components\Form;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -23,13 +22,15 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
     use InteractsWithForms;
 
     public ?array $data = [];
+
     public Athlete $athlete;
+
     public ?Injury $injury = null; // Optionnel, si le protocole est lié à une blessure
 
     public function mount(Injury $injury): void
     {
         $this->athlete = auth('athlete')->user();
-        
+
         if ($injury->exists) {
             $this->injury = $injury;
         } else {
@@ -37,8 +38,8 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
         }
 
         $this->form->fill([
-            'athlete_id' => $this->athlete->id,
-            'date' => now()->startOfDay(),
+            'athlete_id'        => $this->athlete->id,
+            'date'              => now()->startOfDay(),
             'related_injury_id' => $this->injury ? $this->injury->id : null,
         ]);
     }
@@ -90,7 +91,7 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
         $data = $this->form->getState();
         $data['athlete_id'] = $this->athlete->id;
         $data['related_injury_id'] = $this->injury ? $this->injury->id : null;
-        
+
         RecoveryProtocol::create($data);
 
         Notification::make()

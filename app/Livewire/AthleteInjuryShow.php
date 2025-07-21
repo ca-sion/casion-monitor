@@ -2,8 +2,8 @@
 
 namespace App\Livewire;
 
-use App\Models\Athlete;
 use App\Models\Injury;
+use App\Models\Athlete;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -11,6 +11,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 class AthleteInjuryShow extends Component
 {
     public Athlete $athlete;
+
     public Injury $injury;
 
     public function mount(Injury $injury): void
@@ -18,7 +19,7 @@ class AthleteInjuryShow extends Component
         $this->athlete = auth('athlete')->user();
 
         if ($injury->athlete_id !== $this->athlete->id) {
-            throw new NotFoundHttpException();
+            throw new NotFoundHttpException;
         }
 
         $this->injury = $injury->load('medicalFeedbacks');

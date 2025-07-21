@@ -3,7 +3,6 @@
 namespace App\Livewire;
 
 use App\Models\Athlete;
-use App\Models\Injury;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;

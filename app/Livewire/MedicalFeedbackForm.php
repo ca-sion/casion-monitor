@@ -10,7 +10,6 @@ use App\Enums\ProfessionalType;
 use App\Models\MedicalFeedback;
 use Livewire\Attributes\Layout;
 use Filament\Forms\Components\Select;
-use Filament\Schemas\Components\Form;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -23,7 +22,9 @@ class MedicalFeedbackForm extends Component implements HasForms
     use InteractsWithForms;
 
     public ?array $data = [];
+
     public Injury $injury;
+
     public Trainer $trainer;
 
     public function mount(Injury $injury): void
@@ -32,8 +33,8 @@ class MedicalFeedbackForm extends Component implements HasForms
         $this->trainer = auth('trainer')->user();
 
         $this->form->fill([
-            'injury_id' => $this->injury->id,
-            'trainer_id' => $this->trainer->id,
+            'injury_id'     => $this->injury->id,
+            'trainer_id'    => $this->trainer->id,
             'feedback_date' => now()->format('Y-m-d'),
         ]);
     }

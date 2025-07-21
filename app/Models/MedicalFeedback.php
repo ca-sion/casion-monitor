@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Enums\ProfessionalType;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class MedicalFeedback extends Model
 {
@@ -23,10 +23,10 @@ class MedicalFeedback extends Model
     protected function casts(): array
     {
         return [
-            'feedback_date' => 'date',
+            'feedback_date'         => 'date',
             'next_appointment_date' => 'date',
-            'professional_type' => ProfessionalType::class,
-            'reported_by_athlete' => 'boolean',
+            'professional_type'     => ProfessionalType::class,
+            'reported_by_athlete'   => 'boolean',
         ];
     }
 

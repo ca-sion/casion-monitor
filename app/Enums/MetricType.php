@@ -242,7 +242,7 @@ enum MetricType: string implements HasLabel
                 1 = Aucune fatigue, tu pourrais refaire une session.
                 5 = Fatigue modérée, tu sens que tu as travaillé.
                 10 = Fatigue extrême, tu es vidé(e), tu as besoin de repos immédiat.',
-            self::POST_SESSION_PAIN               => "As-tu des douleurs musculaires ou articulaires après cette séance ? Évalue l'intensité de tes douleurs sur une échelle de 1 à 10. 1 = Aucune douleur. 5 = Douleur légère mais présente, tu la sens un peu. 10 = Douleur très forte, ça t'empêche de bouger normalement ou de te sentir bien.",
+            self::POST_SESSION_PAIN => "As-tu des douleurs musculaires ou articulaires après cette séance ? Évalue l'intensité de tes douleurs sur une échelle de 1 à 10. 1 = Aucune douleur. 5 = Douleur légère mais présente, tu la sens un peu. 10 = Douleur très forte, ça t'empêche de bouger normalement ou de te sentir bien.",
         };
     }
 
