@@ -15,6 +15,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Concerns\InteractsWithForms;
 
 class AthleteRecoveryProtocolForm extends Component implements HasForms
@@ -72,16 +73,18 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
                     ->rows(3)
                     ->maxLength(65535)
                     ->nullable(),
-                Select::make('effect_on_pain_intensity')
-                    ->label('Effet sur l\'intensité de la douleur (1-10)')
-                    ->options(array_combine(range(1, 10), range(1, 10)))
-                    ->nullable()
-                    ->helperText('1 = aucune amélioration, 10 = douleur totalement disparue'),
-                Select::make('effectiveness_rating')
-                    ->label('Évaluation de l\'efficacité (1-5)')
-                    ->options(array_combine(range(1, 5), range(1, 5)))
-                    ->nullable()
-                    ->helperText('1 = pas efficace du tout, 5 = très efficace'),
+                ToggleButtons::make('effect_on_pain_intensity')
+                    ->label('Effet sur l\'intensité de la douleur')
+                    ->helperText('1 = aucune amélioration, 10 = douleur totalement disparue')
+                    ->inline()
+                    ->grouped()
+                    ->options(fn () => array_combine(range(1, 10), range(1, 10))),
+                ToggleButtons::make('effectiveness_rating')
+                    ->label('Évaluation de l\'efficacité')
+                    ->helperText('1 = pas efficace du tout, 5 = très efficace')
+                    ->inline()
+                    ->grouped()
+                    ->options(fn () => array_combine(range(1, 5), range(1, 5))),
             ])
             ->statePath('data');
     }
