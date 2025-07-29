@@ -33,6 +33,7 @@ class TrainerController extends Controller
         $period = request()->input('period', 'last_60_days');
         $showInfoAlerts = filter_var(request()->input('show_info_alerts', false), FILTER_VALIDATE_BOOLEAN);
         $showMenstrualCycle = filter_var(request()->input('show_menstrual_cycle', false), FILTER_VALIDATE_BOOLEAN);
+        $showChartAndAvg = filter_var(request()->input('show_chart_and_avg', false), FILTER_VALIDATE_BOOLEAN);
 
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
@@ -89,6 +90,7 @@ class TrainerController extends Controller
             'period_options'          => $periodOptions,
             'show_info_alerts'        => $showInfoAlerts,
             'show_menstrual_cycle'    => $showMenstrualCycle,
+            'show_chart_and_avg'      => $showChartAndAvg,
             'has_alerts'              => $hasAlerts,
         ];
 

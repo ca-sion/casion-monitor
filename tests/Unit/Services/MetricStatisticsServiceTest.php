@@ -132,7 +132,7 @@ it('can format metric value', function () {
     assertEquals('Note text', $formattedValue);
 
     $formattedValue = $this->service->formatMetricDisplayValue(null, $metricType);
-    assertEquals('N/A', $formattedValue);
+    assertEquals('n/a', $formattedValue);
 });
 
 it('can prepare chart data for a single metric', function () {
@@ -195,6 +195,6 @@ it('can calculate evolution trend from numeric collection', function () {
     ]);
 
     $trend = $this->service->calculateGenericNumericTrend($dataCollection);
-    assertEquals('N/A', $trend['trend']);
+    assertEquals('n/a', $trend['trend']);
     assertNull($trend['change']);
 });

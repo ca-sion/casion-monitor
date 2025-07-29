@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use Carbon\Carbon;
 use App\Models\Metric;
 use App\Models\Athlete;
 use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
 use App\Enums\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class MetricService
@@ -289,14 +289,16 @@ class MetricService
             'description'               => $metricType->getDescription(),
             'unit'                      => $metricType->getUnit(),
             'last_value'                => null,
-            'formatted_last_value'      => 'N/A',
+            'formatted_last_value'      => 'n/a',
+            'last_value_date'           => null,
+            'is_last_value_today'       => false,
             'average_7_days'            => null,
-            'formatted_average_7_days'  => 'N/A',
+            'formatted_average_7_days'  => 'n/a',
             'average_30_days'           => null,
-            'formatted_average_30_days' => 'N/A',
+            'formatted_average_30_days' => 'n/a',
             'trend_icon'                => 'ellipsis-horizontal',
             'trend_color'               => 'zinc',
-            'trend_percentage'          => 'N/A',
+            'trend_percentage'          => 'n/a',
             'chart_data'                => [],
             'is_numerical'              => ($valueColumn !== 'note'),
         ];
@@ -308,6 +310,8 @@ class MetricService
             $metricValue = $lastMetric->{$valueColumn};
             $metricData['last_value'] = $metricValue;
             $metricData['formatted_last_value'] = $this->formatMetricDisplayValue($metricValue, $metricType);
+            $metricData['last_value_date'] = $lastMetric->date;
+            $metricData['is_last_value_today'] = $lastMetric->date->isToday();
         }
 
         if ($metricData['is_numerical']) {
@@ -318,7 +322,7 @@ class MetricService
             $metricData['formatted_average_30_days'] = $this->formatMetricDisplayValue($metricData['average_30_days'], $metricType);
 
             $evolutionTrendData = $this->metricTrendsService->calculateMetricEvolutionTrend($metricsForPeriod, $metricType);
-            if ($metricData['average_7_days'] !== null && $evolutionTrendData['trend'] !== 'N/A') {
+            if ($metricData['average_7_days'] !== null && $evolutionTrendData['trend'] !== 'n/a') {
                 $optimalDirection = $metricType->getTrendOptimalDirection();
 
                 $metricData['trend_icon'] = $this->getTrendIcon($evolutionTrendData['trend']);
@@ -355,7 +359,8 @@ class MetricService
         }
 
         // Calcule les statistiques pour le tableau de bord à partir des données hebdomadaires
-        $lastValue = $allWeeklyData->sortByDesc('date')->first()->value ?? null;
+        $lastMetric = $allWeeklyData->sortByDesc('date')->first() ?? null;
+        $lastValue = $lastMetric?->value ?? null;
 
         $dataFor7Days = $allWeeklyData->filter(fn ($item) => $item->date->greaterThanOrEqualTo($now->copy()->subDays(7)->startOfWeek(Carbon::MONDAY)));
         $average7Days = $dataFor7Days->isNotEmpty() ? $dataFor7Days->avg('value') : null;
@@ -364,7 +369,7 @@ class MetricService
         $average30Days = $dataFor30Days->isNotEmpty() ? $dataFor30Days->avg('value') : null;
 
         $trend = $this->metricTrendsService->calculateGenericNumericTrend($allWeeklyData);
-        $changePercentage = 'N/A';
+        $changePercentage = 'n/a';
         if (is_numeric($average7Days) && is_numeric($average30Days) && $average30Days != 0) {
             $change = (($average7Days - $average30Days) / $average30Days) * 100;
             $changePercentage = ($change > 0 ? '+' : '').number_format($change, 1).'%';
@@ -373,12 +378,14 @@ class MetricService
         // Prépare les données pour le retour
         return [
             'label'                     => $metricKey->getLabelShort(),
-            'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'N/A',
-            'formatted_average_7_days'  => is_numeric($average7Days) ? number_format($average7Days, 1) : 'N/A',
-            'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'N/A',
+            'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'n/a',
+            'last_value_date'           => $lastMetric?->date,
+            'is_last_value_today'       => $lastMetric?->date->isToday(),
+            'formatted_average_7_days'  => is_numeric($average7Days) ? number_format($average7Days, 1) : 'n/a',
+            'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'n/a',
             'is_numerical'              => true,
-            'trend_icon'                => $trend['trend'] !== 'N/A' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
-            'trend_color'               => $trend['trend'] !== 'N/A' ? $this->determineTrendColor($trend['trend'], $metricKey->getTrendOptimalDirection()) : 'zinc',
+            'trend_icon'                => $trend['trend'] !== 'n/a' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
+            'trend_color'               => $trend['trend'] !== 'n/a' ? $this->determineTrendColor($trend['trend'], $metricKey->getTrendOptimalDirection()) : 'zinc',
             'trend_percentage'          => $changePercentage,
             'chart_data'                => [
                 'labels' => $allWeeklyData->pluck('date')->map(fn ($d) => $d->format('W Y'))->all(),
@@ -599,14 +606,16 @@ class MetricService
             'description'               => $metricType->getDescription(),
             'unit'                      => $metricType->getUnit(),
             'last_value'                => null,
-            'formatted_last_value'      => 'N/A',
+            'formatted_last_value'      => 'n/a',
+            'last_value_date'           => null,
+            'is_last_value_today'       => false,
             'average_7_days'            => null,
-            'formatted_average_7_days'  => 'N/A',
+            'formatted_average_7_days'  => 'n/a',
             'average_30_days'           => null,
-            'formatted_average_30_days' => 'N/A',
+            'formatted_average_30_days' => 'n/a',
             'trend_icon'                => 'ellipsis-horizontal',
             'trend_color'               => 'zinc',
-            'trend_percentage'          => 'N/A',
+            'trend_percentage'          => 'n/a',
             'chart_data'                => [],
             'is_numerical'              => ($valueColumn !== 'note'),
         ];
@@ -618,6 +627,8 @@ class MetricService
             $metricValue = $lastMetric->{$valueColumn};
             $metricData['last_value'] = $metricValue;
             $metricData['formatted_last_value'] = $this->formatMetricDisplayValue($metricValue, $metricType);
+            $metricData['last_value_date'] = $lastMetric->date;
+            $metricData['is_last_value_today'] = $lastMetric->date->isToday();
         }
 
         if ($metricData['is_numerical']) {
@@ -668,7 +679,7 @@ class MetricService
     public function formatMetricDisplayValue(mixed $value, MetricType $metricType): string
     {
         if ($value === null) {
-            return 'N/A';
+            return 'n/a';
         }
         if ($metricType->getValueColumn() === 'note') {
             return (string) $value;
@@ -717,7 +728,7 @@ class MetricService
         return match ($trend) {
             'increasing' => 'arrow-trending-up',
             'decreasing' => 'arrow-trending-down',
-            default      => 'minus', // stable ou N/A
+            default      => 'minus', // stable ou n/a
         };
     }
 
@@ -741,7 +752,7 @@ class MetricService
 
             foreach ($displayTableMetricTypes as $metricType) {
                 $metric = $metricDates->where('metric_type', $metricType->value)->first();
-                $rowData['metrics'][$metricType->value] = $metric ? $this->formatMetricDisplayValue($metric->{$metricType->getValueColumn()}, $metricType) : 'N/A';
+                $rowData['metrics'][$metricType->value] = $metric ? $this->formatMetricDisplayValue($metric->{$metricType->getValueColumn()}, $metricType) : 'n/a';
             }
 
             if ($isTrainerContext) {

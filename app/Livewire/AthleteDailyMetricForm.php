@@ -251,7 +251,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                                     ->color('gray')
                                     ->tooltip(CalculatedMetric::CPH->getDescription()),
                                 CalculatedMetric::CPH->getLabelShort().':',
-                                $this->athleteCurrentTrainingPlanWeek?->cphNormalizedOverTen ?? 'N/A',
+                                $this->athleteCurrentTrainingPlanWeek?->cphNormalizedOverTen ?? 'n/a',
                             ])
                             ->inline()
                             ->grouped()

@@ -100,8 +100,8 @@
                 <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
                 <flux:text class="text-xs">
                     Phase: <span class="font-medium">{{ $menstrualCycleInfo['phase'] }}</span><br>
-                    Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'N/A' }}</span><br>
-                    Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'N/A' }} jours</span>
+                    Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'n/a' }}</span><br>
+                    Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'n/a' }} jours</span>
                     @if($menstrualCycleInfo['last_period_start'])
                         <br>Dernières règles: <span class="font-medium">{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
                     @endif
@@ -193,7 +193,7 @@
                                 x-data="{}"
                             />
                         </div>
-                    @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
+                    @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
                         <flux:badge size="xs" color="{{ $metricData['trend_color'] }}">
                             <div class="flex items-center gap-1">
                                 <flux:icon name="{{ $metricData['trend_icon'] }}" variant="mini" class="-mr-0.5" />
@@ -289,7 +289,7 @@
                                             {{ $rowData['metrics'][$metricType->value] }}
                                         </flux:badge>
                                     @else
-                                        <flux:text class="text-zinc-500">N/A</flux:text>
+                                        <flux:text class="text-zinc-500">n/a</flux:text>
                                     @endif
                                 </flux:table.cell>
                             @endforeach
@@ -297,7 +297,7 @@
                                 @if ($rowData['edit_link'])
                                     <flux:link href="{{ $rowData['edit_link'] }}">Modifier</flux:link>
                                 @else
-                                    <flux:text class="text-zinc-400">N/A</flux:text>
+                                    <flux:text class="text-zinc-400">n/a</flux:text>
                                 @endif
                             </flux:table.cell>
                         </flux:table.row>

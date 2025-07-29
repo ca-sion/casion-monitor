@@ -13,7 +13,7 @@
                                          wire:click="updateWeekData('{{ $week['start_date'] }}', 'volume_planned', {{ $i }})"></div>
                                 @endfor
                             </div>
-                            <p class="text-xs text-center text-gray-500 mb-2">Vol: {{ $week['volume_planned'] ?? 'N/A' }} / 5</p>
+                            <p class="text-xs text-center text-gray-500 mb-2">Vol: {{ $week['volume_planned'] ?? 'n/a' }} / 5</p>
 
                             <div class="font-semibold text-center mb-2">S{{ $week['week_number'] }}</div>
                             <div class="text-xs text-center text-gray-500">{{ \Carbon\Carbon::parse($week['start_date'])->isoFormat('DD.MM') }}</div>
@@ -25,7 +25,7 @@
                                 ⚙️
                             </button>
 
-                            <p class="text-xs text-center text-gray-500 mb-2">Int: {{ $week['intensity_planned'] ?? 'N/A' }}%</p>
+                            <p class="text-xs text-center text-gray-500 mb-2">Int: {{ $week['intensity_planned'] ?? 'n/a' }}%</p>
 
                             {{-- Slider d'Intensité (1-100) - Vertical --}}
                             <div class="relative h-36 w-8 flex items-center justify-center">

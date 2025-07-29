@@ -90,7 +90,7 @@ class Metric extends Model
     protected function formatValue(mixed $value, ?string $unit, ?string $scale, MetricType $metricType): string
     {
         if ($value === null) {
-            return 'N/A';
+            return 'n/a';
         }
         if ($metricType->getValueColumn() === 'note') {
             return (string) $value;

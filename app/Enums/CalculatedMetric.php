@@ -84,4 +84,36 @@ enum CalculatedMetric: string implements HasLabel
             self::READINESS_SCORE          => 'neutral',
         };
     }
+
+    /**
+     * Retourne l'icône iconify tailwind.
+     */
+    public function getIconifyTailwind(): ?string
+    {
+        return match ($this) {
+            self::CIH                      => 'icon-[material-symbols-light--clock-arrow-down-outline]',
+            self::CIH_NORMALIZED           => 'icon-material-symbols-light--clock-arrow-down-outline]',
+            self::SBM                      => 'icon-[material-symbols-light--digital-wellbeing-outline]',
+            self::CPH                      => 'icon-[material-symbols-light--calendar-clock-outline]',
+            self::RATIO_CIH_CPH            => 'icon-[material-symbols-light--align-center]',
+            self::RATIO_CIH_NORMALIZED_CPH => 'icon-[material-symbols-light--align-center]',
+            self::READINESS_SCORE          => 'icon-[material-symbols-light--readiness-score-outline]',
+        };
+    }
+
+    /**
+     * Retourne la couleur.
+     */
+    public function getColor(): ?string
+    {
+        return match ($this) {
+            self::CIH                      => 'zinc',
+            self::CIH_NORMALIZED           => 'zinc',
+            self::SBM                      => 'zinc',
+            self::CPH                      => 'zinc',
+            self::RATIO_CIH_CPH            => 'zinc',
+            self::RATIO_CIH_NORMALIZED_CPH => 'zinc',
+            self::READINESS_SCORE          => 'zinc',
+        };
+    }
 }

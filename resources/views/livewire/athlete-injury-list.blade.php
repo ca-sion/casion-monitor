@@ -20,15 +20,15 @@
                             <a class="text-zinc-600 hover:text-zinc-900" href="{{ route('athletes.injuries.show', ['hash' => $athlete->hash, 'injury' => $injury->id]) }}">{{ $injury->declaration_date->format('d.m.Y') }}</a>
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{ $injury->injury_type?->getLabel() ?? 'N/A' }}
+                            {{ $injury->injury_type?->getLabel() ?? 'n/a' }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{ $injury->pain_location?->getLabel() ?? 'N/A' }}
+                            {{ $injury->pain_location?->getLabel() ?? 'n/a' }}
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm"
                                 :color="$injury->status?->getColor()"
-                                inset="top bottom">{{ $injury->status?->getLabel() ?? 'N/A' }}</flux:badge>
+                                inset="top bottom">{{ $injury->status?->getLabel() ?? 'n/a' }}</flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:button variant="outline"

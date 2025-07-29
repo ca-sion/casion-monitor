@@ -24,15 +24,12 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <input name="period"
-                type="hidden"
-                value="{{ $period_label }}"> {{-- Keep period value --}}
             <input id="hidden_show_info_alerts"
                 name="show_info_alerts"
                 type="hidden"
                 value="{{ $show_info_alerts ? '1' : '0' }}">
             <flux:field variant="inline">
-                <flux:label>Afficher alertes info</flux:label>
+                <flux:label>Alertes info</flux:label>
                 <flux:switch id="show_info_alerts_switch"
                     :checked="$show_info_alerts"
                     onchange="document.getElementById('hidden_show_info_alerts').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
@@ -45,10 +42,23 @@
                 type="hidden"
                 value="{{ $show_menstrual_cycle ? '1' : '0' }}">
             <flux:field variant="inline">
-                <flux:label>Afficher cycle menstruel</flux:label>
+                <flux:label>Cycle menstruel</flux:label>
                 <flux:switch id="show_menstrual_cycle_switch"
                     :checked="$show_menstrual_cycle"
                     onchange="document.getElementById('hidden_show_menstrual_cycle').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
+            </flux:field>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <input id="hidden_show_chart_and_avg"
+                name="show_chart_and_avg"
+                type="hidden"
+                value="{{ $show_chart_and_avg ? '1' : '0' }}">
+            <flux:field variant="inline">
+                <flux:label>Graphique et moyenne</flux:label>
+                <flux:switch id="show_chart_and_avg_switch"
+                    :checked="$show_chart_and_avg"
+                    onchange="document.getElementById('hidden_show_chart_and_avg').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
             </flux:field>
         </div>
     </form>
@@ -237,10 +247,10 @@
                                 @endphp
                                 <div class="{{ $borderColor }} {{ $bgColor }} rounded-md border p-2">
                                     <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
-                                    <flux:text class="text-xs">
+                                    <flux:text class="text-xs whitespace-normal!">
                                         Phase: <span class="font-medium">{{ $info['phase'] }}</span><br>
-                                        Jours dans la phase: <span class="font-medium">{{ intval($info['days_in_phase']) ?? 'N/A' }}</span><br>
-                                        Longueur moy. cycle: <span class="font-medium">{{ $info['cycle_length_avg'] ?? 'N/A' }} jours</span>
+                                        Jours dans la phase: <span class="font-medium">{{ intval($info['days_in_phase']) ?? 'n/a' }}</span><br>
+                                        Longueur moy. cycle: <span class="font-medium">{{ $info['cycle_length_avg'] ?? 'n/a' }} jours</span>
                                         @if ($info['last_period_start'])
                                             <br>Dernier J1: <span class="font-medium">{{ $info['last_period_start'] }}</span>
                                         @endif
@@ -259,6 +269,7 @@
                         $allMetricsToDisplay = collect($calculated_metric_types)->merge(collect($dashboard_metric_types));
                     @endphp
 
+                    @if($show_chart_and_avg)
                     @foreach ($allMetricsToDisplay as $metricInfo)
                         @php
                             $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
@@ -279,7 +290,7 @@
                                     <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
                                     <flux:text class="ms-1 font-medium">{{ $metricData['formatted_average_30_days'] }}</flux:text>
                                 </div>
-                                @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'N/A')
+                                @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
                                     <div class="mt-1 flex items-center justify-between">
                                         <flux:badge size="sm"
                                             inset="top bottom"
@@ -291,7 +302,7 @@
                                         </flux:badge>
                                     </div>
                                 @else
-                                    <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">N/A</span></flux:text>
+                                    <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">n/a</span></flux:text>
                                 @endif
                             </div>
                             <div class="mt-2">
@@ -309,6 +320,44 @@
                             </div>
                         </flux:table.cell>
                     @endforeach
+                    @endif
+
+                    @if(! $show_chart_and_avg)
+                    @foreach ($allMetricsToDisplay as $metricInfo)
+                        @php
+                            $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
+                            $metricData = $allMetric[$metricInfo->value];
+                        @endphp
+                        <flux:table.cell>
+                            <div>
+                                <flux:badge size="sm" color="{{ $metricInfo->getColor() }}">
+                                    <span class="{{ $metricInfo->getIconifyTailwind() }} size-4 me-1"></span>
+                                    {{ $metricData['formatted_last_value'] }}
+                                </flux:badge>
+                                @if ($metricData['is_last_value_today'])
+                                    <span class="icon-[material-symbols-light--check-small] size-4"></span>
+                                @endif
+                            </div>
+                            <div>
+                                @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
+                                    <div class="mt-2 flex items-center justify-between">
+                                        <flux:badge size="sm"
+                                            inset="top bottom"
+                                            color="{{ $metricData['trend_color'] }}"
+                                            style="background-color: transparent;">
+                                            <div class="flex items-center gap-1">
+                                                <x-filament::icon class="-mr-0.5 shrink-0 [:where(&)]:size-4" name="{{ $metricData['trend_icon'] }}" />
+                                                <span>{{ $metricData['trend_percentage'] }}</span>
+                                            </div>
+                                        </flux:badge>
+                                    </div>
+                                @else
+                                    <flux:text class="mt-2 text-xs font-semibold uppercase text-zinc-500"> </flux:text>
+                                @endif
+                            </div>
+                        </flux:table.cell>
+                    @endforeach
+                    @endif
 
                     <flux:table.cell class="text-center">
                         <flux:modal.trigger :name="'copy-link-account-'.$athlete->id">

@@ -9,7 +9,7 @@
             <flux:badge size="sm"
                 inset="top bottom"
                 :color="$medicalFeedback->injury->status?->getColor()"
-                inset="top bottom">{{ $medicalFeedback->injury->status?->getLabel() ?? 'N/A' }}</flux:badge>
+                inset="top bottom">{{ $medicalFeedback->injury->status?->getLabel() ?? 'n/a' }}</flux:badge>
         </flux:text>
     </flux:card>
     @if ($medicalFeedback->reported_by_athlete)

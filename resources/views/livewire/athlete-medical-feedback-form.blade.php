@@ -8,7 +8,7 @@
             <flux:badge size="sm"
                 inset="top bottom"
                 :color="$injury->status?->getColor()"
-                inset="top bottom">{{ $injury->status?->getLabel() ?? 'N/A' }}</flux:badge>
+                inset="top bottom">{{ $injury->status?->getLabel() ?? 'n/a' }}</flux:badge>
         </flux:text>
     </flux:card>
     <section class="mt-6">

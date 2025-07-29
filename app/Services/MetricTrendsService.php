@@ -82,19 +82,19 @@ class MetricTrendsService
      * Compare la valeur moyenne au début et à la fin de la période ou la première/dernière valeur.
      *
      * @param  Collection<Metric>  $metrics  Collection de métriques déjà filtrée par type.
-     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
+     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'n/a', 'change' => float|null, 'reason' => string|null]
      */
     public function calculateMetricEvolutionTrend(Collection $metrics, MetricType $metricType): array
     {
         if ($metricType->getValueColumn() === 'note') {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'La métrique n\'est pas numérique.'];
+            return ['trend' => 'n/a', 'change' => null, 'reason' => 'La métrique n\'est pas numérique.'];
         }
 
         $valueColumn = $metricType->getValueColumn();
         $numericMetrics = $metrics->filter(fn ($m) => is_numeric($m->{$valueColumn}))->sortBy('date');
 
         if ($numericMetrics->count() < 2) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
+            return ['trend' => 'n/a', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
         }
 
         $totalCount = $numericMetrics->count();
@@ -113,7 +113,7 @@ class MetricTrendsService
         }
 
         if ($firstValue === null || $lastValue === null) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
+            return ['trend' => 'n/a', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
         }
 
         if ($firstValue == 0 && $lastValue != 0) {
@@ -143,7 +143,7 @@ class MetricTrendsService
      * Cette méthode est utilisée pour les métriques synthétiques comme le SBM qui ne sont pas directement des "MetricType".
      *
      * @param  Collection<object|array>  $dataCollection  Collection d'objets/tableaux avec 'date' et 'value'.
-     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'N/A', 'change' => float|null, 'reason' => string|null]
+     * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'n/a', 'change' => float|null, 'reason' => string|null]
      */
     public function calculateGenericNumericTrend(Collection $dataCollection): array
     {
@@ -151,7 +151,7 @@ class MetricTrendsService
             ->sortBy(fn ($item) => $item->date ?? $item['date']);
 
         if ($numericData->count() < 2) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
+            return ['trend' => 'n/a', 'change' => null, 'reason' => 'Pas assez de données pour calculer une tendance.'];
         }
 
         $totalCount = $numericData->count();
@@ -169,7 +169,7 @@ class MetricTrendsService
         }
 
         if ($firstValue === null || $lastValue === null) {
-            return ['trend' => 'N/A', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
+            return ['trend' => 'n/a', 'change' => null, 'reason' => 'Impossible de calculer la tendance avec les valeurs fournies.'];
         }
 
         if ($firstValue == 0 && $lastValue != 0) {

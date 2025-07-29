@@ -273,4 +273,54 @@ enum MetricType: string implements HasLabel
             self::MORNING_FIRST_DAY_PERIOD => 'neutral',
         };
     }
+
+    /**
+     * Retourne l'icône iconify tailwind.
+     */
+    public function getIconifyTailwind(): ?string
+    {
+        return match ($this) {
+            self::MORNING_BODY_WEIGHT_KG   => 'icon-[material-symbols-light--weight-outline]',
+            self::MORNING_HRV              => 'icon-[material-symbols-light--monitor-heart-outline]',
+            self::MORNING_SLEEP_QUALITY    => 'icon-[material-symbols-light--bedtime-outline]',
+            self::MORNING_GENERAL_FATIGUE  => 'icon-[material-symbols-light--wb-twilight-outline]',
+            self::MORNING_PAIN             => 'icon-[material-symbols-light--sick-outline]',
+            self::MORNING_PAIN_LOCATION    => 'icon-[material-symbols-light--my-location-outline]',
+            self::MORNING_MOOD_WELLBEING   => 'icon-[material-symbols-light--stress-management-outline]',
+            self::MORNING_FIRST_DAY_PERIOD => 'icon-[material-symbols-light--menstrual-health-outline]',
+
+            self::PRE_SESSION_ENERGY_LEVEL => 'icon-[material-symbols-light--battery-android-bolt-outline]',
+            self::PRE_SESSION_LEG_FEEL     => 'icon-[material-symbols-light--tibia-alt-outline]',
+
+            self::POST_SESSION_SESSION_LOAD       => 'icon-[material-symbols-light--clock-loader-80]',
+            self::POST_SESSION_PERFORMANCE_FEEL   => 'icon-[material-symbols-light--sprint]',
+            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'icon-[material-symbols-light--contrast-square]',
+            self::POST_SESSION_PAIN               => 'icon-[material-symbols-light--sick]',
+        };
+    }
+
+    /**
+     * Retourne la couleur.
+     */
+    public function getColor(): ?string
+    {
+        return match ($this) {
+            self::MORNING_BODY_WEIGHT_KG   => 'zinc',
+            self::MORNING_HRV              => 'zinc',
+            self::MORNING_SLEEP_QUALITY    => 'cyan',
+            self::MORNING_GENERAL_FATIGUE  => 'cyan',
+            self::MORNING_PAIN             => 'cyan',
+            self::MORNING_PAIN_LOCATION    => 'cyan',
+            self::MORNING_MOOD_WELLBEING   => 'cyan',
+            self::MORNING_FIRST_DAY_PERIOD => 'purple',
+
+            self::PRE_SESSION_ENERGY_LEVEL => 'yellow',
+            self::PRE_SESSION_LEG_FEEL     => 'yellow',
+
+            self::POST_SESSION_SESSION_LOAD       => 'blue',
+            self::POST_SESSION_PERFORMANCE_FEEL   => 'blue',
+            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'blue',
+            self::POST_SESSION_PAIN               => 'blue',
+        };
+    }
 }

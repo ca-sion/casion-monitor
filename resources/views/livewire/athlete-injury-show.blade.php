@@ -30,17 +30,17 @@
             </div>
             <div>
                 <flux-text class="mb-1 block text-sm">Type</flux-text>
-                <flux-text class="font-semibold">{{ $injury->injury_type?->getLabel() ?? 'N/A' }}</flux-text>
+                <flux-text class="font-semibold">{{ $injury->injury_type?->getLabel() ?? 'n/a' }}</flux-text>
             </div>
             <div>
                 <flux-text class="mb-1 block text-sm">Intensité</flux-text>
-                <flux-text class="font-semibold">{{ $injury->pain_intensity ?? 'N/A' }} / 10</flux-text>
+                <flux-text class="font-semibold">{{ $injury->pain_intensity ?? 'n/a' }} / 10</flux-text>
             </div>
             <div>
                 <flux-text class="mb-1 block text-sm">Liée à une session</flux-text>
                 <flux-text class="font-semibold">{{ $injury->session_related ? 'Oui' : 'Non' }}</flux-text>
                 @if ($injury->session_related)
-                    <flux-text class="mt-1 block text-sm">{{ $injury->session_date?->format('d.m.Y') ?? 'N/A' }}</flux-text>
+                    <flux-text class="mt-1 block text-sm">{{ $injury->session_date?->format('d.m.Y') ?? 'n/a' }}</flux-text>
                 @endif
             </div>
             <div>
