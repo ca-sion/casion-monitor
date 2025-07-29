@@ -36,7 +36,7 @@ class TrainerController extends Controller
         $showChartAndAvg = filter_var(request()->input('show_chart_and_avg', false), FILTER_VALIDATE_BOOLEAN);
 
         // Définir les types de métriques "brutes" à afficher
-        $dashboardMetricTypes = [
+        $metricTypes = [
             // MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
@@ -69,8 +69,8 @@ class TrainerController extends Controller
         // Appel unique pour avoir les données en une seule fois
         $athletesOverviewData = $this->metricService->getAthletesData($trainer->athletes, [
             'period' => 'last_60_days',
-            // 'metric_types'               => [],
-            // 'calculated_metrics'         => [],
+            'metric_types'                 => $metricTypes,
+            'calculated_metrics'           => $calculatedMetricTypes,
             'include_dashboard_metrics'    => true,
             'include_weekly_metrics'       => true,
             'include_latest_daily_metrics' => true,
@@ -84,7 +84,7 @@ class TrainerController extends Controller
         $data = [
             'trainer'                 => $trainer,
             'athletes_overview_data'  => $athletesOverviewData,
-            'dashboard_metric_types'  => $dashboardMetricTypes,
+            'dashboard_metric_types'  => $metricTypes,
             'calculated_metric_types' => $calculatedMetricTypes,
             'period_label'            => $period,
             'period_options'          => $periodOptions,
@@ -117,7 +117,7 @@ class TrainerController extends Controller
         $selectedMetricType = request()->input('metric_type');
 
         // Définir les types de métriques "brutes" à afficher dans les cartes individuelles
-        $dashboardMetricTypes = [
+        $metricTypes = [
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
@@ -158,7 +158,7 @@ class TrainerController extends Controller
         // Préparer les options pour l'appel unique à getAthletesData
         $options = [
             'period'                       => $period,
-            'metric_types'                 => $dashboardMetricTypes, // Pour les cartes du dashboard
+            'metric_types'                 => $metricTypes, // Pour les cartes du dashboard
             'include_dashboard_metrics'    => true,
             'include_latest_daily_metrics' => true, // Pour le tableau des données quotidiennes
             'include_alerts'               => ['general', 'charge', 'menstrual'],
