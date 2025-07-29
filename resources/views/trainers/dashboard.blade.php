@@ -279,8 +279,15 @@
                         <flux:table.cell>
                             <div class="flex flex-col gap-2">
                                 <div class="flex items-center justify-between">
-                                    <flux:text class="text-xs font-semibold uppercase text-zinc-500"> </flux:text>
-                                    <flux:text class="ms-1 font-bold">{{ $metricData['formatted_last_value'] }}</flux:text>
+                                    <flux:badge size="sm" color="{{ $metricInfo->getColor() }}">
+                                        <span class="{{ $metricInfo->getIconifyTailwind() }} size-4"></span>
+                                    </flux:badge>
+                                    <flux:text class="ms-1 font-bold">
+                                        @if ($metricData['is_last_value_today'])
+                                            <span class="icon-[material-symbols-light--check-small] size-4 align-middle"></span>
+                                        @endif
+                                        {{ $metricData['formatted_last_value'] }}
+                                    </flux:text>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
