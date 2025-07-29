@@ -59,7 +59,7 @@
         <flux:table.columns>
             <flux:table.column class="z-1 sticky left-0 max-w-36 bg-white dark:bg-zinc-900">Athlète</flux:table.column>
             <flux:table.column class="max-w-48 text-center">Readiness</flux:table.column>
-            @if ($has_alerts)
+            @if ($has_alerts || $show_menstrual_cycle)
             <flux:table.column class="max-w-48 text-center">Alertes & Cycle</flux:table.column>
             @endif
 
@@ -190,10 +190,11 @@
                         </div>
                     </flux:table.cell>
 
-                    @if ($has_alerts)
+                    @if ($has_alerts || $show_menstrual_cycle)
                     {{-- Cellule Alertes & Cycle --}}
                     <flux:table.cell>
                         <div class="flex w-48 flex-col gap-2">
+                            @if ($has_alerts)
                             {{-- Alertes --}}
                             <div class="flex flex-col gap-2">
                                 @foreach (array_merge($athlete->alerts) as $alert)
@@ -215,6 +216,7 @@
                                     @endif
                                 @endforeach
                             </div>
+                            @endif
 
                             {{-- Cycle Menstruel --}}
                             @if ($show_menstrual_cycle && $athlete->menstrual_cycle_info)
