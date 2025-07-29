@@ -168,7 +168,7 @@
                                         {{ $readiness['message'] }}
                                     </flux:badge>
                                     @php
-                                        $truncateLength = 55;
+                                        $truncateLength = 5;
                                         $needsTruncation = strlen($readiness['recommendation']) > $truncateLength;
                                     @endphp
                                     <div x-data="{ expanded: false }">
