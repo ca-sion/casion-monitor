@@ -29,7 +29,7 @@
                 type="hidden"
                 value="{{ $show_info_alerts ? '1' : '0' }}">
             <flux:field variant="inline">
-                <flux:label>Alertes info</flux:label>
+                <flux:label><span class="icon-[material-symbols-light--chat-info] size-5"></span></flux:label>
                 <flux:switch id="show_info_alerts_switch"
                     :checked="$show_info_alerts"
                     onchange="document.getElementById('hidden_show_info_alerts').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
@@ -42,7 +42,7 @@
                 type="hidden"
                 value="{{ $show_menstrual_cycle ? '1' : '0' }}">
             <flux:field variant="inline">
-                <flux:label>Cycle menstruel</flux:label>
+                <flux:label><span class="icon-[material-symbols-light--menstrual-health] size-5"></span></flux:label>
                 <flux:switch id="show_menstrual_cycle_switch"
                     :checked="$show_menstrual_cycle"
                     onchange="document.getElementById('hidden_show_menstrual_cycle').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
@@ -55,7 +55,7 @@
                 type="hidden"
                 value="{{ $show_chart_and_avg ? '1' : '0' }}">
             <flux:field variant="inline">
-                <flux:label>Graphique et moyenne</flux:label>
+                <flux:label><span class="icon-[material-symbols-light--table-chart-view] size-5"></span></flux:label>
                 <flux:switch id="show_chart_and_avg_switch"
                     :checked="$show_chart_and_avg"
                     onchange="document.getElementById('hidden_show_chart_and_avg').value = this.checked ? '1' : '0'; document.getElementById('dashboard-filter-form').submit();" />
