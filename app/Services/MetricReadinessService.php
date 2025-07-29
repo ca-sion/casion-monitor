@@ -175,7 +175,7 @@ class MetricReadinessService
         if ($missingCount > 3) {
             $missingNamesString = implode(', ', $missingMetricNames);
             $status['level'] = 'neutral';
-            $status['message'] = 'Score de readiness non calculable.';
+            $status['message'] = 'Score non calculable.';
             $status['recommendation'] = "Trop de données essentielles sont manquantes pour aujourd'hui ({$missingCount} manquantes : {$missingNamesString}). Veuillez remplir toutes les métriques quotidiennes pour obtenir un score précis.";
             $status['readiness_score'] = 'n/a'; // Indiquer que le score n'est pas disponible
         } else {
