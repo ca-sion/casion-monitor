@@ -36,7 +36,7 @@ class TrainerController extends Controller
 
         // Définir les types de métriques "brutes" à afficher
         $dashboardMetricTypes = [
-            MetricType::MORNING_HRV,
+            // MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
             MetricType::PRE_SESSION_ENERGY_LEVEL,
@@ -49,7 +49,7 @@ class TrainerController extends Controller
 
         // Définir les types de métriques "calculées" à afficher
         $calculatedMetricTypes = [
-            CalculatedMetric::CIH_NORMALIZED,
+            // CalculatedMetric::CIH_NORMALIZED,
             CalculatedMetric::SBM,
             CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
         ];
