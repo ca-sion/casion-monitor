@@ -127,6 +127,7 @@
                                         'yellow' => 'lime',
                                         'orange' => 'amber',
                                         'red' => 'rose',
+                                        'neutral' => 'zinc',
                                         default => 'zinc',
                                     };
                                     $readinessBgColor = match ($readiness['level']) {
@@ -134,6 +135,7 @@
                                         'yellow' => 'bg-lime-50/50 dark:bg-lime-950/50',
                                         'orange' => 'bg-amber-50/50 dark:bg-amber-950/50',
                                         'red' => 'bg-rose-50/50 dark:bg-rose-950/50',
+                                        'neutral' => 'bg-zinc-50/50 dark:bg-zinc-950/50',
                                         default => 'bg-zinc-50/50 dark:bg-zinc-950/50',
                                     };
                                     $readinessBorderColor = match ($readiness['level']) {
@@ -141,6 +143,7 @@
                                         'yellow' => 'border-lime-400',
                                         'orange' => 'border-amber-400',
                                         'red' => 'border-rose-400',
+                                        'neutral' => 'border-zinc-400',
                                         default => 'border-zinc-400',
                                     };
                                 @endphp
