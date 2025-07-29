@@ -59,7 +59,9 @@
         <flux:table.columns>
             <flux:table.column class="z-1 sticky left-0 max-w-36 bg-white dark:bg-zinc-900">Athlète</flux:table.column>
             <flux:table.column class="max-w-48 text-center">Readiness</flux:table.column>
+            @if ($has_alerts)
             <flux:table.column class="max-w-48 text-center">Alertes & Cycle</flux:table.column>
+            @endif
 
             {{-- Colonnes pour les métriques calculées (générées par boucle) --}}
             @foreach ($calculated_metric_types as $metric)
@@ -188,6 +190,7 @@
                         </div>
                     </flux:table.cell>
 
+                    @if ($has_alerts)
                     {{-- Cellule Alertes & Cycle --}}
                     <flux:table.cell>
                         <div class="flex w-48 flex-col gap-2">
@@ -247,6 +250,7 @@
                             @endif
                         </div>
                     </flux:table.cell>
+                    @endif
 
                     {{-- Boucle pour les cellules de métriques (calculées + brutes) --}}
                     @php

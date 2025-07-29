@@ -78,6 +78,8 @@ class TrainerController extends Controller
             'include_readiness_status'     => true,
         ]);
 
+        $hasAlerts = $athletesOverviewData->some(fn ($athlete) => ! empty($athlete->alerts));
+
         $data = [
             'trainer'                 => $trainer,
             'athletes_overview_data'  => $athletesOverviewData,
@@ -87,6 +89,7 @@ class TrainerController extends Controller
             'period_options'          => $periodOptions,
             'show_info_alerts'        => $showInfoAlerts,
             'show_menstrual_cycle'    => $showMenstrualCycle,
+            'has_alerts'              => $hasAlerts,
         ];
 
         if (request()->expectsJson()) {
