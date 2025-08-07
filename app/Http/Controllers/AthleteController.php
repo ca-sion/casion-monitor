@@ -111,7 +111,7 @@ class AthleteController extends Controller
             'dashboard_metrics_data'        => $metricsDataForDashboard,
             'alerts'                        => $alerts,
             'menstrualCycleInfo'            => $menstrualCycleInfo,
-            'readinessStatus'               => $readinessStatus, // Ajouté le statut de readiness
+            'readinessStatus'               => $readinessStatus,
             'period_label'                  => $period,
             'period_options'                => $periodOptions,
             'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable,

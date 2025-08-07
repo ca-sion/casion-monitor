@@ -40,6 +40,7 @@ class TrainerController extends Controller
             // MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::MORNING_PAIN,
             MetricType::PRE_SESSION_ENERGY_LEVEL,
             MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::POST_SESSION_SESSION_LOAD,
