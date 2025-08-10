@@ -6,9 +6,9 @@ use App\Models\Metric;
 use App\Models\Athlete;
 use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
+use Illuminate\Support\Carbon;
 use App\Enums\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class MetricService

@@ -69,7 +69,7 @@ class TrainerController extends Controller
 
         // Appel unique pour avoir les données en une seule fois
         $athletesOverviewData = $this->metricService->getAthletesData($trainer->athletes, [
-            'period' => 'last_60_days',
+            'period'                       => 'last_60_days',
             'metric_types'                 => $metricTypes,
             'calculated_metrics'           => $calculatedMetricTypes,
             'include_dashboard_metrics'    => true,
