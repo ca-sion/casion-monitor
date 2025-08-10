@@ -181,6 +181,7 @@
                                             <span x-show="expanded"
                                                 x-cloak>
                                                 {{ $readiness['recommendation'] }}
+                                                <br>{!! nl2br($readiness['details_text']) !!}
                                             </span>
 
                                             @if ($needsTruncation)
