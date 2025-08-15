@@ -1,10 +1,14 @@
 <x-layouts.athlete :title="$athlete->name">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-        <flux:heading size="xl" level="1" class="mb-4 sm:mb-0">Bonjour {{ $athlete->first_name }}</flux:heading>
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <flux:heading class="mb-4 sm:mb-0"
+            size="xl"
+            level="1">{{ $athlete->first_name }}</flux:heading>
 
         {{-- Sélecteur de période pour l'athlète --}}
-        <form action="{{ route('athletes.dashboard', ['hash' => $athlete->hash]) }}" method="GET" class="flex items-center space-x-2">
-            <flux:text class="text-base whitespace-nowrap">Voir les données des:</flux:text>
+        <form class="flex items-center space-x-2"
+            action="{{ route('athletes.dashboard', ['hash' => $athlete->hash]) }}"
+            method="GET">
+            <flux:text class="whitespace-nowrap text-base">Voir les données des:</flux:text>
             <flux:select name="period" onchange="this.form.submit()">
                 @foreach ($period_options as $value => $label)
                     <option value="{{ $value }}" @selected($period_label === $value)>
@@ -15,11 +19,6 @@
         </form>
     </div>
 
-    <flux:text class="mb-6 mt-2 text-base">
-        Voici ton tableau de bord personnalisé. Les statistiques sont calculées sur les
-        <strong>{{ $period_options[$period_label] ?? 'données sélectionnées' }}</strong>.
-    </flux:text>
-
     <flux:separator variant="subtle" />
 
     {{-- Section pour ajouter une métrique (existante) --}}
@@ -27,56 +26,100 @@
         <flux:card class="bg-lime-50! border-lime-400! my-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
             size="sm"
             color="lime">
-            <flux:heading class="flex items-center gap-2">Ajouter des métriques quotidienne
+            <flux:heading class="flex items-center gap-2">Métriques quotidienne
                 <flux:icon class="ml-auto text-lime-600"
                     name="plus"
                     variant="micro" />
             </flux:heading>
-            <flux:text class="mt-2">Tu peux ajouter de nouvelles métriques quotidiennes pour aujourd'hui ou un autre jour.</flux:text>
         </flux:card>
     </a>
 
+    <flux:separator class="mb-4" variant="subtle" />
+    <flux:heading class="text-base">Aujourd'hui</flux:heading>
+    @php
+        $todayDailyMetrics = $daily_metrics_grouped_by_date->get(now()->toDateString());
+    @endphp
+    @if ($todayDailyMetrics)
+        <div class="mb-4 mt-2 flex flex-wrap gap-1">
+            @foreach ($todayDailyMetrics['metrics'] as $metricType => $metricValue)
+                @php
+                    $metricTypeEnum = \App\Enums\MetricType::from($metricType);
+                @endphp
+                <flux:tooltip content="{{ $metricTypeEnum->getLabel() }}" x-data="{}">
+                    <flux:badge size="sm" color="{{ $metricTypeEnum->getColor() }}">
+                        <span class="{{ $metricTypeEnum->getIconifyTailwind() }} me-1 size-4"></span>
+                        {{ $metricValue }}
+                    </flux:badge>
+                </flux:tooltip>
+            @endforeach
+        </div>
+    @else
+        <flux:text class="mb-4 mt-2 text-xs text-zinc-500">
+            Pas encore de données.
+            <a class="underline"
+                href="{{ route('athletes.metrics.daily.form', ['hash' => $athlete->hash]) }}"
+                aria-label="Ajouter une métrique">Ajouter</a>.
+        </flux:text>
+    @endif
+    @if ($today_feedbacks)
+        <div class="mb-4 mt-2 flex flex-col gap-1">
+            @foreach ($today_feedbacks as $feedback)
+                <flux:callout class="p-0!"
+                    :icon="$feedback->author_type === 'trainer' ? 'user-circle' : 'document-text'"
+                    :color="$feedback->author_type === 'trainer' ? 'purple' : 'stone'">
+                    <flux:callout.text class="text-xs">{!! nl2br(e($feedback->content)) !!}</flux:callout.text>
+                </flux:callout>
+            @endforeach
+        </div>
+    @endif
+
     {{-- Section Volume et Intensité Planifiés de la semaine en cours --}}
     @if ($weekly_planned_volume || $weekly_planned_intensity)
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
-        <flux:card class="p-4 bg-blue-50! border-blue-400! hover:bg-zinc-50 dark:hover:bg-zinc-700" size="sm" color="blue">
-            <flux:heading class="flex items-center gap-2">Volume planifié cette semaine</flux:heading>
-            <flux:text class="mt-2 text-2xl font-bold text-blue-600">
-                {{ number_format($weekly_planned_volume, 0) }} <span class="text-base font-normal text-blue-500">/5</span>
-            </flux:text>
-            <flux:text class="text-xs text-zinc-500">Volume d'entraînement prévu pour la semaine.</flux:text>
-        </flux:card>
+        <flux:separator class="mb-4" variant="subtle" />
+        <flux:heading class="text-base">Cette semaine</flux:heading>
+        <div class="mb-4 mt-2 grid grid-cols-2 gap-4 sm:grid-cols-2">
+            <flux:card class="bg-blue-50! border-blue-400! p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                size="sm"
+                color="blue">
+                <flux:heading class="flex items-center gap-2">Volume</flux:heading>
+                <flux:text class="mt-2 text-2xl font-bold text-blue-600">
+                    {{ number_format($weekly_planned_volume, 0) }} <span class="text-base font-normal text-blue-500">/5</span>
+                </flux:text>
+            </flux:card>
 
-        <flux:card class="p-4 bg-purple-50! border-purple-400! hover:bg-zinc-50 dark:hover:bg-zinc-700" size="sm" color="purple">
-            <flux:heading class="flex items-center gap-2">Intensité planifiée cette semaine</flux:heading>
-            <flux:text class="mt-2 text-2xl font-bold text-purple-600">
-                {{ number_format($weekly_planned_intensity, 0) }} <span class="text-base font-normal text-purple-500">/100</span>
-            </flux:text>
-            <flux:text class="text-xs text-zinc-500">Intensité d'entraînement prévue pour la semaine.</flux:text>
-        </flux:card>
-    </div>
+            <flux:card class="bg-purple-50! border-purple-400! p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                size="sm"
+                color="purple">
+                <flux:heading class="flex items-center gap-2">Intensité</flux:heading>
+                <flux:text class="mt-2 text-2xl font-bold text-purple-600">
+                    {{ number_format($weekly_planned_intensity, 0) }} <span class="text-base font-normal text-purple-500">/100</span>
+                </flux:text>
+            </flux:card>
+        </div>
     @endif
 
     {{-- Section Alertes --}}
-    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
-        <flux:heading size="lg" level="2" class="mb-4 text-center">🔔 Tes Alertes Récentes</flux:heading>
+    <flux:card class="my-6 rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-800">
+        <flux:heading class="mb-4 text-center text-base">🔔 Alertes</flux:heading>
         @if (!empty($alerts))
             <div class="flex flex-col gap-3">
                 @foreach ($alerts as $alert)
-                    <flux:badge size="md" inset="top bottom" class="w-full text-center py-2 px-4 whitespace-normal!"
-                        color="{{ match($alert['type']) {
+                    <flux:badge class="whitespace-normal! w-full px-4 py-2 text-center"
+                        size="md"
+                        inset="top bottom"
+                        color="{{ match ($alert['type']) {
                             'danger' => 'rose',
                             'warning' => 'amber',
                             'info' => 'sky',
                             'success' => 'emerald',
-                            default => 'zinc'
+                            default => 'zinc',
                         } }}">
                         <span>{{ $alert['message'] }}</span>
                     </flux:badge>
                 @endforeach
             </div>
         @else
-            <flux:text class="text-center text-zinc-500 italic">
+            <flux:text class="text-center italic text-zinc-500">
                 Aucune alerte détectée pour la période sélectionnée. Tout semble en ordre ! 🎉
             </flux:text>
         @endif
@@ -96,13 +139,13 @@
                     $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
                 }
             @endphp
-            <div class="mt-4 p-3 border rounded-md {{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }}">
+            <div class="{{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }} mt-4 rounded-md border p-3">
                 <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
                 <flux:text class="text-xs">
                     Phase: <span class="font-medium">{{ $menstrualCycleInfo['phase'] }}</span><br>
                     Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'n/a' }}</span><br>
                     Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'n/a' }} jours</span>
-                    @if($menstrualCycleInfo['last_period_start'])
+                    @if ($menstrualCycleInfo['last_period_start'])
                         <br>Dernières règles: <span class="font-medium">{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
                     @endif
                 </flux:text>
@@ -111,10 +154,12 @@
     </flux:card>
 
     {{-- Section Protocoles de Récupération --}}
-    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
-        <div class="flex justify-between items-center mb-4">
-            <flux:heading size="lg" level="2">🧘 Tes protocoles de récupération</flux:heading>
-            <flux:button variant="filled" icon="plus" href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}">Ajouter un protocole</flux:button>
+    <flux:card class="my-6 rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-800">
+        <div class="mb-4 flex items-center justify-between">
+            <flux:heading size="lg" level="2">🧘 Protocoles</flux:heading>
+            <flux:button href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}"
+                variant="filled"
+                icon="plus">Ajouter un protocole</flux:button>
         </div>
         @if ($recoveryProtocols->isEmpty())
             <div class="p-8">
@@ -129,8 +174,8 @@
         @else
             <div class="space-y-4">
                 @foreach ($recoveryProtocols as $protocol)
-                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                        <div class="flex justify-between items-start mb-3">
+                    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                        <div class="mb-3 flex items-start justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-900">
                                     {{ $protocol->recovery_type->getLabel() }}
@@ -147,22 +192,22 @@
                             </div>
                             <div class="flex items-center space-x-2">
                                 @if ($protocol->effect_on_pain_intensity)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                                         Douleur: {{ $protocol->effect_on_pain_intensity }}/10
                                     </span>
                                 @endif
                                 @if ($protocol->effectiveness_rating)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
                                         Efficacité: {{ $protocol->effectiveness_rating }}/5
                                     </span>
                                 @endif
                             </div>
                         </div>
-                        
+
                         @if ($protocol->notes)
                             <div class="mb-3">
-                                <p class="text-xs font-medium text-gray-700 mb-1">Notes:</p>
-                                <p class="text-sm text-gray-800 bg-gray-50 p-2 rounded">{{ $protocol->notes }}</p>
+                                <p class="mb-1 text-xs font-medium text-gray-700">Notes:</p>
+                                <p class="rounded bg-gray-50 p-2 text-sm text-gray-800">{{ $protocol->notes }}</p>
                             </div>
                         @endif
                     </div>
@@ -171,60 +216,62 @@
         @endif
     </flux:card>
 
-    <flux:separator variant="subtle" class="my-8" />
+    <flux:separator class="my-8" variant="subtle" />
 
-    <flux:text class="mb-4 mt-8 text-lg font-semibold">📈 Tes statistiques clés:</flux:text>
+    <flux:text class="mb-4 mt-8 text-lg font-semibold">📈 Statistiques</flux:text>
 
     {{-- Section des cartes de métriques individuelles (existante) --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-4">
+    <div class="my-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         @foreach ($dashboard_metrics_data as $metricTypeKey => $metricData)
-            <flux:card class="p-4 transform transition-transform duration-200 hover:scale-105 hover:shadow-xl" size="sm">
-                <div class="flex items-center justify-between mb-2">
-                        <div>
-                            <flux:text class="text-xs font-semibold uppercase text-zinc-500 inline">{{ $metricData['short_label'] }}</flux:text>
-                            <x-filament::icon-button
-                                class="inline ms-1"
-                                style="vertical-align: text-bottom;"
-                                icon="heroicon-o-information-circle"
-                                tooltip="{{ $metricData['description'] }}"
-                                label="{{ $metricData['description'] }}"
-                                color="gray"
-                                size="sm"
-                                x-data="{}"
-                            />
-                        </div>
+            <flux:card class="transform p-4 transition-transform duration-200 hover:scale-105 hover:shadow-xl" size="sm">
+                <div class="mb-2 flex items-center justify-between">
+                    <div>
+                        <flux:text class="inline text-xs font-semibold uppercase text-zinc-500">{{ $metricData['short_label'] }}</flux:text>
+                        <x-filament::icon-button class="ms-1 inline"
+                            style="vertical-align: text-bottom;"
+                            icon="heroicon-o-information-circle"
+                            tooltip="{{ $metricData['description'] }}"
+                            label="{{ $metricData['description'] }}"
+                            color="gray"
+                            size="sm"
+                            x-data="{}" />
+                    </div>
                     @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
                         <flux:badge size="xs" color="{{ $metricData['trend_color'] }}">
                             <div class="flex items-center gap-1">
-                                <flux:icon name="{{ $metricData['trend_icon'] }}" variant="mini" class="-mr-0.5" />
+                                <flux:icon class="-mr-0.5"
+                                    name="{{ $metricData['trend_icon'] }}"
+                                    variant="mini" />
                                 <span>{{ $metricData['trend_percentage'] }}</span>
                             </div>
                         </flux:badge>
                     @endif
                 </div>
-                <flux:heading size="lg" level="2" class="mb-4 text-slate-600 dark:text-slate-400">
+                <flux:heading class="mb-4 text-slate-600 dark:text-slate-400"
+                    size="lg"
+                    level="2">
                     {{ $metricData['formatted_last_value'] }}
-                    <x-filament::icon-button
-                        class="inline ms-1"
+                    <x-filament::icon-button class="ms-1 inline"
                         icon="heroicon-o-information-circle"
                         tooltip="Dernière valeur enregistrée pour cette métrique."
                         label="Dernière valeur enregistrée pour cette métrique."
                         color="gray"
                         size="xs"
-                        x-data="{}"
-                    />
+                        x-data="{}" />
                 </flux:heading>
                 <div class="mb-4">
                     {{-- Utilisation du composant Flux UI pour le graphique - MISE À JOUR AVEC VOTRE SOLUTION --}}
                     @if (!empty($metricData['chart_data']['labels_and_data']) && count(array_filter($metricData['chart_data']['data'], fn($val) => $val !== null)) >= 2)
-                        <flux:chart :value="$metricData['chart_data']['labels_and_data']" class="h-24">
+                        <flux:chart class="h-24" :value="$metricData['chart_data']['labels_and_data']">
                             <flux:chart.svg>
-                                <flux:chart.line field="value" class="stroke-slate-500!" />
-                                <flux:chart.axis axis="x" field="label" class="text-xs text-zinc-400">
+                                <flux:chart.line class="stroke-slate-500!" field="value" />
+                                <flux:chart.axis class="text-xs text-zinc-400"
+                                    axis="x"
+                                    field="label">
                                     <flux:chart.axis.line />
                                     <flux:chart.axis.tick />
                                 </flux:chart.axis>
-                                <flux:chart.axis axis="y" class="text-xs text-zinc-400">
+                                <flux:chart.axis class="text-xs text-zinc-400" axis="y">
                                     <flux:chart.axis.grid stroke-dasharray="2 2" />
                                     <flux:chart.axis.tick />
                                 </flux:chart.axis>
@@ -245,51 +292,54 @@
         @endforeach
     </div>
 
-    <flux:separator variant="subtle" class="my-8" />
+    <flux:separator class="my-8" variant="subtle" />
 
     {{-- Section Tableau de toutes les données métriques brutes --}}
-    <flux:card class="my-6 p-6 bg-white dark:bg-zinc-800 shadow-lg rounded-lg">
-        <flux:heading size="lg" level="2" class="mb-4 text-center">📋 Tes Données Quotidiennes Détaillées</flux:heading>
-        <flux:text class="mb-4 text-zinc-600 dark:text-zinc-400 text-center">
+    <flux:card class="my-6 rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-800">
+        <flux:heading class="mb-4 text-center"
+            size="lg"
+            level="2">📋 Données quotidiennes</flux:heading>
+        <flux:text class="mb-4 text-center text-zinc-600 dark:text-zinc-400">
             Explore tes entrées de métriques jour par jour. Clique sur "Modifier" pour ajuster une entrée.
         </flux:text>
 
         <div class="overflow-x-auto">
             <flux:table class="min-w-full text-nowrap">
                 <flux:table.columns>
-                    <flux:table.column class="z-1 sticky left-0 bg-white dark:bg-zinc-900 w-32">Date</flux:table.column>
+                    <flux:table.column class="z-1 sticky left-0 w-32 bg-white dark:bg-zinc-900">Date</flux:table.column>
                     @foreach ($display_table_metric_types as $metricType)
                         <flux:table.column class="text-center">
                             {{ $metricType->getLabelShort() }}
-                            <x-filament::icon-button
-                                class="inline ms-1"
+                            <x-filament::icon-button class="ms-1 inline"
                                 icon="heroicon-o-information-circle"
                                 tooltip="{!! $metricType->getDescription() !!}"
                                 label="{{ $metricType->getDescription() }}"
                                 color="gray"
                                 size="sm"
-                                x-data="{}"
-                            />
+                                x-data="{}" />
                         </flux:table.column>
                     @endforeach
-                    <flux:table.column class="text-center w-24">Actions</flux:table.column>
+                    <flux:table.column class="w-24 text-center">Actions</flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
                     {{-- Utilisation de $processed_daily_metrics_for_table --}}
                     @forelse ($daily_metrics_grouped_by_date as $date => $rowData)
                         <flux:table.row>
-                            <flux:table.cell class="z-1 sticky left-0 bg-white dark:bg-zinc-900 font-semibold">
+                            <flux:table.cell class="z-1 sticky left-0 bg-white font-semibold dark:bg-zinc-900">
                                 {{ $rowData['date'] }}
                             </flux:table.cell>
                             @foreach ($display_table_metric_types as $metricType)
                                 <flux:table.cell class="text-center">
                                     @if (isset($rowData['metrics'][$metricType->value]))
-                                        <flux:badge size="xs" color="zinc">
-                                            {{ $rowData['metrics'][$metricType->value] }}
-                                        </flux:badge>
+                                        <div>
+                                            <flux:badge size="sm" color="{{ $metricType->getColor() }}">
+                                                <span class="{{ $metricType->getIconifyTailwind() }} me-1 size-4"></span>
+                                                {{ $rowData['metrics'][$metricType->value] }}
+                                            </flux:badge>
+                                        </div>
                                     @else
-                                        <flux:text class="text-zinc-500">n/a</flux:text>
+                                        <flux:text class="text-zinc-500">-</flux:text>
                                     @endif
                                 </flux:table.cell>
                             @endforeach

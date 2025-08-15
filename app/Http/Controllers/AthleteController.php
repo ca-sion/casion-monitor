@@ -81,12 +81,23 @@ class AthleteController extends Controller
         $menstrualCycleInfo = $athleteData->menstrual_cycle_info ?? null;
         $readinessStatus = $athleteData->readiness_status ?? null;
         $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
-        $weeklyMetricsData = collect($athleteData->weekly_metrics_data ?? []); // Données hebdomadaires
+        $weeklyMetricsData = collect($athleteData->weekly_metrics_data ?? []);
 
         // Récupérer le volume et l'intensité planifiés pour la semaine en cours
-        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
-        $weeklyPlannedVolume = $weeklyMetricsData->get($currentWeekStartDate)['cph'] ?? 0; // CPH est le volume planifié
-        $weeklyPlannedIntensity = 0; // L'intensité planifiée n'est pas directement dans les métriques calculées, à revoir si nécessaire
+        $currentTrainingPlanWeek = $athlete->currentTrainingPlanWeek;
+        $weeklyPlannedVolume = $currentTrainingPlanWeek->volume_planned ?? 0;
+        $weeklyPlannedIntensity = $currentTrainingPlanWeek->intensity_planned ?? 0;
+
+        // Récupérer les feedbacks de la semaine
+        $currentWeekfeedbacks = $athlete->feedbacks()
+            ->with('trainer')
+            ->whereBetween('date', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::MONDAY)])
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $todaysFeedbacks = $currentWeekfeedbacks->filter(function ($feedback) {
+            return $feedback->date->isToday();
+        });
 
         // Traiter l'historique des métriques pour la préparation du tableau
         $processedDailyMetricsForTable = $this->metricService->prepareDailyMetricsForTableView(
@@ -119,6 +130,8 @@ class AthleteController extends Controller
             'weekly_planned_volume'         => $weeklyPlannedVolume,
             'weekly_planned_intensity'      => $weeklyPlannedIntensity,
             'recoveryProtocols'             => $athlete->recoveryProtocols()->orderBy('date', 'desc')->get(),
+            'weekly_feedbacks'              => $currentWeekfeedbacks,
+            'today_feedbacks'               => $todaysFeedbacks,
         ];
 
         if ($request->expectsJson()) {

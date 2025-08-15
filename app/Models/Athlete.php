@@ -132,6 +132,16 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
+     * Get the athlete's current training plan week.
+     */
+    protected function currentTrainingPlanWeek(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->currentTrainingPlan?->weeks()->where('start_date', now()->startOfWeek(Carbon::MONDAY)->toDateString())->first(),
+        );
+    }
+
+    /**
      * Get the athlete's name.
      */
     protected function name(): Attribute
