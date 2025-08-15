@@ -215,10 +215,20 @@ class TrainerFeedbackForm extends Component implements HasSchemas
 
         foreach ($feedbacksData as $feedbackType => $content) {
             if ($content != null && $content != '<p></p>') {
-                $f = Feedback::updateOrCreate(
-                    ['athlete_id' => $this->athlete_id, 'date' => $this->date->format('Y-m-d H:i:s'), 'type' => $feedbackType],
-                    ['content' => $content, 'author_type' => 'trainer', 'trainer_id' => $this->trainer->id]
-                );
+                if (in_array($feedbackType, [
+                    FeedbackType::POST_SESSION_FEEDBACK->value,
+                    FeedbackType::POST_COMPETITION_FEEDBACK->value,
+                ])) {
+                    $f = Feedback::updateOrCreate(
+                        ['athlete_id' => $this->athlete_id, 'date' => $this->date->format('Y-m-d H:i:s'), 'type' => $feedbackType],
+                        ['content' => $content, 'author_type' => 'trainer', 'trainer_id' => $this->trainer->id]
+                    );
+                } else {
+                    $f = Feedback::updateOrCreate(
+                        ['athlete_id' => $this->athlete_id, 'date' => $this->date->format('Y-m-d H:i:s'), 'type' => $feedbackType],
+                        ['content' => $content]
+                    );
+                }
             } else {
                 // Si le contenu est vide, supprime le feedback existant
                 Feedback::where('athlete_id', $this->athlete_id)
