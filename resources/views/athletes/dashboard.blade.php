@@ -151,25 +151,29 @@
     </div>
 
     {{-- Section Protocoles de Récupération --}}
-    <flux:card class="my-6 shadow-lg">
-        <div class="mb-4 flex items-center justify-between">
-            <flux:heading class="dark:text-zinc-200"
-                size="lg"
-                level="2">🧘 Protocoles</flux:heading>
-            <flux:button href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}"
-                variant="filled"
-                icon="plus">Ajouter un protocole</flux:button>
-        </div>
-        @if ($recoveryProtocols->isEmpty())
-            <div class="p-8">
-                <flux:callout icon="chat-bubble-left-right">
-                    <flux:callout.heading>Aucun protocole de récupération enregistré.</flux:callout.heading>
+    <flux:separator class="mb-4 mt-6" variant="subtle" />
+    <flux:heading class="text-base">🧘 Séances (physio, massage, récupération)</flux:heading>
 
-                    <flux:callout.text>
-                        Enregistre tes séances de récupération pour les suivre ici.
-                    </flux:callout.text>
-                </flux:callout>
-            </div>
+    <div class="mt-4">
+        <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une séance">
+            <flux:card class="bg-lime-50! border-lime-400! my-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                size="sm"
+                color="lime">
+                <flux:heading class="flex items-center gap-2 text-lime-800">Ajouter une séance
+                    <flux:icon class="ml-auto text-lime-600"
+                        name="plus"
+                        variant="micro" />
+                </flux:heading>
+            </flux:card>
+        </a>
+        @if ($recoveryProtocols->isEmpty())
+            <flux:callout icon="chat-bubble-left-right">
+                <flux:callout.heading>Aucun protocole de récupération enregistré.</flux:callout.heading>
+
+                <flux:callout.text>
+                    Enregistre tes séances de récupération pour les suivre ici.
+                </flux:callout.text>
+            </flux:callout>
         @else
             <div class="space-y-4">
                 @foreach ($recoveryProtocols as $protocol)
@@ -191,14 +195,20 @@
                             </div>
                             <div class="flex items-center space-x-2">
                                 @if ($protocol->effect_on_pain_intensity)
-                                    <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                                        Douleur: {{ $protocol->effect_on_pain_intensity }}/10
-                                    </span>
+                                    <flux:badge class="whitespace-normal! w-full"
+                                        size="sm"
+                                        inset="top bottom"
+                                        color="blue">
+                                        {{ $protocol->effect_on_pain_intensity }}/10
+                                    </flux:badge>
                                 @endif
                                 @if ($protocol->effectiveness_rating)
-                                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/20 dark:text-green-300">
-                                        Efficacité: {{ $protocol->effectiveness_rating }}/5
-                                    </span>
+                                    <flux:badge class="whitespace-normal! w-full"
+                                        size="sm"
+                                        inset="top bottom"
+                                        color="green">
+                                        {{ $protocol->effectiveness_rating }}/5
+                                    </flux:badge>
                                 @endif
                             </div>
                         </div>
@@ -213,7 +223,7 @@
                 @endforeach
             </div>
         @endif
-    </flux:card>
+    </div>
 
     <flux:separator class="my-8" variant="subtle" />
 
