@@ -89,14 +89,17 @@ class AthleteController extends Controller
         $weeklyPlannedIntensity = $currentTrainingPlanWeek->intensity_planned ?? 0;
 
         // Récupérer les feedbacks de la semaine
-        $currentWeekfeedbacks = $athlete->feedbacks()
+        $lastSevenDaysFeedbacks = $athlete->feedbacks()
             ->with('trainer')
-            ->whereBetween('date', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::MONDAY)])
+            ->whereBetween('date', [now()->subDays(7)->startOfDay(), now()->endOfDay()])
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
-        $todaysFeedbacks = $currentWeekfeedbacks->filter(function ($feedback) {
+        $todaysFeedbacks = $lastSevenDaysFeedbacks->filter(function ($feedback) {
             return $feedback->date->isToday();
+        });
+        $lastSevenDaysFeedbacks = $lastSevenDaysFeedbacks->filter(function ($feedback) {
+            return $feedback->date->isBefore(now()->startOfDay());
         });
 
         // Traiter l'historique des métriques pour la préparation du tableau
@@ -130,7 +133,7 @@ class AthleteController extends Controller
             'weekly_planned_volume'         => $weeklyPlannedVolume,
             'weekly_planned_intensity'      => $weeklyPlannedIntensity,
             'recoveryProtocols'             => $athlete->recoveryProtocols()->orderBy('date', 'desc')->get(),
-            'weekly_feedbacks'              => $currentWeekfeedbacks,
+            'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
         ];
 

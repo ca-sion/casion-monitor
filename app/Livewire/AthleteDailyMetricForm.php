@@ -319,6 +319,10 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         }
 
         $this->suggestInjuryDeclaration();
+        Notification::make()
+            ->title('Sauvegardé')
+            ->success()
+            ->send();
     }
 
     private function desiredMetricTypes(): array

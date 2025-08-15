@@ -14,6 +14,7 @@ use Livewire\Attributes\Layout;
 use Illuminate\Contracts\View\View;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Contracts\HasSchemas;
@@ -102,9 +103,9 @@ class TrainerFeedbackForm extends Component implements HasSchemas
                     ->native(false)
                     ->displayFormat('d.m.Y')
                     ->live()
-                    ->afterStateUpdated(function (Set $set, Get $get, ?Carbon $state) {
+                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
                         // Mettre à jour la date pour la navigation
-                        $this->date = $state;
+                        $this->date = Carbon::parse($state);
                         $this->prevDate = $this->date->copy()->subDay();
                         $this->nextDate = $this->date->copy()->addDay();
 
@@ -112,7 +113,7 @@ class TrainerFeedbackForm extends Component implements HasSchemas
                         $athleteId = $get('athlete_id');
                         if ($athleteId) {
                             $feedbacks = Feedback::where('athlete_id', $athleteId)
-                                ->whereDate('date', $state)->get();
+                                ->whereDate('date', $this->date)->get();
                             foreach ($feedbacks as $feedback) {
                                 $set($feedback->type->value, $feedback->content);
                             }
@@ -134,7 +135,7 @@ class TrainerFeedbackForm extends Component implements HasSchemas
 
                         // Recharger les feedbacks pour le nouvel athlète et la date sélectionnée
                         $feedbacks = Feedback::where('athlete_id', $state)
-                            ->whereDate('date', $get('date'))->get();
+                            ->whereDate('date', $this->date)->get();
                         foreach ($feedbacks as $feedback) {
                             $set($feedback->type->value, $feedback->content);
                         }
@@ -227,6 +228,10 @@ class TrainerFeedbackForm extends Component implements HasSchemas
             }
         }
         $this->dispatch('feedback-saved'); // Déclenche un événement pour notifier la sauvegarde si besoin
+        Notification::make()
+            ->title('Sauvegardé')
+            ->success()
+            ->send();
     }
 
     #[Layout('components.layouts.trainer')]
