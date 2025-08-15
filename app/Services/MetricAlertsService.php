@@ -43,6 +43,10 @@ class MetricAlertsService
         MetricType::MORNING_PAIN->value => [
             'persistent_high_7d_min' => 5,
             'trend_increase_percent' => 20,
+            'declared_high_min'      => 4,
+        ],
+        MetricType::POST_SESSION_PAIN->value => [
+            'declared_high_min' => 4,
         ],
         MetricType::MORNING_HRV->value => [
             'trend_decrease_percent' => -10,
@@ -71,6 +75,12 @@ class MetricAlertsService
             'menstrual_fatigue_min'         => 7,
             'menstrual_perf_feel_max'       => 4,
         ],
+    ];
+
+    public const PAIN_METRICS = [
+        MetricType::MORNING_PAIN,
+        MetricType::MORNING_PAIN_LOCATION,
+        MetricType::POST_SESSION_PAIN,
     ];
 
     public function getAlerts(Athlete $athlete, Collection $athleteMetrics, Collection $athletePlanWeeks, array $options): array
@@ -363,12 +373,38 @@ class MetricAlertsService
     protected function checkPainAlerts(Collection $metrics, array &$alerts): void
     {
         $painType = MetricType::MORNING_PAIN;
-        $painMetrics = $metrics->filter(fn ($m) => $m->metric_type === $painType);
+        $painMetrics = $metrics->filter(fn ($m) => in_array($m->metric_type, self::PAIN_METRICS));
         $painThresholds = self::ALERT_THRESHOLDS[$painType->value];
+
+        // Récupérer les métriques du jour le plus récent pour les douleurs déclarées
+        $sortedMetrics = $painMetrics->sortByDesc('date')->filter(function ($m) {
+            return $m->date->isSameDay(Carbon::today()) || $m->date->isSameDay(Carbon::yesterday());
+        });
+        $currentMorningPain = $sortedMetrics ? $sortedMetrics->where('metric_type', MetricType::MORNING_PAIN)->first()?->value : null;
+        $currentMorningPainLocation = $sortedMetrics ? $sortedMetrics->where('metric_type', MetricType::MORNING_PAIN_LOCATION)->first()?->note : null;
+        $currentPostSessionPain = $sortedMetrics ? $sortedMetrics->where('metric_type', MetricType::POST_SESSION_PAIN)->first()?->value : null;
+
+        // Alerte de douleur matinale déclarée élevée avec localisation
+        if ($currentMorningPain !== null && $currentMorningPain >= $painThresholds['declared_high_min'] && ! empty($currentMorningPainLocation)) {
+            $this->addAlert($alerts, 'danger', 'Douleur matinale élevée ('.$currentMorningPain.'/10). Localisation : '.$currentMorningPainLocation.'.');
+        }
+
+        // Alerte de douleur post-session élevée
+        $postSessionPainThreshold = self::ALERT_THRESHOLDS[MetricType::POST_SESSION_PAIN->value]['declared_high_min'] ?? null;
+        if ($currentPostSessionPain !== null && $postSessionPainThreshold !== null && $currentPostSessionPain >= $postSessionPainThreshold) {
+            $this->addAlert($alerts, 'danger', 'Douleur post-session élevée ('.$currentPostSessionPain.'/10).');
+        }
+
+        // Logique existante pour les tendances et moyennes de douleur matinale
         if ($painMetrics->count() > 5) {
             $averagePain7Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($painMetrics, $painType)['averages']['Derniers 7 jours'] ?? null;
             if ($averagePain7Days !== null && $averagePain7Days >= $painThresholds['persistent_high_7d_min']) {
-                $this->addAlert($alerts, 'warning', 'Douleurs musculaires/articulaires persistantes (moy. '.round($averagePain7Days).'/10). Évaluer la cause et la nécessité d\'un repos.');
+                $message = 'Douleurs musculaires/articulaires persistantes (moy. '.round($averagePain7Days).'/10).';
+                if (! empty($currentMorningPainLocation)) {
+                    $message .= ' Localisation : '.$currentMorningPainLocation.'.';
+                }
+                $message .= ' Évaluer la cause et la nécessité d\'un repos.';
+                $this->addAlert($alerts, 'warning', $message);
             }
             $painTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($painMetrics, $painType);
             if ($painTrend['trend'] === 'increasing' && $painTrend['change'] > $painThresholds['trend_increase_percent']) {

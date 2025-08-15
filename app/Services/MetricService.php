@@ -71,6 +71,14 @@ class MetricService
             $metricTypes = array_map(fn ($value) => MetricType::from($value), $combinedMetricValues);
         }
 
+        if (in_array('general', $options['include_alerts'])) {
+            $existingMetricValues = array_map(fn ($metricType) => $metricType->value, $metricTypes);
+            $painMetricValues = array_map(fn ($metricType) => $metricType->value, $this->metricAlertsService::PAIN_METRICS);
+
+            $combinedMetricValues = array_unique(array_merge($existingMetricValues, $painMetricValues));
+            $metricTypes = array_map(fn ($value) => MetricType::from($value), $combinedMetricValues);
+        }
+
         // Déterminer la date de début maximale pour la collecte des métriques brutes, en fonction de la période et des options d'inclusion.
         $maxStartDate = $this->determineMetricCollectionStartDate($options);
 
