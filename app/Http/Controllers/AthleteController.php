@@ -52,6 +52,7 @@ class AthleteController extends Controller
             MetricType::MORNING_SLEEP_QUALITY,
             MetricType::MORNING_MOOD_WELLBEING,
             MetricType::MORNING_PAIN,
+            MetricType::MORNING_PAIN_LOCATION,
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,

@@ -355,12 +355,10 @@
                             @foreach ($display_table_metric_types as $metricType)
                                 <flux:table.cell class="text-center">
                                     @if (isset($rowData['metrics'][$metricType->value]))
-                                        <div>
-                                            <flux:badge size="sm" color="{{ $metricType->getColor() }}">
-                                                <span class="{{ $metricType->getIconifyTailwind() }} me-1 size-4"></span>
-                                                {{ $rowData['metrics'][$metricType->value] }}
-                                            </flux:badge>
-                                        </div>
+                                        <flux:badge size="sm" color="{{ $metricType->getColor() }}">
+                                            <span class="{{ $metricType->getIconifyTailwind() }} me-1 size-4"></span>
+                                            {{ $rowData['metrics'][$metricType->value] }}
+                                        </flux:badge>
                                     @else
                                         <flux:text class="text-zinc-500 dark:text-zinc-400">-</flux:text>
                                     @endif
