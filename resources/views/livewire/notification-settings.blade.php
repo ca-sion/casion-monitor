@@ -51,7 +51,7 @@
                             navigator.serviceWorker.ready.then(registration => {
                                 registration.pushManager.subscribe({
                                     userVisibleOnly: true,
-                                    applicationServerKey: $wire.vapidPublicKey
+                                    applicationServerKey: urlBase64ToUint8Array($wire.vapidPublicKey)
                                 }).then(subscription => {
                                     $wire.subscribe(subscription.toJSON());
                                 }).catch(error => {

@@ -40,14 +40,20 @@ class WebPushNotification extends Notification
      */
     public function toWebPush(object $notifiable, $notification)
     {
-        return (new WebPushMessage)
+        $message = (new WebPushMessage)
             ->title($this->title)
             ->body($this->body)
-            ->action('Ouvrir', $this->url) // Define an action button and set its target URL
             ->options([
                 'TTL' => 1000, // Time to live in seconds
                 'urgency' => 'normal',
                 'icon' => '/favicon.png', // Icon for the notification
             ]);
+
+        if ($this->url) {
+            $message->action('Ouvrir', 'open_url');
+            $message->data(['url' => $this->url]);
+        }
+
+        return $message;
     }
 }

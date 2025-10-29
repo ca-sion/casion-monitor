@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\NotificationPreference;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\TimePicker;
+use App\Notifications\WebPushNotification;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\CheckboxList;
@@ -27,10 +29,15 @@ class NotificationSettings extends Component implements HasActions, HasSchemas, 
     use InteractsWithTable;
 
     public $preferences = []; // This will now be managed by Filament Table
+
     public $newPreferenceTime = '08:00';
+
     public $newPreferenceDays = [];
+
     public $isSubscribed = false;
+
     public $vapidPublicKey;
+
     public $daysOfWeek = [];
 
     public function mount()
@@ -58,6 +65,7 @@ class NotificationSettings extends Component implements HasActions, HasSchemas, 
         } elseif (Auth::guard('trainer')->check()) {
             return Auth::guard('trainer')->user();
         }
+
         return null;
     }
 
@@ -120,45 +128,116 @@ class NotificationSettings extends Component implements HasActions, HasSchemas, 
                             'notification_time' => $data['time'],
                             'notification_days' => $data['days'],
                         ]);
-                        $this->dispatch('notify', type: 'success', message: 'Rappel ajouté avec succès.');
+                        Notification::make()
+                            ->title('Rappel ajouté avec succès.')
+                            ->success()
+                            ->send();
                     })
                     ->visible(fn () => $this->notifiable->notificationPreferences()->count() < 5),
+                Action::make('sendTestNotification')
+                    ->label('Tester l\'envoi')
+                    ->action('sendTestNotification')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Envoyer une notification de test')
+                    ->modalDescription('Nous allons envoyer une notification de test pour vérifier que votre appareil est bien configuré.')
+                    ->visible(fn () => $this->isSubscribed),
             ]);
+    }
+
+    public function sendTestNotification()
+    {
+        if (! $this->notifiable) {
+            Notification::make()
+                ->title('Utilisateur non authentifié.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        if (! $this->isSubscribed) {
+            Notification::make()
+                ->title('Vous n\'êtes pas abonné aux notifications.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        try {
+            $this->notifiable->notify(new WebPushNotification(
+                'Notification de test',
+                'Si vous recevez ceci, les notifications sont bien configurées.',
+                $this->notifiable->accountLink
+            ));
+
+            Notification::make()
+                ->title('Notification de test envoyée.')
+                ->success()
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Erreur lors de l\'envoi de la notification de test.')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function subscribe($subscription)
     {
-        if (!$this->notifiable) {
+        if (! $this->notifiable) {
             $this->dispatch('notify', type: 'error', message: 'Utilisateur non authentifié.');
+
             return;
         }
 
-        // Extract keys from the nested 'keys' array
-        $publicKey = $subscription['keys']['p256dh'] ?? null;
-        $authToken = $subscription['keys']['auth'] ?? null;
-        $contentEncoding = $subscription['contentEncoding'] ?? null; // This might still be null if not provided by browser
+        try {
+            // Extract keys from the nested 'keys' array
+            $publicKey = $subscription['keys']['p256dh'] ?? null;
+            $authToken = $subscription['keys']['auth'] ?? null;
+            $contentEncoding = $subscription['contentEncoding'] ?? null; // This might still be null if not provided by browser
 
-        $this->notifiable->updatePushSubscription(
-            $subscription['endpoint'],
-            $publicKey,
-            $authToken,
-            $contentEncoding
-        );
+            $this->notifiable->updatePushSubscription(
+                $subscription['endpoint'],
+                $publicKey,
+                $authToken,
+                $contentEncoding
+            );
 
-        $this->isSubscribed = true;
-        $this->dispatch('notify', type: 'success', message: 'Abonnement aux notifications activé.');
+            $this->isSubscribed = true;
+            Notification::make()
+                ->title('Abonnement aux notifications activé.')
+                ->success()
+                ->send();
+
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title("Erreur d'abonnement WebPush pour l'utilisateur ID {$this->notifiable->id}")
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function unsubscribe(string $endpoint)
     {
-        if (!$this->notifiable) {
-            $this->dispatch('notify', type: 'error', message: 'Utilisateur non authentifié.');
+        if (! $this->notifiable) {
+            Notification::make()
+                ->title('Utilisateur non authentifié.')
+                ->danger()
+                ->send();
+
             return;
         }
 
         $this->notifiable->deletePushSubscription($endpoint);
         $this->isSubscribed = false;
-        $this->dispatch('notify', type: 'success', message: 'Abonnement aux notifications désactivé.');
+        Notification::make()
+            ->title('Abonnement aux notifications désactivé.')
+            ->warning()
+            ->send();
     }
 
     #[Layout('components.layouts.athlete')]
