@@ -9,10 +9,13 @@ use Illuminate\Support\Carbon;
 use Vinkla\Hashids\Facades\Hashids;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use MichaelRavedoni\LaravelValueObjects\Casts\ValueObjectCast;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
@@ -25,6 +28,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
 
     /** @use HasFactory<\Database\Factories\AthleteFactory> */
     use HasFactory;
+    use Notifiable, HasPushSubscriptions;
 
     /**
      * The attributes that aren't mass assignable.
@@ -111,6 +115,14 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     public function recoveryProtocols(): HasMany
     {
         return $this->hasMany(RecoveryProtocol::class);
+    }
+
+    /**
+     * Get the notification preferences for the athlete.
+     */
+    public function notificationPreferences(): MorphMany
+    {
+        return $this->morphMany(NotificationPreference::class, 'notifiable');
     }
 
     /**

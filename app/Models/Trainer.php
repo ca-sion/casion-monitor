@@ -14,6 +14,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
+use Illuminate\Notifications\Notifiable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Trainer extends Model implements AuthenticatableContract, AuthorizableContract
 {
@@ -22,6 +25,7 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
 
     /** @use HasFactory<\Database\Factories\TrainerFactory> */
     use HasFactory;
+    use Notifiable, HasPushSubscriptions;
 
     /**
      * The attributes that aren't mass assignable.
@@ -126,5 +130,13 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
     public function feedbacks(): HasMany
     {
         return $this->hasMany(Feedback::class);
+    }
+
+    /**
+     * Get the notification preferences for the trainer.
+     */
+    public function notificationPreferences(): MorphMany
+    {
+        return $this->morphMany(NotificationPreference::class, 'notifiable');
     }
 }
