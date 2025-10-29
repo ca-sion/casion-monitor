@@ -7,16 +7,16 @@ use Illuminate\Support\Carbon;
 use Vinkla\Hashids\Facades\Hashids;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\Access\Authorizable;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
-use Illuminate\Notifications\Notifiable;
-use NotificationChannels\WebPush\HasPushSubscriptions;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Trainer extends Model implements AuthenticatableContract, AuthorizableContract
 {
@@ -25,7 +25,8 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
 
     /** @use HasFactory<\Database\Factories\TrainerFactory> */
     use HasFactory;
-    use Notifiable, HasPushSubscriptions;
+
+    use HasPushSubscriptions, Notifiable;
 
     /**
      * The attributes that aren't mass assignable.

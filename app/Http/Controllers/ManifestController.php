@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-
 class ManifestController extends Controller
 {
     /**
@@ -18,32 +15,32 @@ class ManifestController extends Controller
         $userModelName = 'App\\Models\\'.$userModel;
         $user = $userModelName::find($userId);
 
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthorized');
         }
 
         $manifest = [
-            'name' => 'CA Sion Monitor - ' . $user->name,
-            'short_name' => 'Monitor',
-            'start_url' => $user->accountLink,
-            'display' => 'standalone',
+            'name'             => 'CA Sion Monitor - '.$user->name,
+            'short_name'       => 'Monitor',
+            'start_url'        => $user->accountLink,
+            'display'          => 'standalone',
             'background_color' => '#FFFFFF',
-            'theme_color' => '#000000',
-            'description' => 'Application de monitoring pour le CA Sion.',
-            'icons' => [
+            'theme_color'      => '#000000',
+            'description'      => 'Application de monitoring pour le CA Sion.',
+            'icons'            => [
                 [
-                    'src' => url('favicon.png'),
-                    'sizes' => '192x192',
-                    'type' => 'image/png',
-                    'purpose' => 'any maskable'
+                    'src'     => url('favicon.png'),
+                    'sizes'   => '192x192',
+                    'type'    => 'image/png',
+                    'purpose' => 'any maskable',
                 ],
                 [
-                    'src' => url('apple-touch-icon.png'),
-                    'sizes' => '180x180',
-                    'type' => 'image/png',
-                    'purpose' => 'any maskable'
-                ]
-            ]
+                    'src'     => url('apple-touch-icon.png'),
+                    'sizes'   => '180x180',
+                    'type'    => 'image/png',
+                    'purpose' => 'any maskable',
+                ],
+            ],
         ];
 
         return response()->json($manifest);

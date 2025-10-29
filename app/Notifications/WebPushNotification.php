@@ -4,15 +4,17 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class WebPushNotification extends Notification
 {
     use Queueable;
 
     protected $title;
+
     protected $body;
+
     protected $url;
 
     /**
@@ -44,9 +46,9 @@ class WebPushNotification extends Notification
             ->title($this->title)
             ->body($this->body)
             ->options([
-                'TTL' => 1000, // Time to live in seconds
+                'TTL'     => 1000, // Time to live in seconds
                 'urgency' => 'normal',
-                'icon' => '/favicon.png', // Icon for the notification
+                'icon'    => '/favicon.png', // Icon for the notification
             ]);
 
         if ($this->url) {

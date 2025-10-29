@@ -28,7 +28,8 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
 
     /** @use HasFactory<\Database\Factories\AthleteFactory> */
     use HasFactory;
-    use Notifiable, HasPushSubscriptions;
+
+    use HasPushSubscriptions, Notifiable;
 
     /**
      * The attributes that aren't mass assignable.
