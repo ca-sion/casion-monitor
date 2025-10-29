@@ -109,8 +109,9 @@ class NotificationSettings extends Component implements HasActions, HasSchemas, 
                             ->label('Heure du rappel')
                             ->required()
                             ->seconds(false)
-                            ->native(false)
-                            ->placeholder('HH:MM'),
+                            ->native(true)
+                            ->placeholder('HH:MM')
+                            ->minutesStep(15),
                         CheckboxList::make('days')
                             ->label('Jours de la semaine')
                             ->options($this->daysOfWeek)

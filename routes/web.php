@@ -9,6 +9,7 @@ use App\Livewire\MedicalFeedbackForm;
 use App\Livewire\TrainerFeedbackForm;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\NotificationSettings;
+use Illuminate\Support\Facades\Artisan;
 use App\Livewire\AthleteDailyMetricForm;
 use App\Http\Controllers\AthleteController;
 use App\Http\Controllers\TrainerController;
@@ -50,3 +51,9 @@ Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}/injuries/{injury}/recovery-protocols/create', AthleteRecoveryProtocolForm::class)->name('athletes.injuries.recovery-protocols.create');
     Route::get('/a/{hash}/recovery-protocols/create', AthleteRecoveryProtocolForm::class)->name('athletes.recovery-protocols.create');
 });
+
+Route::get('/run/reminders', function () {
+    Artisan::call('reminders:send');
+
+    return response('Reminders command executed.', 200);
+})->name('run.reminders');
