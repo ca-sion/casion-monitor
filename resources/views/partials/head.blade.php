@@ -7,7 +7,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
 <meta name="theme-color" content="#000000"/>
-<link rel="manifest" href="{{ route('manifest.generate') }}">
+@include('partials.manifest')
 
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=inter:400,500,600" rel="stylesheet" />

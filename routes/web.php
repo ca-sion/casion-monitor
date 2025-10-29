@@ -14,6 +14,7 @@ use App\Http\Controllers\AthleteController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
+use App\Http\Controllers\ManifestController;
 use App\Livewire\AthleteMedicalFeedbackForm;
 use App\Livewire\TrainerMedicalFeedbackEdit;
 use App\Livewire\AthleteRecoveryProtocolForm;
@@ -24,7 +25,7 @@ Route::get('/', function () {
 
 Route::post('logout', Logout::class)->name('logout');
 
-Route::get('/manifest.json', [\App\Http\Controllers\ManifestController::class, 'generate'])->name('manifest.generate');
+Route::get('/manifest.json', [ManifestController::class, 'generate'])->name('manifest.generate');
 
 Route::middleware([TrainerHashProtect::class])->group(function () {
     Route::get('/t/{hash}', [TrainerController::class, 'dashboard'])->name('trainers.dashboard');

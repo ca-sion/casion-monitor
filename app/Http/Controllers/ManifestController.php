@@ -12,25 +12,24 @@ class ManifestController extends Controller
      */
     public function generate()
     {
-        $user = null;
-        if (Auth::guard('athlete')->check()) {
-            $user = Auth::guard('athlete')->user();
-        } elseif (Auth::guard('trainer')->check()) {
-            $user = Auth::guard('trainer')->user();
-        }
+        $lang = request()->input('lang');
+        $userId = request()->input('user');
+        $userModel = request()->input('userModel');
+        $userModelName = 'App\\Models\\'.$userModel;
+        $user = $userModelName::find($userId);
 
         if (!$user) {
             abort(401, 'Unauthorized');
         }
 
         $manifest = [
-            'name' => 'Casion Monitor - ' . $user->name,
-            'short_name' => 'Casion Monitor',
+            'name' => 'CA Sion Monitor - ' . $user->name,
+            'short_name' => 'Monitor',
             'start_url' => $user->accountLink,
             'display' => 'standalone',
             'background_color' => '#FFFFFF',
             'theme_color' => '#000000',
-            'description' => 'Votre application de monitoring sportif personnalisée.',
+            'description' => 'Application de monitoring pour le CA Sion.',
             'icons' => [
                 [
                     'src' => url('favicon.png'),
