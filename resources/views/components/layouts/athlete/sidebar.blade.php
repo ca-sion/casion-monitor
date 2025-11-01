@@ -64,6 +64,8 @@
                         </div>
                     </flux:menu.radio.group>
 
+                    <flux:menu.separator />
+
                     <flux:menu.radio.group>
                         <flux:menu.item :href="route('athletes.settings', ['hash' => auth('athlete')->user()?->hash])" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
                     </flux:menu.radio.group>

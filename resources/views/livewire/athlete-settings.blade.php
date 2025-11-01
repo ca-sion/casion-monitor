@@ -1,5 +1,5 @@
 <div class="p-4">
-    <h2 class="text-xl font-semibold mb-4">Paramètres des notifications</h2>
+    <h2 class="text-xl font-semibold mb-4">Paramètres</h2>
 
     <div class="mb-6">
         <h3 class="text-lg font-medium mb-2">Notifications Push</h3>

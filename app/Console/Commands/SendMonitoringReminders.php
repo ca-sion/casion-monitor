@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use App\Models\NotificationPreference;
-use App\Notifications\WebPushNotification;
+use App\Notifications\SendDailyReminder;
 
 class SendMonitoringReminders extends Command
 {
@@ -60,7 +60,7 @@ class SendMonitoringReminders extends Command
                     if ($notifiable && $notifiable->pushSubscriptions()->exists()) {
                         $this->info("Sending reminder to {$notifiable->name} for {$preference->notification_time} (rounded to {$roundedPrefTime})...");
 
-                        $notifiable->notify(new WebPushNotification(
+                        $notifiable->notify(new SendDailyReminder(
                             'Rappel Monitoring',
                             "N'oubliez pas de remplir votre monitoring quotidien !",
                             $notifiable->accountLink

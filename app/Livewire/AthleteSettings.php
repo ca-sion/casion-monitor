@@ -13,7 +13,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Notifications\Notification;
 use Filament\Forms\Components\TimePicker;
-use App\Notifications\WebPushNotification;
+use App\Notifications\SendDailyReminder;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\CheckboxList;
@@ -22,7 +22,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 
-class NotificationSettings extends Component implements HasActions, HasSchemas, HasTable
+class AthleteSettings extends Component implements HasActions, HasSchemas, HasTable
 {
     use InteractsWithActions;
     use InteractsWithSchemas;
@@ -167,7 +167,7 @@ class NotificationSettings extends Component implements HasActions, HasSchemas, 
         }
 
         try {
-            $this->notifiable->notify(new WebPushNotification(
+            $this->notifiable->notify(new SendDailyReminder(
                 'Notification de test',
                 'Si vous recevez ceci, les notifications sont bien configurées.',
                 $this->notifiable->accountLink
@@ -244,6 +244,6 @@ class NotificationSettings extends Component implements HasActions, HasSchemas, 
     #[Layout('components.layouts.athlete')]
     public function render()
     {
-        return view('livewire.notification-settings');
+        return view('livewire.athlete-settings');
     }
 }

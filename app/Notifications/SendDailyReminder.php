@@ -7,7 +7,7 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-class WebPushNotification extends Notification
+class SendDailyReminder extends Notification
 {
     use Queueable;
 
