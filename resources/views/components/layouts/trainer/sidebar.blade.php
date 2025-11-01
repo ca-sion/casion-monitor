@@ -108,6 +108,12 @@
 
                     <flux:menu.separator />
 
+                    <flux:menu.radio.group>
+                        <flux:menu.item :href="route('trainers.settings', ['hash' => auth('trainer')->user()?->hash])" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
+                    </flux:menu.radio.group>
+
+                    <flux:menu.separator />
+
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
                         <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
