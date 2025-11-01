@@ -1,12 +1,18 @@
 @php
     $lang = app()->getLocale();
     $user = null;
-    if (auth()->guard('athlete')->check()) {
-        $user = auth()->guard('athlete')->user();
-        $userModel = 'Athlete';
-    } elseif (auth()->guard('trainer')->check()) {
-        $user = auth()->guard('trainer')->user();
-        $userModel = 'Athlete';
+    $userModel = null;
+
+    if (request()->routeIs('trainers.*')) {
+        if (auth()->guard('trainer')->check()) {
+            $user = auth()->guard('trainer')->user();
+            $userModel = 'Trainer';
+        }
+    } else {
+        if (auth()->guard('athlete')->check()) {
+            $user = auth()->guard('athlete')->user();
+            $userModel = 'Athlete';
+        }
     }
 @endphp
 
