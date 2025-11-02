@@ -32,9 +32,16 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
 
     public ?Injury $injury = null; // Optionnel, si le protocole est lié à une blessure
 
-    public function mount(Injury $injury): void
+    public ?RecoveryProtocol $recoveryProtocol = null;
+
+    public function mount(Injury $injury, RecoveryProtocol $recoveryProtocol): void
     {
         $this->athlete = auth('athlete')->user();
+
+        if ($recoveryProtocol->exists) {
+            $this->recoveryProtocol = $recoveryProtocol;
+            $this->form->fill($this->recoveryProtocol->toArray());
+        }
 
         if ($injury->exists) {
             $this->injury = $injury;
@@ -51,11 +58,13 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
             }
         }
 
-        $this->form->fill([
-            'athlete_id'        => $this->athlete->id,
-            'date'              => $initialDate,
-            'related_injury_id' => $this->injury ? $this->injury->id : null,
-        ]);
+        if (! $this->recoveryProtocol) {
+            $this->form->fill([
+                'athlete_id'        => $this->athlete->id,
+                'date'              => $initialDate,
+                'related_injury_id' => $this->injury ? $this->injury->id : null,
+            ]);
+        }
     }
 
     public function form(Schema $schema): Schema
@@ -108,12 +117,21 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
         $data['athlete_id'] = $this->athlete->id;
         $data['related_injury_id'] = $this->injury ? $this->injury->id : null;
 
-        RecoveryProtocol::create($data);
+        if ($this->recoveryProtocol) {
+            $this->recoveryProtocol->update($data);
 
-        Notification::make()
-            ->title('Protocole de récupération ajouté avec succès !')
-            ->success()
-            ->send();
+            Notification::make()
+                ->title('Protocole de récupération mis à jour avec succès !')
+                ->success()
+                ->send();
+        } else {
+            RecoveryProtocol::create($data);
+
+            Notification::make()
+                ->title('Protocole de récupération ajouté avec succès !')
+                ->success()
+                ->send();
+        }
 
         // Rediriger vers le tableau de bord de l'athlète ou la page de la blessure si liée
         if ($this->injury) {

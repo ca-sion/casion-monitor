@@ -126,6 +126,7 @@
 
                                 @case('injury')
                                     @php $injury = $item['data']; @endphp
+
                                     <flux:card class="border-red-300! bg-red-50! border shadow-lg">
                                         <div class="flex items-center gap-3">
                                             <x-heroicon-o-shield-exclamation class="h-6 w-6 text-red-600" />
@@ -136,32 +137,58 @@
                                             </flux:heading>
                                         </div>
                                         <div class="mt-3 space-y-1 text-sm">
-                                            <p><strong class="font-medium">Zone :</strong> {{ $injury->body_part->getLabel() }}</p>
-                                            <p><strong class="font-medium">Type :</strong> {{ $injury->type->getLabel() }}</p>
-                                            <p><strong class="font-medium">Statut :</strong>
-                                                <flux:badge color="danger" size="xs">{{ $injury->status->getLabel() }}</flux:badge>
+                                            <p><strong class="font-medium">Zone :</strong> {{ $injury->pain_location?->getLabel() }}</p>
+                                            <p><strong class="font-medium">Type :</strong> {{ $injury->injury_type?->getLabel() }}</p>
+                                            <p><strong class="font-medium">Statut :</strong> {{ $injury->status->getLabel() }}
                                             </p>
                                         </div>
                                         @if ($injury->description)
                                             <p class="mt-2 text-xs italic text-gray-700">"{{ $injury->description }}"</p>
                                         @endif
+                                        <flux:button class="mt-3"
+                                            size="sm"
+                                            :href="route('athletes.injuries.show', ['hash' => $athlete->hash, 'injury' => $injury])">Voir</flux:button>
                                     </flux:card>
                                 @break
 
                                 @case('recovery_protocol')
                                     @php $protocol = $item['data']; @endphp
-                                    <flux:card class="border-blue-300! bg-blue-50! border shadow-lg">
-                                        <div class="flex items-center gap-3">
-                                            <x-heroicon-o-clipboard-document-list class="h-6 w-6 text-blue-600" />
-                                            <flux:heading class="font-semibold text-blue-800"
-                                                level="3"
-                                                size="sm">
-                                                Protocole de récupération assigné
-                                            </flux:heading>
-                                        </div>
-                                        <p class="mt-2 text-sm text-gray-700">{{ $protocol->title }}</p>
-                                        <a class="mt-2 inline-block text-xs font-bold text-blue-600 hover:underline" href="#">Voir le protocole</a>
-                                    </flux:card>
+                                    <flux:callout class="p-0!"
+                                        icon="stethoscope"
+                                        color="purple"
+                                        inline>
+                                        <flux:callout.heading>
+                                            {{ $protocol->recovery_type->getLabel() }}
+                                        </flux:callout.heading>
+                                        <flux:callout.text>
+                                            {{ $protocol->notes }}
+                                            @if ($protocol->duration_minutes)
+                                                • {{ $protocol->duration_minutes }} minutes
+                                            @endif
+                                            @if ($protocol->relatedInjury)
+                                                • Lié à la blessure: {{ $protocol->relatedInjury->type }}
+                                            @endif
+                                        </flux:callout.text>
+                                        <x-slot name="actions">
+                                            <flux:button size="sm" :href="route('athletes.recovery-protocols.edit', ['hash' => $athlete->hash, 'recoveryProtocol' => $protocol])">Voir</flux:button>
+                                            @if ($protocol->effectiveness_rating)
+                                                <flux:badge class="whitespace-normal!"
+                                                    size="sm"
+                                                    inset="top bottom"
+                                                    color="green">
+                                                    {{ $protocol->effectiveness_rating }}/5
+                                                </flux:badge>
+                                            @endif
+                                            @if ($protocol->effect_on_pain_intensity)
+                                                <flux:badge class="whitespace-normal!"
+                                                    size="sm"
+                                                    inset="top bottom"
+                                                    color="blue">
+                                                    {{ $protocol->effect_on_pain_intensity }}/10
+                                                </flux:badge>
+                                            @endif
+                                        </x-slot>
+                                    </flux:callout>
                                 @break
 
                                 @case('metric_alert')
