@@ -20,6 +20,11 @@ return new class extends Migration
             $table->string('gender', 2)->nullable();
             $table->date('last_connection')->nullable();
             $table->string('external_id')->nullable();
+            $table->string('telegram_chat_id')->nullable();
+            $table->string('tiiva_id')->nullable();
+            $table->string('webling_id')->nullable();
+            $table->string('nds_id')->nullable();
+            $table->json('preferences')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
         });

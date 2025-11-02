@@ -4,10 +4,10 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\Telegram\TelegramChannel;
-use NotificationChannels\Telegram\TelegramMessage;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
+use NotificationChannels\Telegram\TelegramChannel;
+use NotificationChannels\Telegram\TelegramMessage;
 
 class SendDailyReminder extends Notification
 {
@@ -78,7 +78,7 @@ class SendDailyReminder extends Notification
     {
         $message = TelegramMessage::create()
             ->to($notifiable->routeNotificationFor('telegram'))
-            ->content("*" . $this->title . "*\n" . $this->body);
+            ->content('*'.$this->title."*\n".$this->body);
 
         if ($this->url) {
             $message->button('Ouvrir', $this->url);

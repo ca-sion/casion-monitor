@@ -2,14 +2,12 @@
 
 namespace App\Livewire;
 
-use Telegram\Bot\Api;
 use Livewire\Component;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
 use Livewire\Attributes\Layout;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
 use App\Models\NotificationPreference;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
@@ -22,7 +20,6 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Filament\Forms\Components\CheckboxList;
 use Illuminate\Validation\ValidationException;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
@@ -90,81 +87,71 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
         $this->telegramActivationUrl = 'https://t.me/'.config('services.telegram-bot-api.username').'?start='.$this->telegramActivationToken;
     }
 
+    public function checkTelegramActivation($notifyUser = false)
+    {
+        if (! $this->telegramActivationToken) {
+            if ($notifyUser) {
+                Notification::make()->title('Erreur')->body('Aucun jeton d\'activation n\'est disponible. Veuillez rafraîchir la page.')->danger()->send();
+            }
+
+            return;
+        }
+
+        try {
+            $updates = Telegram::getUpdates(['limit' => 20, 'timeout' => 0]);
+            $foundChatId = null;
+            $maxUpdateId = 0;
+
+            foreach ($updates as $update) {
+                $message = $update->getMessage();
+                if ($message && $message->text === '/start '.$this->telegramActivationToken) {
+                    $foundChatId = $message->getChat()->id;
+                    $maxUpdateId = $update->getUpdateId();
+                    break;
+                }
+            }
+
+            if ($foundChatId) {
+                $this->notifiable->update(['telegram_chat_id' => $foundChatId]);
+
+                Telegram::sendMessage([
+                    'chat_id' => $foundChatId,
+                    'text'    => '✅ Votre compte a été lié avec succès !',
+                ]);
+
+                Telegram::getUpdates(['offset' => $maxUpdateId + 1]);
+
+                $this->telegramChatId = $foundChatId;
+
+                if ($notifyUser) {
+                    Notification::make()->title('Compte lié !')->body('Votre compte Telegram a été lié avec succès.')->success()->send();
+                }
+            } elseif ($notifyUser) {
+                Notification::make()->title('Échec de la vérification')->body('Nous n\'avons pas pu confirmer votre activation. Veuillez cliquer sur le lien et démarrer la conversation avec le bot avant de vérifier manuellement.')->warning()->send();
+            }
+        } catch (\Exception $e) {
+            if ($notifyUser) {
+                Notification::make()->title('Erreur de l\'API')->body('Un problème de communication avec Telegram est survenu. Veuillez réessayer plus tard.')->danger()->send();
+            }
+            // Do not bubble up exception for polling
+        }
+    }
+
     public function scanForTelegramChatIdAction(): Action
-{
-    return Action::make('scanForTelegramChatId')
-        ->label('Scanner mon activation Telegram')
-        ->color('primary')
-        ->icon('heroicon-o-arrow-path')
-        ->disabled(fn () => !$this->telegramActivationToken)
-        ->action(function () {
-            
-            $athlete = $this->notifiable;
-            $token = $this->telegramActivationToken;
-
-            if (!$token) {
-                Notification::make()->title('Erreur')->body('Veuillez d\'abord générer le lien.')->danger()->send();
-                return;
-            }
-
-            try {
-                // Appeler getUpdates pour récupérer les dernières interactions.
-                $updates = Telegram::getUpdates(['limit' => 20, 'timeout' => 0]); 
-                
-                $foundChatId = null;
-                $maxUpdateId = 0;
-
-                foreach ($updates as $update) {
-                    $message = $update->getMessage();
-                    
-                    if ($message) {
-                        $text = $message->text;
-                        $updateId = $update->getUpdateId();
-                        
-                        // 1. On cherche spécifiquement la commande /start suivie de notre jeton
-                        if ($text === "/start {$token}") {
-                            $foundChatId = $message->getChat()->id;
-                            $maxUpdateId = $updateId;
-                            // Une fois trouvé, on peut s'arrêter
-                            break; 
-                        }
-                    }
-                }
-
-                if ($foundChatId) {
-                    // 2. Lier le Chat ID et nettoyer le jeton
-                    $athlete->update([
-                        'telegram_chat_id' => $foundChatId
-                    ]);
-                    
-                    // 3. Envoyer un message de confirmation (bonne pratique)
-                    Telegram::sendMessage([
-                        'chat_id' => $foundChatId,
-                        'text' => '✅ Votre compte a été lié avec succès !',
-                    ]);
-
-                    // 4. Mettre à jour l'offset pour nettoyer la file d'attente des prochaines getUpdates
-                    Telegram::getUpdates(['offset' => $maxUpdateId + 1]); 
-                    
-                    // Mise à jour de l'interface Livewire
-                    $this->telegramChatId = $foundChatId;
-                    
-                    Notification::make()->title('Compte lié !')->body('Le Chat ID a été trouvé et enregistré.')->success()->send();
-
-                } else {
-                    Notification::make()->title('Échec du scan')->body('Veuillez d\'abord cliquer sur le lien Telegram et envoyer le message de démarrage.')->warning()->send();
-                }
-
-            } catch (\Exception $e) {
-                Notification::make()->title('Erreur de l\'API')->body('Problème de communication avec Telegram.')->danger()->send();
-            }
-        });
-}
+    {
+        return Action::make('scanForTelegramChatId')
+            ->label('vérification manuelle')
+            ->link()
+            ->color('gray')
+            ->disabled(fn () => ! $this->telegramActivationToken)
+            ->action(fn () => $this->checkTelegramActivation(true));
+    }
 
     public function linkTelegramManuallyAction(): Action
     {
         return Action::make('linkTelegramManually')
-            ->label('Lier manuellement via Chat ID')
+            ->label('Lier manuellement Telegram')
+            ->link()
             ->modalHeading('Lier le compte Telegram')
             ->modalSubmitActionLabel('Confirmer la liaison')
             ->schema([
@@ -178,7 +165,7 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
             ->action(function (array $data) {
                 $chatId = $data['chat_id'];
                 $athlete = $this->notifiable;
-                
+
                 // 1. Enregistrer le Chat ID dans la base de données
                 $athlete->update(['telegram_chat_id' => $chatId]);
 
@@ -186,9 +173,9 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
                 try {
                     Telegram::sendMessage([
                         'chat_id' => $chatId,
-                        'text' => '🎉 Votre compte Telegram a été lié avec succès à notre service !',
+                        'text'    => '🎉 Votre compte Telegram a été lié avec succès à notre service !',
                     ]);
-                    
+
                     // Mise à jour de la propriété Livewire
                     $this->telegramChatId = $chatId;
 
@@ -197,11 +184,11 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
                         ->body('Un message de confirmation a été envoyé sur Telegram.')
                         ->success()
                         ->send();
-                        
+
                 } catch (\Exception $e) {
                     // Si le message échoue (ID incorrect, bot bloqué, etc.)
                     $athlete->update(['telegram_chat_id' => null]); // Annuler la liaison
-                    
+
                     Notification::make()
                         ->title('Erreur de liaison Telegram')
                         ->body("Impossible d'envoyer un message à ce Chat ID. Assurez-vous d'avoir le bon ID et d'avoir démarré la conversation avec le bot. Le compte n'a PAS été lié.")

@@ -15,40 +15,67 @@
                         <p class="font-semibold text-green-600 dark:text-green-400">Votre compte est lié à Telegram.</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400">Vous recevrez les notifications via le bot <strong>{{ config('services.telegram-bot-api.username') }}</strong>.</p>
                     </div>
-                    <button wire:click="unlinkTelegram" class="fi-btn fi-btn-size-md fi-btn-color-red fi-btn-variant-outline dark:fi-btn-color-red">
+                    <x-filament::button color="danger" outlined="true" wire:click="unlinkTelegram">
                         Dissocier
-                    </button>
+                    </x-filament::button>
                 </div>
             @else
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Pour recevoir les notifications via Telegram, suivre les étapes ci-dessous :
-                </p>
-                <ol class="list-decimal list-inside text-sm text-gray-600 dark:text-gray-400 mt-2 space-y-2">
-                    <li>Télécharger l'application Telegram.</li>
-                    @if ($telegramActivationUrl)
-                    <li>
-                        Ouvrez Telegram et démarrez une conversation avec notre bot "{{ config('services.telegram-bot-api.username') }}" ou en cliquant sur ce lien :
-                        <a href="{{ $telegramActivationUrl }}" target="_blank" class="fi-btn fi-btn-size-md fi-btn-color-primary fi-btn-variant-solid dark:fi-btn-color-primary">
-                            Ouvrir une conversation avec le robot
-                        </a>
-                    </li>
-                    <li>Revenir ici et activer la liaison en cliquant sur ce bouton :
-                        {{ $this->scanForTelegramChatIdAction }}
-                    </li>
-                    @else
-                    <li>
-                        Impossible de générer le lien d'activation. Cliquer sur ce bouton pour le faire manuellement.
-                    </li>
-                    <li>
-                        <a href="https://t.me/userinfobot" target="_blank" class="font-semibold text-primary-600 hover:underline">
-                            userinfobot
-                        </a>
-                    </li>
-                    <li>Entrer ensuite le Chat id manuellement en cliquant sur le bouton ci-après :
-                        {{ $this->linkTelegramManuallyAction }}
-                    </li>
-                    @endif
-                </ol>
+                @if ($telegramActivationUrl)
+                    <div wire:poll.5s="checkTelegramActivation">
+                        <div class="flex flex-col md:flex-row md:items-start gap-4">
+                            <!-- QR Code and Link -->
+                            <div x-data="{}" x-init="
+                                new QRCode($refs.qrcode, {
+                                    text: '{{ $telegramActivationUrl }}',
+                                    width: 128,
+                                    height: 128,
+                                    colorDark: '#000000',
+                                    colorLight: '#ffffff',
+                                    correctLevel: QRCode.CorrectLevel.H
+                                });
+                            " class="flex flex-col items-center gap-2" wire:ignore>
+                                <div x-ref="qrcode" class="p-2 bg-white rounded-lg"></div>
+                                <a href="{{ $telegramActivationUrl }}" target="_blank" class="fi-btn fi-btn-size-md fi-btn-color-primary fi-btn-variant-solid dark:fi-btn-color-primary">
+                                    Ouvrir le lien
+                                </a>
+                            </div>
+                            
+                            <!-- Instructions -->
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800 dark:text-gray-200">Liez votre compte Telegram en 2 étapes :</p>
+                                <ol class="list-decimal list-inside text-sm text-gray-600 dark:text-gray-400 mt-2 space-y-2">
+                                    <li>
+                                        <strong>Scannez le QR code</strong> avec votre téléphone ou <strong>cliquez sur le lien</strong>.
+                                    </li>
+                                    <li>
+                                        Dans Telegram, appuyez sur le bouton <strong>"Démarrer"</strong> qui apparaît.
+                                    </li>
+                                </ol>
+                                <div class="mt-4 p-3 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 flex items-center gap-3">
+                                    <x-filament::loading-indicator class="h-5 w-5" />
+                                    <flux:text>En attente d'activation... Nous détectons la liaison automatiquement.</flux:text>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t dark:border-gray-700/50 text-xs text-gray-500 dark:text-gray-400">
+                            <p>Si la liaison automatique ne fonctionne pas :</p>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>Contrôler d'avoir <a href="https://telegram.org/" class="underline" target="_blank">installé l'application Telegram</a>.</li>
+                                <li>Assurez-vous d'avoir bien cliqué sur "Démarrer" dans Telegram.</li>
+                                <li>Vous pouvez forcer une {{ $this->scanForTelegramChatIdAction }}.</li>
+                                <li>En dernier recours, vous pouvez {{ $this->linkTelegramManuallyAction }}.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+                @else
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Le service de liaison Telegram est actuellement indisponible. Nous n'avons pas pu générer de lien d'activation.
+                    </p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Vous pouvez tenter une liaison manuelle : {{ $this->linkTelegramManuallyAction }}
+                    </p>
+                @endif
             @endif
         </div>
 
