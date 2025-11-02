@@ -1,4 +1,4 @@
-<div class="p-4">
+<div class="">
     <h1 class="text-2xl font-semibold mb-4">Paramètres</h1>
 
     <div class="mb-6">
