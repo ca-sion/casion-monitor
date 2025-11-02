@@ -1,10 +1,60 @@
 <div class="p-4">
-    <h2 class="text-xl font-semibold mb-4">Paramètres</h2>
+    <h1 class="text-2xl font-semibold mb-4">Paramètres</h1>
 
     <div class="mb-6">
-        <h3 class="text-lg font-medium mb-2">Notifications Push</h3>
+        <h2 class="text-lg font-medium mb-2">Notifications</h2>
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Recevez des rappels directement sur votre appareil pour ne pas oublier de remplir votre monitoring.
+            Recevez des notifications directement sur vos appareils.
+        </p>
+
+        <h3 class="font-medium mb-2">Telegram</h3>
+        <div class="p-4 mb-6 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            @if ($telegramChatId)
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-green-600 dark:text-green-400">Votre compte est lié à Telegram.</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Vous recevrez les notifications via le bot <strong>{{ config('services.telegram-bot-api.username') }}</strong>.</p>
+                    </div>
+                    <button wire:click="unlinkTelegram" class="fi-btn fi-btn-size-md fi-btn-color-red fi-btn-variant-outline dark:fi-btn-color-red">
+                        Dissocier
+                    </button>
+                </div>
+            @else
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Pour recevoir les notifications via Telegram, suivre les étapes ci-dessous :
+                </p>
+                <ol class="list-decimal list-inside text-sm text-gray-600 dark:text-gray-400 mt-2 space-y-2">
+                    <li>Télécharger l'application Telegram.</li>
+                    @if ($telegramActivationUrl)
+                    <li>
+                        Ouvrez Telegram et démarrez une conversation avec notre bot "{{ config('services.telegram-bot-api.username') }}" ou en cliquant sur ce lien :
+                        <a href="{{ $telegramActivationUrl }}" target="_blank" class="fi-btn fi-btn-size-md fi-btn-color-primary fi-btn-variant-solid dark:fi-btn-color-primary">
+                            Ouvrir une conversation avec le robot
+                        </a>
+                    </li>
+                    <li>Revenir ici et activer la liaison en cliquant sur ce bouton :
+                        {{ $this->scanForTelegramChatIdAction }}
+                    </li>
+                    @else
+                    <li>
+                        Impossible de générer le lien d'activation. Cliquer sur ce bouton pour le faire manuellement.
+                    </li>
+                    <li>
+                        <a href="https://t.me/userinfobot" target="_blank" class="font-semibold text-primary-600 hover:underline">
+                            userinfobot
+                        </a>
+                    </li>
+                    <li>Entrer ensuite le Chat id manuellement en cliquant sur le bouton ci-après :
+                        {{ $this->linkTelegramManuallyAction }}
+                    </li>
+                    @endif
+                </ol>
+            @endif
+        </div>
+
+        <h3 class="font-medium mb-2">Web push</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Notifications PWA (ne fonctionnent pas lorsque l'application est en arrière-plan).
         </p>
 
         <button

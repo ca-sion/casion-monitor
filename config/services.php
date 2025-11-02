@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'telegram-bot-api' => [
+        'username' => 'casion_bot',
+        'token' => env('TELEGRAM_BOT_TOKEN'),
+    ],
+
 ];

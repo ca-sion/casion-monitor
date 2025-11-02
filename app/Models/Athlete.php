@@ -127,6 +127,16 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
+     * Route notifications for the Telegram channel.
+     *
+     * @return int|null
+     */
+    public function routeNotificationForTelegram()
+    {
+        return $this->telegram_chat_id;
+    }
+
+    /**
      * Check if the athlete has any active injuries.
      */
     public function hasActiveInjuries(): bool

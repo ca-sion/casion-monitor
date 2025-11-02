@@ -4,6 +4,8 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Telegram\TelegramChannel;
+use NotificationChannels\Telegram\TelegramMessage;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
@@ -34,7 +36,17 @@ class SendDailyReminder extends Notification
      */
     public function via(object $notifiable): array
     {
-        return [WebPushChannel::class];
+        $channels = [];
+
+        if ($notifiable->pushSubscriptions()->exists()) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        if ($notifiable->telegram_chat_id) {
+            $channels[] = TelegramChannel::class;
+        }
+
+        return $channels;
     }
 
     /**
@@ -54,6 +66,22 @@ class SendDailyReminder extends Notification
         if ($this->url) {
             $message->action('Ouvrir', 'open_url');
             $message->data(['url' => $this->url]);
+        }
+
+        return $message;
+    }
+
+    /**
+     * Get the Telegram representation of the notification.
+     */
+    public function toTelegram(object $notifiable)
+    {
+        $message = TelegramMessage::create()
+            ->to($notifiable->routeNotificationFor('telegram'))
+            ->content("*" . $this->title . "*\n" . $this->body);
+
+        if ($this->url) {
+            $message->button('Ouvrir', $this->url);
         }
 
         return $message;
