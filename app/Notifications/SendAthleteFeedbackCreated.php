@@ -5,7 +5,6 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 use NotificationChannels\Telegram\TelegramChannel;
 use NotificationChannels\Telegram\TelegramMessage;
 
@@ -60,7 +59,7 @@ class SendAthleteFeedbackCreated extends Notification
     public function toTelegram(object $notifiable)
     {
         $message = TelegramMessage::create()
-            ->content('*'.$this->athlete?->name."* a ajouté un feedback _".$this->feedback?->type?->getLabel()."_ pour le ".$this->feedback?->date?->locale('fr_CH')->isoFormat('ll')." :\n".$this->feedback->content);
+            ->content('*'.$this->athlete?->name.'* a ajouté un feedback _'.$this->feedback?->type?->getLabel().'_ pour le '.$this->feedback?->date?->locale('fr_CH')->isoFormat('ll')." :\n".$this->feedback->content);
 
         $message->button('Ouvrir', route('trainers.feedbacks.form', ['hash' => $notifiable->hash, 'd' => $this->feedback?->date->format('Y-m-d'), 'athlete_id' => $this->feedback->athlete_id]));
 
