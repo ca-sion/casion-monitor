@@ -7,6 +7,7 @@ use App\Models\Athlete;
 use Livewire\Component;
 use App\Enums\RecoveryType;
 use Filament\Schemas\Schema;
+use Livewire\Attributes\Url;
 use Livewire\Attributes\Layout;
 use App\Models\RecoveryProtocol;
 use Filament\Forms\Components\Select;
@@ -21,6 +22,9 @@ use Filament\Forms\Concerns\InteractsWithForms;
 class AthleteRecoveryProtocolForm extends Component implements HasForms
 {
     use InteractsWithForms;
+
+    #[Url]
+    public $date = null;
 
     public ?array $data = [];
 
@@ -38,9 +42,18 @@ class AthleteRecoveryProtocolForm extends Component implements HasForms
             $this->injury = null;
         }
 
+        $initialDate = now()->startOfDay();
+        if ($this->date) {
+            try {
+                $initialDate = \Carbon\Carbon::parse($this->date)->startOfDay();
+            } catch (\Carbon\Exceptions\InvalidFormatException $e) {
+                // Keep default date if format is invalid
+            }
+        }
+
         $this->form->fill([
             'athlete_id'        => $this->athlete->id,
-            'date'              => now()->startOfDay(),
+            'date'              => $initialDate,
             'related_injury_id' => $this->injury ? $this->injury->id : null,
         ]);
     }
