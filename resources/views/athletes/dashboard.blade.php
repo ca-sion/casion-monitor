@@ -26,7 +26,7 @@
         </a>
 
         {{-- Journal --}}
-        <a href="{{ route('athletes.feedbacks', ['hash' => $athlete->hash]) }}" aria-label="Journal des feedbacks">
+        <a href="{{ route('athletes.journal', ['hash' => $athlete->hash]) }}" aria-label="Journal des feedbacks">
             <flux:card class="bg-sky-50! border-sky-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-sky-100 hover:shadow-md dark:border-sky-800 dark:bg-sky-900/50 dark:hover:bg-sky-800/50">
                 <flux:icon class="mb-2 h-8 w-8 text-sky-600 dark:text-sky-400"
                     name="book-open"

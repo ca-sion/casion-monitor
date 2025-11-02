@@ -15,7 +15,7 @@
         {{-- Section des filtres --}}
         <div class="border-b border-t border-gray-200 bg-gray-50 px-4 py-4 sm:px-6">
             <form class="flex flex-col items-center gap-4 sm:flex-row"
-                action="{{ route('athletes.feedbacks', ['hash' => $athlete->hash]) }}"
+                action="{{ route('athletes.journal', ['hash' => $athlete->hash]) }}"
                 method="GET">
                 <div class="w-full sm:w-auto">
                     <label class="sr-only block text-sm font-medium text-gray-700" for="period">Période</label>

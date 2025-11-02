@@ -146,7 +146,7 @@ class AthleteController extends Controller
         return view('athletes.dashboard', $data);
     }
 
-    public function feedbacks(Request $request): View|JsonResponse
+    public function journal(Request $request): View|JsonResponse
     {
         $athlete = Auth::guard('athlete')->user();
         if (! $athlete) {
@@ -259,6 +259,6 @@ class AthleteController extends Controller
             return response()->json($data);
         }
 
-        return view('athletes.feedbacks', $data);
+        return view('athletes.journal', $data);
     }
 }
