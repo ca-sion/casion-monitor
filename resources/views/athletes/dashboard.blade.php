@@ -19,7 +19,7 @@
         <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter un protocol">
             <flux:card class="bg-purple-50! border-purple-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-purple-100 hover:shadow-md dark:border-purple-800 dark:bg-purple-900/50 dark:hover:bg-purple-800/50">
                 <flux:icon class="mb-2 h-8 w-8 text-purple-600 dark:text-purple-400"
-                    name="plus-circle"
+                    name="stethoscope"
                     variant="outline" />
                 <flux:text class="font-semibold text-purple-800 dark:text-purple-200">Séance</flux:text>
             </flux:card>
@@ -90,7 +90,7 @@
             @foreach ($today_feedbacks as $feedback)
                 <flux:callout class="p-0!"
                     :icon="$feedback->author_type === 'trainer' ? 'user-circle' : 'document-text'"
-                    :color="$feedback->author_type === 'trainer' ? 'purple' : 'stone'">
+                    :color="$feedback->author_type === 'trainer' ? 'teal' : 'stone'">
                     <flux:callout.text class="text-xs">{!! nl2br(e($feedback->content)) !!}</flux:callout.text>
                 </flux:callout>
             @endforeach
@@ -124,7 +124,7 @@
             @foreach ($last_days_feedbacks as $feedback)
                 <flux:callout class="p-0!"
                     :icon="$feedback->author_type === 'trainer' ? 'user-circle' : 'document-text'"
-                    :color="$feedback->author_type === 'trainer' ? 'purple' : 'stone'">
+                    :color="$feedback->author_type === 'trainer' ? 'teal' : 'stone'">
                     <flux:callout.heading class="text-xs">{{ $feedback->date->locale('fr_CH')->isoFormat('L') }}</flux:callout.heading>
                     <flux:callout.text class="text-xs">{!! nl2br(e($feedback->content)) !!}</flux:callout.text>
                 </flux:callout>
