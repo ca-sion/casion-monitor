@@ -140,4 +140,14 @@ class Trainer extends Model implements AuthenticatableContract, AuthorizableCont
     {
         return $this->morphMany(NotificationPreference::class, 'notifiable');
     }
+
+    /**
+     * Route notifications for the Telegram channel.
+     *
+     * @return int|null
+     */
+    public function routeNotificationForTelegram()
+    {
+        return $this->telegram_chat_id;
+    }
 }
