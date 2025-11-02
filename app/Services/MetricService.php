@@ -580,8 +580,6 @@ class MetricService
     }
 
     /**
-     * Récupère les métriques les plus récentes groupées par date.
-     *
      * Récupère les métriques les plus récentes groupées par date pour un athlète.
      *
      * @param  int  $limit  Le nombre maximum de métriques brutes à récupérer.

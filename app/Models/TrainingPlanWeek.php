@@ -17,6 +17,13 @@ class TrainingPlanWeek extends Model
 
     protected $fillable = ['training_plan_id', 'week_number', 'start_date', 'volume_planned', 'intensity_planned'];
 
+    protected function casts(): array
+    {
+        return [
+            'start_date' => 'date',
+        ];
+    }
+
     /**
      * Get the training plan that owns the TrainingPlanWeek.
      */

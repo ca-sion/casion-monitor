@@ -47,7 +47,16 @@
     </div>
 
     <flux:separator class="mb-4" variant="subtle" />
-    <flux:heading class="text-base">Aujourd'hui</flux:heading>
+    <flux:heading class="text-base">
+        Aujourd'hui
+        <a class="underline"
+                href="{{ route('athletes.metrics.daily.form', ['hash' => $athlete->hash]) }}"
+                aria-label="Ajouter une métrique">
+            <flux:icon class="inline size-5"
+                    name="plus-circle"
+                    variant="outline" />
+                </a>
+    </flux:heading>
 
     @php
         $todayDailyMetrics = $daily_metrics_grouped_by_date->get(now()->toDateString());
@@ -125,7 +134,7 @@
 
     {{-- Section Alertes --}}
     <flux:separator class="mb-4" variant="subtle" />
-    <flux:heading class="text-base">🔔 Alertes</flux:heading>
+    <flux:heading class="text-base">Alertes</flux:heading>
 
     <div class="mt-4">
         @if (!empty($alerts))
@@ -182,7 +191,7 @@
 
     {{-- Section Protocoles de Récupération --}}
     <flux:separator class="mb-4 mt-6" variant="subtle" />
-    <flux:heading class="text-base">🧘 Séances (physio, massage, récupération)</flux:heading>
+    <flux:heading class="text-base">Séances (physio, massage, récupération)</flux:heading>
 
     <div class="mt-4">
         <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une séance">
@@ -257,7 +266,7 @@
 
     <flux:separator class="my-8" variant="subtle" />
 
-    <flux:text class="mb-4 mt-8 text-lg font-semibold dark:text-zinc-200">📈 Statistiques</flux:text>
+    <flux:heading class="text-base">Statistiques</flux:heading>
 
     {{-- Sélecteur de période pour l'athlète --}}
     <form class="flex items-center space-x-2"
@@ -351,7 +360,7 @@
     <flux:card class="my-6 rounded-lg p-6 shadow-lg dark:border dark:border-zinc-700 dark:bg-zinc-800">
         <flux:heading class="mb-4 text-center dark:text-zinc-200"
             size="lg"
-            level="2">📋 Données quotidiennes</flux:heading>
+            level="2">Données quotidiennes</flux:heading>
         <flux:text class="mb-4 text-center text-zinc-600 dark:text-zinc-400">
             Explore tes entrées de métriques jour par jour. Clique sur "Modifier" pour ajuster une entrée.
         </flux:text>

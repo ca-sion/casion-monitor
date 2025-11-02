@@ -8,6 +8,7 @@ use App\Enums\FeedbackType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Services\MetricService;
+use App\Models\TrainingPlanWeek;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -148,86 +149,111 @@ class AthleteController extends Controller
     public function feedbacks(Request $request): View|JsonResponse
     {
         $athlete = Auth::guard('athlete')->user();
-
         if (! $athlete) {
             abort(403, 'Accès non autorisé');
         }
 
-        $filterType = $request->input('filter_type');
-        $filterCategory = $request->input('filter_category');
-        $period = $request->input('period', 'last_15_days');
+        $period = $request->input('period', 'last_30_days');
         $page = $request->input('page', 1);
-        $perPage = 10;
+        $perPage = 15;
 
-        $query = $athlete->feedbacks()->with('trainer');
+        // 1. Définir la plage de dates
+        $periodMap = [
+            'last_7_days' => 7, 'last_15_days' => 15, 'last_30_days' => 30,
+            'last_90_days' => 90, 'last_6_months' => 180, 'last_year' => 365,
+        ];
+        $startDate = isset($periodMap[$period]) ? now()->subDays($periodMap[$period])->startOfDay() : null;
 
-        if ($filterType && FeedbackType::tryFrom($filterType)) {
-            $query->where('type', $filterType);
+        // 2. Récupérer et formater toutes les données dans un array PHP simple
+        $allTimelineItems = [];
+
+        // Feedbacks
+        $feedbacks = $athlete->feedbacks()->with('trainer')
+            ->when($startDate, fn ($q) => $q->where('date', '>=', $startDate))
+            ->get();
+        foreach ($feedbacks as $item) {
+            $allTimelineItems[] = ['date' => $item->date, 'type' => 'feedback', 'data' => $item];
         }
 
-        if ($filterCategory) {
-            $sessionTypes = [
-                FeedbackType::PRE_SESSION_GOALS->value,
-                FeedbackType::POST_SESSION_FEEDBACK->value,
-                FeedbackType::POST_SESSION_SENSATION->value,
-            ];
-            $competitionTypes = [
-                FeedbackType::PRE_COMPETITION_GOALS->value,
-                FeedbackType::POST_COMPETITION_FEEDBACK->value,
-                FeedbackType::POST_COMPETITION_SENSATION->value,
-            ];
+        // Blessures
+        $injuries = $athlete->injuries()
+            ->when($startDate, fn ($q) => $q->where('start_date', '>=', $startDate))
+            ->get();
+        foreach ($injuries as $item) {
+            $allTimelineItems[] = ['date' => $item->start_date, 'type' => 'injury', 'data' => $item];
+        }
 
-            if ($filterCategory === 'session') {
-                $query->whereIn('type', $sessionTypes);
-            } elseif ($filterCategory === 'competition') {
-                $query->whereIn('type', $competitionTypes);
+        // Protocoles de récupération
+        $recoveryProtocols = $athlete->recoveryProtocols()
+            ->when($startDate, fn ($q) => $q->where('date', '>=', $startDate))
+            ->get();
+        foreach ($recoveryProtocols as $item) {
+            $allTimelineItems[] = ['date' => $item->date, 'type' => 'recovery_protocol', 'data' => $item];
+        }
+
+        // Métriques quotidiennes
+        $metricData = $this->metricService->getAthletesData(collect([$athlete]), [
+            'period' => $period,
+            'include_latest_daily_metrics' => true,
+        ])->first();
+
+        if (! empty($metricData->latest_daily_metrics)) {
+            foreach ($metricData->latest_daily_metrics as $date => $metricsForDay) {
+                $allTimelineItems[] = [
+                    'date' => Carbon::parse($date),
+                    'type' => 'daily_metrics',
+                    'data' => $metricsForDay,
+                ];
             }
         }
 
-        $limitDate = null;
-        $periodMap = [
-            'last_7_days'   => 7,
-            'last_15_days'  => 15,
-            'last_30_days'  => 30,
-            'last_90_days'  => 90,
-            'last_6_months' => 180,
-            'last_year'     => 365,
-            'all_time'      => null,
+        // Semaines du plan d'entraînement (si un lundi)
+        // if ($athlete->currentTrainingPlan) {
+        //     $trainingPlanWeeks = TrainingPlanWeek::where('training_plan_id', $athlete->currentTrainingPlan->id)
+        //         ->when($startDate, fn ($q) => $q->where('start_date', '>=', $startDate))
+        //         ->get();
+
+        //     foreach ($trainingPlanWeeks as $week) {
+        //         $weekStartDate = Carbon::parse($week->start_date);
+        //         if ($weekStartDate->isMonday()) {
+        //             $allTimelineItems[] = [
+        //                 'date' => $weekStartDate,
+        //                 'type' => 'training_plan_week',
+        //                 'data' => $week,
+        //             ];
+        //         }
+        //     }
+        // }
+        
+        // 3. Trier tous les éléments par date, puis les grouper
+        $groupedItems = collect($allTimelineItems)
+            ->sortByDesc(fn ($item) => Carbon::parse($item['date']))
+            ->groupBy(fn ($item) => Carbon::parse($item['date'])->format('Y-m-d'));
+
+        // 4. Paginer les jours groupés. $perPage définit le nombre de jours par page.
+        $paginatedGroups = new \Illuminate\Pagination\LengthAwarePaginator(
+            $groupedItems->forPage($page, $perPage),
+            $groupedItems->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $periodOptions = [
+            'last_7_days' => '7 derniers jours', 'last_15_days' => '15 derniers jours',
+            'last_30_days' => '30 derniers jours', 'last_90_days' => '90 derniers jours',
+            'last_6_months' => '6 derniers mois', 'last_year' => 'Dernière année',
+            'all_time' => 'Depuis le début',
         ];
-
-        $periodOptionsForView = [
-            'last_7_days'   => '7 derniers jours',
-            'last_15_days'  => '15 derniers jours',
-            'last_30_days'  => '30 derniers jours',
-            'last_90_days'  => '90 derniers jours',
-            'last_6_months' => '6 derniers mois',
-            'last_year'     => 'Dernière année',
-            'all_time'      => 'Depuis le début',
-        ];
-
-        if (isset($periodMap[$period]) && $periodMap[$period] !== null) {
-            $limitDate = Carbon::now()->subDays($periodMap[$period])->startOfDay();
-            $query->where('date', '>=', $limitDate);
-        }
-
-        $feedbacks = $query->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage, ['*'], 'page', $page);
-
-        $groupedFeedbacks = $feedbacks->groupBy(function ($feedback) {
-            return \Carbon\Carbon::parse($feedback->date)->format('Y-m-d');
-        });
 
         $data = [
-            'athlete'               => $athlete,
-            'groupedFeedbacks'      => $groupedFeedbacks,
-            'feedbackTypes'         => FeedbackType::cases(),
-            'periodOptions'         => $periodOptionsForView,
-            'currentPeriod'         => $period,
-            'currentFilterType'     => $filterType,
-            'currentFilterCategory' => $filterCategory,
-            'feedbacksPaginator'    => $feedbacks,
+            'athlete' => $athlete,
+            'groupedItems' => $paginatedGroups,
+            'timelinePaginator' => $paginatedGroups,
+            'periodOptions' => $periodOptions,
+            'currentPeriod' => $period,
         ];
+        //dd($groupedItems);
 
         if ($request->expectsJson()) {
             return response()->json($data);
