@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Athletes\Schemas;
 
-use App\ValueObjects\Gender;
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -22,8 +21,8 @@ class AthleteForm
                 DatePicker::make('birthdate'),
                 Select::make('gender')
                     ->options([
-                        'm'     => 'Homme',
-                        'w'     => 'Femme',
+                        'm' => 'Homme',
+                        'w' => 'Femme',
                     ]),
                 DateTimePicker::make('last_connection')
                     ->native(false)

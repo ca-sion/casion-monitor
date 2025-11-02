@@ -2,14 +2,15 @@
 
 use App\Livewire\Actions\Logout;
 use App\Livewire\AthleteSettings;
+use App\Livewire\TrainerSettings;
 use App\Livewire\AthleteInjuryForm;
 use App\Livewire\AthleteInjuryList;
 use App\Livewire\AthleteInjuryShow;
 use App\Livewire\AthleteMonthlyForm;
+use App\Livewire\AthleteFeedbackForm;
 use App\Livewire\MedicalFeedbackForm;
 use App\Livewire\TrainerFeedbackForm;
 use Illuminate\Support\Facades\Route;
-use App\Livewire\TrainerSettings;
 use Illuminate\Support\Facades\Artisan;
 use App\Livewire\AthleteDailyMetricForm;
 use App\Http\Controllers\AthleteController;
@@ -17,7 +18,6 @@ use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
 use App\Http\Controllers\ManifestController;
-use App\Livewire\AthleteFeedbackForm;
 use App\Livewire\AthleteMedicalFeedbackForm;
 use App\Livewire\TrainerMedicalFeedbackEdit;
 use App\Livewire\AthleteRecoveryProtocolForm;

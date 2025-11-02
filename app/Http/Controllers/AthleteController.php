@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\MetricType;
 use Illuminate\View\View;
-use App\Enums\FeedbackType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Services\MetricService;
@@ -159,7 +158,7 @@ class AthleteController extends Controller
 
         // 1. Définir la plage de dates
         $periodMap = [
-            'last_7_days' => 7, 'last_15_days' => 15, 'last_30_days' => 30,
+            'last_7_days'  => 7, 'last_15_days' => 15, 'last_30_days' => 30,
             'last_90_days' => 90, 'last_6_months' => 180, 'last_year' => 365,
         ];
         $startDate = isset($periodMap[$period]) ? now()->subDays($periodMap[$period])->startOfDay() : null;
@@ -193,7 +192,7 @@ class AthleteController extends Controller
 
         // Métriques quotidiennes
         $metricData = $this->metricService->getAthletesData(collect([$athlete]), [
-            'period' => $period,
+            'period'                       => $period,
             'include_latest_daily_metrics' => true,
         ])->first();
 
@@ -224,7 +223,7 @@ class AthleteController extends Controller
         //         }
         //     }
         // }
-        
+
         // 3. Trier tous les éléments par date, puis les grouper
         $groupedItems = collect($allTimelineItems)
             ->sortByDesc(fn ($item) => Carbon::parse($item['date']))
@@ -240,20 +239,20 @@ class AthleteController extends Controller
         );
 
         $periodOptions = [
-            'last_7_days' => '7 derniers jours', 'last_15_days' => '15 derniers jours',
-            'last_30_days' => '30 derniers jours', 'last_90_days' => '90 derniers jours',
+            'last_7_days'   => '7 derniers jours', 'last_15_days' => '15 derniers jours',
+            'last_30_days'  => '30 derniers jours', 'last_90_days' => '90 derniers jours',
             'last_6_months' => '6 derniers mois', 'last_year' => 'Dernière année',
-            'all_time' => 'Depuis le début',
+            'all_time'      => 'Depuis le début',
         ];
 
         $data = [
-            'athlete' => $athlete,
-            'groupedItems' => $paginatedGroups,
+            'athlete'           => $athlete,
+            'groupedItems'      => $paginatedGroups,
             'timelinePaginator' => $paginatedGroups,
-            'periodOptions' => $periodOptions,
-            'currentPeriod' => $period,
+            'periodOptions'     => $periodOptions,
+            'currentPeriod'     => $period,
         ];
-        //dd($groupedItems);
+        // dd($groupedItems);
 
         if ($request->expectsJson()) {
             return response()->json($data);

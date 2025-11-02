@@ -2,33 +2,22 @@
 
 namespace App\Livewire;
 
-use App\Models\Metric;
 use App\Models\Athlete;
 use Livewire\Component;
 use App\Models\Feedback;
-use App\Enums\MetricType;
 use App\Enums\FeedbackType;
-use Filament\Actions\Action;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Url;
 use Illuminate\Support\Carbon;
-use App\Enums\CalculatedMetric;
-use App\Services\MetricService;
 use Livewire\Attributes\Layout;
-use App\Models\TrainingPlanWeek;
 use Illuminate\Contracts\View\View;
-use Filament\Support\Icons\Heroicon;
-use Filament\Forms\Components\Select;
-use Filament\Schemas\Components\Icon;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Hidden;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
