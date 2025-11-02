@@ -2,7 +2,7 @@
 <div class="mx-auto max-w-2xl">
 
     <flux:heading size="xl" level="1">{{ $trainer->name }}</flux:heading>
-    <flux:text class="mb-6 mt-2 text-base">Rentrer les métriques pour le jour choisi.</flux:text>
+    <flux:text class="mb-6 mt-2 text-base">Rentrer les feedbacks pour le jour choisi.</flux:text>
 
     <form wire:submit="save">
         {{ $this->form }}

@@ -59,6 +59,12 @@
                             href="{{ route('athletes.metrics.daily.form', ['hash' => $athlete->hash, 'd' => $date]) }}"
                             variant="filled"
                             size="xs"
+                            icon="pencil-square">
+                        </flux:button>
+                        <flux:button class="ms-2 inline"
+                            href="{{ route('athletes.feedbacks.create', ['hash' => $athlete->hash, 'd' => $date]) }}"
+                            variant="filled"
+                            size="xs"
                             icon="chat-bubble-left-ellipsis">
                         </flux:button>
                         <flux:button class="ms-2 inline"
@@ -136,14 +142,9 @@
                                                 Déclaration de blessure
                                             </flux:heading>
                                         </div>
-                                        <div class="mt-3 space-y-1 text-sm">
-                                            <p><strong class="font-medium">Zone :</strong> {{ $injury->pain_location?->getLabel() }}</p>
-                                            <p><strong class="font-medium">Type :</strong> {{ $injury->injury_type?->getLabel() }}</p>
-                                            <p><strong class="font-medium">Statut :</strong> {{ $injury->status->getLabel() }}
-                                            </p>
-                                        </div>
+                                        <p class="mt-2 text-sm text-gray-800">{{ $injury->injury_type?->getLabel() }} : {{ $injury->pain_location?->getLabel() }}</p>
                                         @if ($injury->description)
-                                            <p class="mt-2 text-xs italic text-gray-700">"{{ $injury->description }}"</p>
+                                            <p class="mt-2 text-xs italic text-gray-700">{{ $injury->description }}</p>
                                         @endif
                                         <flux:button class="mt-3"
                                             size="sm"
