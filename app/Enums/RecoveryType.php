@@ -6,6 +6,7 @@ use Filament\Support\Contracts\HasLabel;
 
 enum RecoveryType: string implements HasLabel
 {
+    case PHYSICAL_FOLLOWUP = 'physical_followup';
     case MASSAGE = 'massage';
     case TARGETED_STRETCHES = 'targeted_stretches';
     case CONTRAST_BATHS = 'contrast_baths';
@@ -17,6 +18,7 @@ enum RecoveryType: string implements HasLabel
     public function getLabel(): ?string
     {
         return match ($this) {
+            self::PHYSICAL_FOLLOWUP  => 'Suivi physique (physio/ostéo)',
             self::MASSAGE            => 'Massage',
             self::TARGETED_STRETCHES => 'Étirements ciblés',
             self::CONTRAST_BATHS     => 'Bains de contraste',
