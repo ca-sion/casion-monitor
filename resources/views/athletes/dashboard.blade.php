@@ -7,7 +7,7 @@
     <div class="my-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {{-- Ajouter des métriques quotidiennes --}}
         <a href="{{ route('athletes.metrics.daily.form', ['hash' => $athlete->hash]) }}" aria-label="Ajouter des métriques quotidiennes">
-            <flux:card class="bg-lime-50! border-lime-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-lime-100 hover:shadow-md dark:border-lime-800 dark:bg-lime-900/50 dark:hover:bg-lime-800/50">
+            <flux:card class="bg-lime-50! border-lime-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-lime-100! hover:shadow-md dark:border-lime-800! dark:bg-lime-900/50! dark:hover:bg-lime-800/50!">
                 <flux:icon class="mb-2 h-8 w-8 text-lime-600 dark:text-lime-400"
                     name="plus-circle"
                     variant="outline" />
@@ -17,7 +17,7 @@
 
         {{-- Ajouter une séance --}}
         <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter un protocol">
-            <flux:card class="bg-purple-50! border-purple-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-purple-100 hover:shadow-md dark:border-purple-800 dark:bg-purple-900/50 dark:hover:bg-purple-800/50">
+            <flux:card class="bg-purple-50! border-purple-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-purple-100! hover:shadow-md dark:border-purple-800! dark:bg-purple-900/50! dark:hover:bg-purple-800/50!">
                 <flux:icon class="mb-2 h-8 w-8 text-purple-600 dark:text-purple-400"
                     name="stethoscope"
                     variant="outline" />
@@ -27,7 +27,7 @@
 
         {{-- Journal --}}
         <a href="{{ route('athletes.journal', ['hash' => $athlete->hash]) }}" aria-label="Journal des feedbacks">
-            <flux:card class="bg-sky-50! border-sky-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-sky-100 hover:shadow-md dark:border-sky-800 dark:bg-sky-900/50 dark:hover:bg-sky-800/50">
+            <flux:card class="bg-sky-50! border-sky-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-sky-100! hover:shadow-md dark:border-sky-800! dark:bg-sky-900/50! dark:hover:bg-sky-800/50!">
                 <flux:icon class="mb-2 h-8 w-8 text-sky-600 dark:text-sky-400"
                     name="book-open"
                     variant="outline" />
@@ -37,7 +37,7 @@
 
         {{-- Préférences --}}
         <a href="{{ route('athletes.settings', ['hash' => $athlete->hash]) }}" aria-label="Préférences">
-            <flux:card class="bg-zinc-50! border-zinc-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-zinc-100 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:bg-zinc-800/50">
+            <flux:card class="bg-zinc-50! border-zinc-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-zinc-100! hover:shadow-md dark:border-zinc-800! dark:bg-zinc-900/50! dark:hover:bg-zinc-800/50!">
                 <flux:icon class="mb-2 h-8 w-8 text-zinc-600 dark:text-zinc-400"
                     name="cog-6-tooth"
                     variant="outline" />
@@ -195,7 +195,7 @@
 
     <div class="mt-4">
         <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une séance">
-            <flux:card class="bg-lime-50! border-lime-400! my-4 hover:bg-zinc-50 dark:hover:bg-zinc-700"
+            <flux:card class="bg-lime-50! border-lime-400! my-4 hover:bg-zinc-50! dark:border-lime-800! dark:bg-lime-900/50! dark:hover:bg-lime-800/50!"
                 size="sm"
                 color="lime">
                 <flux:heading class="flex items-center gap-2 text-lime-800">Ajouter une séance
