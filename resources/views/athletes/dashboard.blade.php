@@ -230,7 +230,7 @@
                                         • {{ $healthEvent->duration_minutes }} minutes
                                     @endif
                                     @if ($healthEvent->injury)
-                                        • Lié à la blessure: {{ $healthEvent->injury->injury_type }}
+                                        • Lié à la blessure: {{ $healthEvent->injury->injury_type?->getPrefixForLocation() }} - {{ $healthEvent->injury->pain_location?->getLabel() }}
                                     @endif
                                 </p>
                             </div>
