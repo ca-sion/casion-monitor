@@ -68,7 +68,7 @@
                             icon="chat-bubble-left-ellipsis">
                         </flux:button>
                         <flux:button class="ms-2 inline"
-                            href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash, 'date' => $date]) }}"
+                            href="{{ route('athletes.health-events.create', ['hash' => $athlete->hash, 'date' => $date]) }}"
                             variant="filled"
                             size="xs"
                             icon="stethoscope">
@@ -171,7 +171,7 @@
                                             @endif
                                         </flux:callout.text>
                                         <x-slot name="actions">
-                                            <flux:button size="sm" :href="route('athletes.recovery-protocols.edit', ['hash' => $athlete->hash, 'recoveryProtocol' => $protocol])">Voir</flux:button>
+                                            <flux:button size="sm" :href="route('athletes.health-events.edit', ['hash' => $athlete->hash, 'healthEvent' => $protocol])">Voir</flux:button>
                                             @if ($protocol->effectiveness_rating)
                                                 <flux:badge class="whitespace-normal!"
                                                     size="sm"

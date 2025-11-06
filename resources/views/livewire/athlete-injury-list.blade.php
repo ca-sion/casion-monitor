@@ -37,13 +37,9 @@
                                 inset="bottom">
                                 <a class="text-zinc-600 hover:text-zinc-900" href="{{ route('athletes.injuries.show', ['hash' => $athlete->hash, 'injury' => $injury->id]) }}">Détails</a>
                             </flux:button>
-                            <flux:button href="{{ route('athletes.injuries.feedback.create', ['hash' => $athlete->hash, 'injury' => $injury->id]) }}"
+                            <flux:button href="{{ route('athletes.injuries.health-events.create', ['hash' => $athlete->hash, 'injury' => $injury->id]) }}"
                                 size="sm"
                                 variant="primary"
-                                icon="plus">Consultation</flux:button>
-                            <flux:button href="{{ route('athletes.injuries.recovery-protocols.create', ['hash' => $athlete->hash, 'injury' => $injury->id]) }}"
-                                size="sm"
-                                variant="outline"
                                 icon="plus">Séance</flux:button>
                         </flux:table.cell>
                     </flux:table.row>

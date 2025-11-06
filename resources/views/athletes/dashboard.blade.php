@@ -16,7 +16,7 @@
         </a>
 
         {{-- Ajouter une séance --}}
-        <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter un protocol">
+        <a href="{{ route('athletes.health-events.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter un healthEvent">
             <flux:card class="bg-purple-50! border-purple-400! flex flex-col items-center justify-center rounded-lg border p-4 text-center shadow-sm transition-all duration-200 ease-in-out hover:bg-purple-100! hover:shadow-md dark:border-purple-800! dark:bg-purple-900/50! dark:hover:bg-purple-800/50!">
                 <flux:icon class="mb-2 h-8 w-8 text-purple-600 dark:text-purple-400"
                     name="stethoscope"
@@ -194,7 +194,7 @@
     <flux:heading class="text-base">Séances (physio, massage, récupération)</flux:heading>
 
     <div class="mt-4">
-        <a href="{{ route('athletes.recovery-protocols.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une séance">
+        <a href="{{ route('athletes.health-events.create', ['hash' => $athlete->hash]) }}" aria-label="Ajouter une séance">
             <flux:card class="bg-lime-50! border-lime-400! my-4 hover:bg-zinc-50! dark:border-lime-800! dark:bg-lime-900/50! dark:hover:bg-lime-800/50!"
                 size="sm"
                 color="lime">
@@ -205,9 +205,9 @@
                 </flux:heading>
             </flux:card>
         </a>
-        @if ($recoveryProtocols->isEmpty())
+        @if ($healthEvents->isEmpty())
             <flux:callout icon="chat-bubble-left-right">
-                <flux:callout.heading>Aucun protocole de récupération enregistré.</flux:callout.heading>
+                <flux:callout.heading>Aucun healthEvente de récupération enregistré.</flux:callout.heading>
 
                 <flux:callout.text>
                     Enregistre tes séances de récupération pour les suivre ici.
@@ -215,50 +215,52 @@
             </flux:callout>
         @else
             <div class="space-y-4">
-                @foreach ($recoveryProtocols as $protocol)
-                    <div class="rounded-lg border border-gray-200 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                @foreach ($healthEvents as $healthEvent)
+                    <a class="block rounded-lg border border-gray-200 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900" href="{{ route('athletes.health-events.edit', ['hash' => $athlete->hash, 'healthEvent' => $healthEvent]) }}">
                         <div class="mb-3 flex items-start justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-zinc-100">
-                                    {{ $protocol->recovery_type->getLabel() }}
+                                    {{ $healthEvent->type->getLabel() }}
                                 </p>
                                 <p class="text-xs text-gray-500 dark:text-zinc-400">
-                                    {{ $protocol->date->format('d.m.Y') }}
-                                    @if ($protocol->duration_minutes)
-                                        • {{ $protocol->duration_minutes }} minutes
+                                    {{ $healthEvent->date->format('d.m.Y') }}
+                                    -
+                                    {{ str($healthEvent->purpose)->limit(50) }}
+                                    @if ($healthEvent->duration_minutes)
+                                        • {{ $healthEvent->duration_minutes }} minutes
                                     @endif
-                                    @if ($protocol->relatedInjury)
-                                        • Lié à la blessure: {{ $protocol->relatedInjury->type }}
+                                    @if ($healthEvent->relatedInjury)
+                                        • Lié à la blessure: {{ $healthEvent->relatedInjury->type }}
                                     @endif
                                 </p>
                             </div>
                             <div class="flex items-center space-x-2">
-                                @if ($protocol->effect_on_pain_intensity)
+                                @if ($healthEvent->effect_on_pain_intensity)
                                     <flux:badge class="whitespace-normal! w-full"
                                         size="sm"
                                         inset="top bottom"
                                         color="blue">
-                                        {{ $protocol->effect_on_pain_intensity }}/10
+                                        {{ $healthEvent->effect_on_pain_intensity }}/10
                                     </flux:badge>
                                 @endif
-                                @if ($protocol->effectiveness_rating)
+                                @if ($healthEvent->effectiveness_rating)
                                     <flux:badge class="whitespace-normal! w-full"
                                         size="sm"
                                         inset="top bottom"
                                         color="green">
-                                        {{ $protocol->effectiveness_rating }}/5
+                                        {{ $healthEvent->effectiveness_rating }}/5
                                     </flux:badge>
                                 @endif
                             </div>
                         </div>
 
-                        @if ($protocol->notes)
+                        @if ($healthEvent->note)
                             <div class="mb-3">
-                                <p class="mb-1 text-xs font-medium text-gray-700 dark:text-zinc-300">Notes:</p>
-                                <p class="rounded bg-gray-50 p-2 text-sm text-gray-800 dark:bg-zinc-700 dark:text-zinc-200">{{ $protocol->notes }}</p>
+                                <p class="mb-1 text-xs font-medium text-gray-700 dark:text-zinc-300">Notes :</p>
+                                <p class="rounded bg-gray-50 p-2 text-sm text-gray-800 dark:bg-zinc-700 dark:text-zinc-200">{{ $healthEvent->note }}</p>
                             </div>
                         @endif
-                    </div>
+                    </a>
                 @endforeach
             </div>
         @endif

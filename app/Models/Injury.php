@@ -36,13 +36,8 @@ class Injury extends Model
         return $this->belongsTo(Athlete::class);
     }
 
-    public function medicalFeedbacks(): HasMany
+    public function healthEvents(): HasMany
     {
-        return $this->hasMany(MedicalFeedback::class);
-    }
-
-    public function recoveryProtocols(): HasMany
-    {
-        return $this->hasMany(RecoveryProtocol::class, 'related_injury_id');
+        return $this->hasMany(HealthEvent::class);
     }
 }

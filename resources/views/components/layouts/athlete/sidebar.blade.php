@@ -21,7 +21,7 @@
                 </flux:navlist.group>
                 <flux:navlist.group heading="Suivi médical" class="grid">
                     <flux:navlist.item icon="clipboard-document-list" :href="route('athletes.injuries.index', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.injuries.index')" wire:navigate>Tableau de bord</flux:navlist.item>
-                    <flux:navlist.item icon="plus" :href="route('athletes.recovery-protocols.create', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.recovery-protocols.create')" wire:navigate>Séance</flux:navlist.item>
+                    <flux:navlist.item icon="plus" :href="route('athletes.health-events.create', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.health-events.create')" wire:navigate>Séance</flux:navlist.item>
                     {{--
                     <flux:navlist.item icon="plus" :href="route('athletes.injuries.create', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.injuries.create')" wire:navigate>Douleur/blessure</flux:navlist.item>
                     --}}

@@ -421,11 +421,11 @@
                         </div>
 
                         {{-- Feedbacks médicaux pour cette blessure --}}
-                        @if ($injury->medicalFeedbacks->isNotEmpty())
+                        @if ($injury->healthEvents->isNotEmpty())
                             <div class="mt-4">
-                                <h5 class="mb-3 text-sm font-medium text-gray-700">Feedbacks médicaux ({{ $injury->medicalFeedbacks->count() }})</h5>
+                                <h5 class="mb-3 text-sm font-medium text-gray-700">Feedbacks médicaux ({{ $injury->healthEvents->count() }})</h5>
                                 <div class="space-y-3">
-                                    @foreach ($injury->medicalFeedbacks->sortByDesc('feedback_date') as $feedback)
+                                    @foreach ($injury->healthEvents->sortByDesc('feedback_date') as $feedback)
                                         <div class="rounded-md border border-gray-200 bg-white p-3">
                                             <div class="flex items-start justify-between">
                                                 <div class="flex-1">

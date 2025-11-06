@@ -133,7 +133,7 @@ class AthleteController extends Controller
             'display_table_metric_types'    => $displayTableMetricTypes,
             'weekly_planned_volume'         => $weeklyPlannedVolume,
             'weekly_planned_intensity'      => $weeklyPlannedIntensity,
-            'recoveryProtocols'             => $athlete->recoveryProtocols()->limit(12)->orderBy('date', 'desc')->get(),
+            'healthEvents'             => $athlete->healthEvents()->limit(12)->orderBy('date', 'desc')->get(),
             'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
         ];
@@ -183,10 +183,10 @@ class AthleteController extends Controller
         }
 
         // Protocoles de récupération
-        $recoveryProtocols = $athlete->recoveryProtocols()
+        $healthEvents = $athlete->healthEvents()
             ->when($startDate, fn ($q) => $q->where('date', '>=', $startDate))
             ->get();
-        foreach ($recoveryProtocols as $item) {
+        foreach ($healthEvents as $item) {
             $allTimelineItems[] = ['date' => $item->date, 'type' => 'recovery_protocol', 'data' => $item];
         }
 

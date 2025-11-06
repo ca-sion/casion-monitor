@@ -113,9 +113,9 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     /**
      * Get the recovery protocols for the athlete.
      */
-    public function recoveryProtocols(): HasMany
+    public function healthEvents(): HasMany
     {
-        return $this->hasMany(RecoveryProtocol::class);
+        return $this->hasMany(HealthEvent::class);
     }
 
     /**
