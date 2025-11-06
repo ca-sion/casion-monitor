@@ -152,40 +152,40 @@
                                     </flux:card>
                                 @break
 
-                                @case('recovery_protocol')
-                                    @php $protocol = $item['data']; @endphp
+                                @case('health_event')
+                                    @php $healthEvent = $item['data']; @endphp
                                     <flux:callout class="p-0!"
                                         icon="stethoscope"
                                         color="purple"
                                         inline>
                                         <flux:callout.heading>
-                                            {{ $protocol->recovery_type->getLabel() }}
+                                            {{ $healthEvent->type->getLabel() }}
                                         </flux:callout.heading>
                                         <flux:callout.text>
-                                            {{ $protocol->notes }}
-                                            @if ($protocol->duration_minutes)
-                                                • {{ $protocol->duration_minutes }} minutes
+                                            {{ $healthEvent->note }}
+                                            @if ($healthEvent->duration_minutes)
+                                                • {{ $healthEvent->duration_minutes }} minutes
                                             @endif
-                                            @if ($protocol->relatedInjury)
-                                                • Lié à la blessure: {{ $protocol->relatedInjury->type }}
+                                            @if ($healthEvent->injury)
+                                                • Lié à la blessure: {{ $healthEvent->injury->injury_type?->getPrefixForLocation() }} - {{ $healthEvent->injury->pain_location?->getLabel() }}
                                             @endif
                                         </flux:callout.text>
                                         <x-slot name="actions">
-                                            <flux:button size="sm" :href="route('athletes.health-events.edit', ['hash' => $athlete->hash, 'healthEvent' => $protocol])">Voir</flux:button>
-                                            @if ($protocol->effectiveness_rating)
+                                            <flux:button size="sm" :href="route('athletes.health-events.edit', ['hash' => $athlete->hash, 'healthEvent' => $healthEvent])">Voir</flux:button>
+                                            @if ($healthEvent->effectiveness_rating)
                                                 <flux:badge class="whitespace-normal!"
                                                     size="sm"
                                                     inset="top bottom"
                                                     color="green">
-                                                    {{ $protocol->effectiveness_rating }}/5
+                                                    {{ $healthEvent->effectiveness_rating }}/5
                                                 </flux:badge>
                                             @endif
-                                            @if ($protocol->effect_on_pain_intensity)
+                                            @if ($healthEvent->effect_on_pain_intensity)
                                                 <flux:badge class="whitespace-normal!"
                                                     size="sm"
                                                     inset="top bottom"
                                                     color="blue">
-                                                    {{ $protocol->effect_on_pain_intensity }}/10
+                                                    {{ $healthEvent->effect_on_pain_intensity }}/10
                                                 </flux:badge>
                                             @endif
                                         </x-slot>

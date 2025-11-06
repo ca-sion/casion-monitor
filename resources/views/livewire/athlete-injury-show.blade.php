@@ -164,62 +164,62 @@
             </div>
         @else
             <div class="space-y-6">
-                @foreach ($injury->healthEvents->sortByDesc('feedback_date') as $feedback)
+                @foreach ($injury->healthEvents->sortByDesc('feedback_date') as $healthEvent)
                     <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-md transition-all duration-300 hover:shadow-lg">
                         <div class="mb-4 flex items-start justify-between">
                             <div>
                                 <p class="mb-1 text-base font-bold text-gray-900">
-                                    {{ $feedback->professional_type->getLabel() }}
+                                    {{ $healthEvent->professional?->name }}
                                 </p>
                                 <p class="text-sm text-gray-500">
-                                    <span class="font-medium">Date:</span> {{ $feedback->feedback_date->format('d.m.Y') }}
-                                    @if ($feedback->reported_by_athlete)
+                                    <span class="font-medium">Date:</span> {{ $healthEvent->date->format('d.m.Y') }}
+                                    @if ($healthEvent->reported_by_athlete)
                                         <span class="mx-2">•</span> Rapporté par l'athlète
                                     @endif
-                                    @if ($feedback->trainer)
-                                        <span class="mx-2">•</span> Complété par {{ $feedback->trainer->name }}
+                                    @if ($healthEvent->trainer)
+                                        <span class="mx-2">•</span> Complété par {{ $healthEvent->trainer->name }}
                                     @endif
                                 </p>
                             </div>
-                            @if ($feedback->next_appointment_date)
+                            @if ($healthEvent->next_appointment_date)
                                 <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                                    Prochain RDV: {{ $feedback->next_appointment_date->format('d.m.Y') }}
+                                    Prochain RDV: {{ $healthEvent->next_appointment_date->format('d.m.Y') }}
                                 </span>
                             @endif
                         </div>
 
-                        @if ($feedback->diagnosis)
+                        @if ($healthEvent->diagnosis)
                             <div class="mb-3">
                                 <p class="mb-1 text-sm font-medium text-gray-700">Diagnostic:</p>
-                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $feedback->diagnosis }}</div>
+                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $healthEvent->diagnosis }}</div>
                             </div>
                         @endif
 
-                        @if ($feedback->treatment_plan)
+                        @if ($healthEvent->treatment_plan)
                             <div class="mb-3">
                                 <p class="mb-1 text-sm font-medium text-gray-700">Plan de traitement:</p>
-                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $feedback->treatment_plan }}</div>
+                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $healthEvent->treatment_plan }}</div>
                             </div>
                         @endif
 
-                        @if ($feedback->training_limitations)
+                        @if ($healthEvent->training_limitations)
                             <div class="mb-3">
                                 <p class="mb-1 text-sm font-medium text-gray-700">Limitations d'entraînement:</p>
-                                <div class="rounded border-l-4 border-yellow-400 bg-yellow-50 p-3 text-sm font-medium leading-relaxed text-yellow-900">{{ $feedback->training_limitations }}</div>
+                                <div class="rounded border-l-4 border-yellow-400 bg-yellow-50 p-3 text-sm font-medium leading-relaxed text-yellow-900">{{ $healthEvent->training_limitations }}</div>
                             </div>
                         @endif
 
-                        @if ($feedback->rehab_progress)
+                        @if ($healthEvent->rehab_progress)
                             <div class="mb-3">
                                 <p class="mb-1 text-sm font-medium text-gray-700">Progrès de rééducation:</p>
-                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $feedback->rehab_progress }}</div>
+                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $healthEvent->rehab_progress }}</div>
                             </div>
                         @endif
 
-                        @if ($feedback->notes)
+                        @if ($healthEvent->notes)
                             <div>
                                 <p class="mb-1 text-sm font-medium text-gray-700">Notes complémentaires:</p>
-                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $feedback->notes }}</div>
+                                <div class="rounded border border-gray-200 bg-gray-50 p-3 text-sm leading-relaxed text-gray-800">{{ $healthEvent->notes }}</div>
                             </div>
                         @endif
                     </div>

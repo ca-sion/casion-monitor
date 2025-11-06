@@ -187,7 +187,7 @@ class AthleteController extends Controller
             ->when($startDate, fn ($q) => $q->where('date', '>=', $startDate))
             ->get();
         foreach ($healthEvents as $item) {
-            $allTimelineItems[] = ['date' => $item->date, 'type' => 'recovery_protocol', 'data' => $item];
+            $allTimelineItems[] = ['date' => $item->date, 'type' => 'health_event', 'data' => $item];
         }
 
         // Métriques quotidiennes

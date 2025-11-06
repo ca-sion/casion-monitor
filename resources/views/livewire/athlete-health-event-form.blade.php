@@ -1,5 +1,5 @@
 <div class="container mx-auto max-w-4xl">
-    <flux:heading size="xl" level="1">Ajouter une séance</flux:heading>
+    <flux:heading size="xl" level="1">Ajouter/Modifier une séance</flux:heading>
     <flux:text class="mb-6 mt-2 text-base">Médecin, physiothérapie, coaching, massage, récupération, etc.</flux:text>
 
     @if ($injury)

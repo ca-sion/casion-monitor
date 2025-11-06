@@ -229,8 +229,8 @@
                                     @if ($healthEvent->duration_minutes)
                                         • {{ $healthEvent->duration_minutes }} minutes
                                     @endif
-                                    @if ($healthEvent->relatedInjury)
-                                        • Lié à la blessure: {{ $healthEvent->relatedInjury->type }}
+                                    @if ($healthEvent->injury)
+                                        • Lié à la blessure: {{ $healthEvent->injury->injury_type }}
                                     @endif
                                 </p>
                             </div>
