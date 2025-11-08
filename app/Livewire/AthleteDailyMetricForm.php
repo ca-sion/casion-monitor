@@ -17,6 +17,7 @@ use App\Services\MetricService;
 use Livewire\Attributes\Layout;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Contracts\View\View;
+use App\Services\GamificationService;
 use Filament\Support\Icons\Heroicon;
 use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
@@ -343,6 +344,9 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             JS
             );
         }
+        
+        // Update Gamification
+        resolve(GamificationService::class)->processEntry($this->athlete, $this->date, $data);
 
         $this->suggestInjuryDeclaration();
 

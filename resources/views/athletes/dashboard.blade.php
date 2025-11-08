@@ -123,6 +123,12 @@
         </div>
     @endif
 
+    @if ($gamificationData)
+        <div class="mt-2 mb-4">
+            <x-gamification-card :gamification-data="$gamificationData" />
+        </div>
+    @endif
+
     @if ($last_days_feedbacks)
         <div class="mb-4 mt-2 flex flex-col gap-1">
             @foreach ($last_days_feedbacks as $feedback)
@@ -211,7 +217,7 @@
         </a>
         @if ($healthEvents->isEmpty())
             <flux:callout icon="chat-bubble-left-right">
-                <flux:callout.heading>Aucun healthEvente de récupération enregistré.</flux:callout.heading>
+                <flux:callout.heading>Aucune séance enregistrée.</flux:callout.heading>
 
                 <flux:callout.text>
                     Enregistre tes séances de récupération pour les suivre ici.

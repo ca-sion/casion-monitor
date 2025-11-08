@@ -48,6 +48,24 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     ];
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'metadata' => '{
+            "gamification": {
+                "current_streak": 0,
+                "longest_streak": 0,
+                "last_entry_date": null,
+                "points": 0,
+                "level": "Débutant",
+                "badges": []
+            }
+        }',
+    ];
+
+    /**
      * The accessors to append to the model's array form.
      *
      * @var array
@@ -66,6 +84,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
             'last_connection' => 'datetime',
             'last_activity'   => 'datetime',
             'gender'          => ValueObjectCast::class.':'.Gender::class,
+            'metadata'        => 'array',
         ];
     }
 

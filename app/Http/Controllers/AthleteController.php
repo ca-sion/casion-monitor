@@ -83,6 +83,7 @@ class AthleteController extends Controller
         $readinessStatus = $athleteData->readiness_status ?? null;
         $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
         $weeklyMetricsData = collect($athleteData->weekly_metrics_data ?? []);
+        $gamificationData = $athlete->metadata['gamification'] ?? null;
 
         // Récupérer le volume et l'intensité planifiés pour la semaine en cours
         $currentTrainingPlanWeek = $athlete->currentTrainingPlanWeek;
@@ -127,6 +128,7 @@ class AthleteController extends Controller
             'alerts'                        => $alerts,
             'menstrualCycleInfo'            => $menstrualCycleInfo,
             'readinessStatus'               => $readinessStatus,
+            'gamificationData'              => $gamificationData,
             'period_label'                  => $period,
             'period_options'                => $periodOptions,
             'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable,
