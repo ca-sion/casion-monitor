@@ -64,6 +64,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
         return [
             'birthday'        => 'date',
             'last_connection' => 'datetime',
+            'last_activity'   => 'datetime',
             'gender'          => ValueObjectCast::class.':'.Gender::class,
         ];
     }
