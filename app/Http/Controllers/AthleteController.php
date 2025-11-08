@@ -129,8 +129,8 @@ class AthleteController extends Controller
             foreach ($sbmData['labels'] as $index => $label) {
                 $combinedWeeklyChartData[] = [
                     'label' => $label,
-                    'sbm'   => round($sbmData['data'][$index], 2) ?? null,
-                    'ratio' => round($ratioData['data'][$index], 2) ?? null,
+                    'sbm'   => round(data_get($sbmData['data'], $index), 2) ?? null,
+                    'ratio' => round(data_get($ratioData['data'], $index), 2) ?? null,
                 ];
             }
         }
