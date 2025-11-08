@@ -188,7 +188,7 @@
             Cette section contient des outils de débogage et de test.
         </p>
         <x-filament::button type="button"
-            color="warning"
+            color="primary"
             x-on:click="
                 localStorage.removeItem('pwaInstallDismissed');
                 alert('Préférence de la bannière PWA réinitialisée. Elle se réaffichera au prochain chargement de page.');
