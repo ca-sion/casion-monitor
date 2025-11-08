@@ -288,14 +288,12 @@
         <flux:card class="my-4 p-4 dark:border dark:border-zinc-700 dark:bg-zinc-800">
             <flux:heading class="mb-4"
                 size="md"
-                level="3">Suivi hebdomadaire (SBM & Ratio CIH/CPH)</flux:heading>
+                level="3">Suivi SBM</flux:heading>
             <flux:chart class="h-48"
                 :value="$combinedWeeklyChartData">
                 <flux:chart.svg>
                     <flux:chart.line class="stroke-blue-500!"
                         field="sbm" />
-                    <flux:chart.line class="stroke-emerald-500!"
-                        field="ratio" />
                     <flux:chart.axis class="text-xs text-zinc-400"
                         axis="x"
                         field="label">
@@ -308,9 +306,34 @@
                         <flux:chart.axis.grid stroke-dasharray="2 2" />
                         <flux:chart.axis.tick />
                     </flux:chart.axis>
+                    <flux:chart.cursor />
+                </flux:chart.svg>
+                <flux:chart.tooltip>
+                    <flux:chart.tooltip.heading field="label" />
+                    <flux:chart.tooltip.value field="sbm"
+                        label="SBM"
+                        color="blue" />
+                </flux:chart.tooltip>
+            </flux:chart>
+        </flux:card>
+        <flux:card class="my-4 p-4 dark:border dark:border-zinc-700 dark:bg-zinc-800">
+            <flux:heading class="mb-4"
+                size="md"
+                level="3">Suivi CIH/CPH</flux:heading>
+            <flux:chart class="h-48"
+                :value="$combinedWeeklyChartData">
+                <flux:chart.svg>
+                    <flux:chart.line class="stroke-emerald-500!"
+                        field="ratio" />
+                    <flux:chart.axis class="text-xs text-zinc-400"
+                        axis="x"
+                        field="label">
+                        <flux:chart.axis.line />
+                        <flux:chart.axis.tick />
+                    </flux:chart.axis>
                     <flux:chart.axis class="text-xs text-zinc-400"
                         axis="y"
-                        position="end"
+                        position="right"
                         field="ratio">
                         <flux:chart.axis.grid stroke-dasharray="2 2" />
                         <flux:chart.axis.tick />
@@ -319,9 +342,6 @@
                 </flux:chart.svg>
                 <flux:chart.tooltip>
                     <flux:chart.tooltip.heading field="label" />
-                    <flux:chart.tooltip.value field="sbm"
-                        label="SBM"
-                        color="blue" />
                     <flux:chart.tooltip.value field="ratio"
                         label="Ratio"
                         color="emerald" />
