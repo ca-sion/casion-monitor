@@ -85,6 +85,7 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
             'last_activity'   => 'datetime',
             'gender'          => ValueObjectCast::class.':'.Gender::class,
             'metadata'        => 'array',
+            'preferences'     => 'array',
         ];
     }
 
@@ -225,6 +226,14 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
         return Attribute::make(
             get: fn () => route('athletes.dashboard', ['hash' => $this->hash]),
         );
+    }
+
+    /**
+     * Get a specific preference value.
+     */
+    public function getPreference(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->preferences, $key, $default);
     }
 
     /**

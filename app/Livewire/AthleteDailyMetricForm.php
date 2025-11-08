@@ -115,7 +115,8 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->inputMode('numeric')
                             ->minValue(10)
                             ->maxValue(200)
-                            ->suffix('ms'),
+                            ->suffix('ms')
+                            ->visible(fn () => $this->athlete->getPreference('show_hrv', true)),
                         ToggleButtons::make(MetricType::MORNING_SLEEP_QUALITY->value)
                             ->label(MetricType::MORNING_SLEEP_QUALITY->getLabel())
                             ->helperText(MetricType::MORNING_SLEEP_QUALITY->getScaleHint())

@@ -5,15 +5,18 @@ namespace App\Livewire;
 use Livewire\Component;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
+use Filament\Schemas\Schema;
 use Livewire\Attributes\Layout;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Components\Toggle;
 use App\Models\NotificationPreference;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use App\Notifications\SendDailyReminder;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\TimePicker;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Contracts\HasSchemas;
@@ -31,6 +34,8 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
     use InteractsWithTable;
 
     public $preferences = []; // This will now be managed by Filament Table
+
+    public ?array $preferencesData = [];
 
     public $newPreferenceTime = '08:00';
 
@@ -69,6 +74,35 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
         if (! $this->telegramChatId) {
             $this->generateTelegramActivationUrl();
         }
+
+        $this->preferencesForm->fill($this->notifiable->preferences ?? []);
+    }
+
+    public function preferencesForm(Schema $schema): Schema
+    {
+        return $schema
+            ->statePath('preferencesData')
+            ->schema([
+                Section::make('Préférences d\'affichage')
+                    ->compact()
+                    ->schema([
+                        Toggle::make('show_hrv')
+                            ->label('Afficher le champ HRV')
+                            ->helperText('Masque ou affiche le champ de la variabilité de la fréquence cardiaque (HRV) dans le formulaire quotidien.'),
+                    ]),
+            ]);
+    }
+
+    public function savePreferences(): void
+    {
+        $data = $this->preferencesForm->getState();
+        $this->notifiable->preferences = $data;
+        $this->notifiable->save();
+
+        Notification::make()
+            ->title('Préférences sauvegardées')
+            ->success()
+            ->send();
     }
 
     public function generateTelegramActivationUrl()
