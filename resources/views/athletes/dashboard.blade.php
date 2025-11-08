@@ -123,12 +123,6 @@
         </div>
     @endif
 
-    @if ($gamificationData)
-        <div class="mt-2 mb-4">
-            <x-gamification-card :gamification-data="$gamificationData" />
-        </div>
-    @endif
-
     @if ($last_days_feedbacks)
         <div class="mb-4 mt-2 flex flex-col gap-1">
             @foreach ($last_days_feedbacks as $feedback)
@@ -198,6 +192,15 @@
             </div>
         @endif
     </div>
+
+    {{-- Section Gamification --}}
+    <flux:separator class="mb-4 mt-6" variant="subtle" />
+
+    @if ($gamificationData)
+        <div class="mt-2 mb-4">
+            <x-gamification-card :gamification-data="$gamificationData" />
+        </div>
+    @endif
 
     {{-- Section Protocoles de Récupération --}}
     <flux:separator class="mb-4 mt-6" variant="subtle" />
@@ -279,6 +282,53 @@
     <flux:separator class="my-8" variant="subtle" />
 
     <flux:heading class="text-base">Statistiques</flux:heading>
+
+    {{-- Nouveau graphique hebdomadaire --}}
+    @if (!empty($combinedWeeklyChartData) && count(array_filter(array_column($combinedWeeklyChartData, 'sbm'))) >= 2)
+        <flux:card class="my-4 p-4 dark:border dark:border-zinc-700 dark:bg-zinc-800">
+            <flux:heading class="mb-4"
+                size="md"
+                level="3">Suivi hebdomadaire (SBM & Ratio CIH/CPH)</flux:heading>
+            <flux:chart class="h-48"
+                :value="$combinedWeeklyChartData">
+                <flux:chart.svg>
+                    <flux:chart.line class="stroke-blue-500!"
+                        field="sbm" />
+                    <flux:chart.line class="stroke-emerald-500!"
+                        field="ratio" />
+                    <flux:chart.axis class="text-xs text-zinc-400"
+                        axis="x"
+                        field="label">
+                        <flux:chart.axis.line />
+                        <flux:chart.axis.tick />
+                    </flux:chart.axis>
+                    <flux:chart.axis class="text-xs text-zinc-400"
+                        axis="y"
+                        field="sbm">
+                        <flux:chart.axis.grid stroke-dasharray="2 2" />
+                        <flux:chart.axis.tick />
+                    </flux:chart.axis>
+                    <flux:chart.axis class="text-xs text-zinc-400"
+                        axis="y"
+                        position="end"
+                        field="ratio">
+                        <flux:chart.axis.grid stroke-dasharray="2 2" />
+                        <flux:chart.axis.tick />
+                    </flux:chart.axis>
+                    <flux:chart.cursor />
+                </flux:chart.svg>
+                <flux:chart.tooltip>
+                    <flux:chart.tooltip.heading field="label" />
+                    <flux:chart.tooltip.value field="sbm"
+                        label="SBM"
+                        color="blue" />
+                    <flux:chart.tooltip.value field="ratio"
+                        label="Ratio"
+                        color="emerald" />
+                </flux:chart.tooltip>
+            </flux:chart>
+        </flux:card>
+    @endif
 
     {{-- Sélecteur de période pour l'athlète --}}
     <form class="flex items-center space-x-2"

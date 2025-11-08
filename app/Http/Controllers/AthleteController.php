@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MetricType;
+use App\Enums\CalculatedMetric;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -61,10 +62,17 @@ class AthleteController extends Controller
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
+        // Définir les types de métriques "calculées" à afficher
+        $calculatedMetricTypes = [
+            CalculatedMetric::SBM,
+            CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
+        ];
+
         // Préparer les options pour l'appel unique à getAthletesData
         $options = [
             'period'                       => $period,
             'metric_types'                 => $dashboardMetricTypes,
+            'calculated_metrics'           => $calculatedMetricTypes,
             'include_dashboard_metrics'    => true,
             'include_latest_daily_metrics' => true,
             'include_alerts'               => ['general', 'charge', 'readiness', 'menstrual'],
@@ -112,6 +120,21 @@ class AthleteController extends Controller
             false
         );
 
+        // Préparer les données pour le graphique hebdomadaire combiné
+        $sbmData = $athleteData->weekly_metrics_data['sbm']['chart_data'] ?? ['labels' => [], 'data' => []];
+        $ratioData = $athleteData->weekly_metrics_data['ratio_cih_normalized_cph']['chart_data'] ?? ['labels' => [], 'data' => []];
+
+        $combinedWeeklyChartData = [];
+        if (! empty($sbmData['labels'])) {
+            foreach ($sbmData['labels'] as $index => $label) {
+                $combinedWeeklyChartData[] = [
+                    'label' => $label,
+                    'sbm' => $sbmData['data'][$index] ?? null,
+                    'ratio' => $ratioData['data'][$index] ?? null,
+                ];
+            }
+        }
+
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
             'last_14_days'  => '14 derniers jours',
@@ -138,6 +161,7 @@ class AthleteController extends Controller
             'healthEvents'             => $athlete->healthEvents()->limit(12)->orderBy('date', 'desc')->get(),
             'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
+            'combinedWeeklyChartData'       => $combinedWeeklyChartData,
         ];
 
         if ($request->expectsJson()) {
