@@ -18,8 +18,8 @@ class TrainingPlanSeeder extends Seeder
             $plan1 = TrainingPlan::factory()->create([
                 'id'         => 1,
                 'name'       => 'Plan A',
-                'start_date' => now()->subMonths(6)->startOfMonth()->toDateString(),
-                'end_date'   => now()->addMonths(6)->endOfMonth()->toDateString(),
+                'start_date' => now()->subMonths(6)->startOfMonth(),
+                'end_date'   => now()->addMonths(6)->endOfMonth(),
             ]);
         }
 
@@ -28,8 +28,8 @@ class TrainingPlanSeeder extends Seeder
             $plan2 = TrainingPlan::factory()->create([
                 'id'         => 2,
                 'name'       => 'Plan B',
-                'start_date' => now()->subMonths(1)->startOfMonth()->toDateString(),
-                'end_date'   => now()->addMonths(12)->endOfMonth()->toDateString(),
+                'start_date' => now()->subMonths(1)->startOfMonth(),
+                'end_date'   => now()->addMonths(12)->endOfMonth(),
             ]);
         }
 

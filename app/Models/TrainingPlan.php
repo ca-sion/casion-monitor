@@ -15,6 +15,14 @@ class TrainingPlan extends Model
 
     protected $fillable = ['name', 'description', 'trainer_id', 'start_date', 'end_date'];
 
+    protected function casts(): array
+    {
+        return [
+            'start_date' => 'date',
+            'end_date' => 'date',
+        ];
+    }
+
     /**
      * Get the trainer that owns the TrainingPlan.
      */

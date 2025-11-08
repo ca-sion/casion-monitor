@@ -225,7 +225,7 @@ class MetricService
 
                 $sbm = $dailySbmValues->isNotEmpty() ? $dailySbmValues->avg() : null;
 
-                $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
+                $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate);
                 $cph = $planWeek ? $this->metricCalculationService->calculateCph($planWeek) : 0.0;
 
                 $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek);
@@ -710,7 +710,7 @@ class MetricService
         }
 
         return TrainingPlanWeek::where('training_plan_id', $assignedPlan->id)
-            ->where('start_date', $weekStartDate->toDateString())
+            ->where('start_date', $weekStartDate)
             ->first();
     }
 

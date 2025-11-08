@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TrainingPlans\Pages;
 
+use Illuminate\Support\Carbon;
 use App\Models\TrainingPlanWeek;
 use Filament\Resources\Pages\Page;
 use App\Services\MetricCalculationService;
@@ -29,11 +30,11 @@ class AllocateTrainingPlan extends Page
         $trainingPlan = $this->record;
 
         if ($trainingPlan && $trainingPlan->start_date && $trainingPlan->end_date) {
-            $startDate = \Carbon\Carbon::parse($trainingPlan->start_date);
-            $endDate = \Carbon\Carbon::parse($trainingPlan->end_date);
+            $startDate = $trainingPlan->start_date;
+            $endDate = $trainingPlan->end_date;
 
             $this->weeks = [];
-            $currentWeekStart = $startDate->startOfWeek(\Carbon\Carbon::MONDAY);
+            $currentWeekStart = $startDate->startOfWeek(Carbon::MONDAY);
 
             while ($currentWeekStart->lte($endDate)) {
                 $weekNumber = $currentWeekStart->weekOfYear;
@@ -42,7 +43,7 @@ class AllocateTrainingPlan extends Page
 
                 // Récupérer les données de la semaine si elles existent
                 $weekData = TrainingPlanWeek::where('training_plan_id', $this->record->id)
-                    ->where('start_date', $currentWeekStart->toDateString())
+                    ->where('start_date', $currentWeekStart)
                     ->first();
 
                 // Calcul des métriques de charge pour la semaine
@@ -50,7 +51,7 @@ class AllocateTrainingPlan extends Page
 
                 $this->weeks[] = [
                     'start_date'        => $currentWeekStart->toDateString(),
-                    'end_date'          => $currentWeekStart->endOfWeek(\Carbon\Carbon::SUNDAY)->toDateString(),
+                    'end_date'          => $currentWeekStart->endOfWeek(Carbon::SUNDAY)->toDateString(),
                     'week_number'       => $weekNumber,
                     'year'              => $year,
                     'identifier'        => $weekIdentifier,
@@ -76,7 +77,7 @@ class AllocateTrainingPlan extends Page
     public function selectWeekForDailyRefinement(string $date): void
     {
         // Convertir la date pour obtenir le début de la semaine (lundi)
-        $startOfWeek = \Carbon\Carbon::parse($date)->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
+        $startOfWeek = Carbon::parse($date)->startOfWeek(Carbon::MONDAY)->toDateString();
 
         // Ici, nous pourrions ouvrir un modal ou rediriger vers une autre page
         // pour l'affinage quotidien. Pour l'instant, juste une notification.
@@ -89,8 +90,8 @@ class AllocateTrainingPlan extends Page
 
     public function updateWeekData(string $startDate, string $field, $value): void
     {
-        $startOfWeek = \Carbon\Carbon::parse($startDate)->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString();
-        $weekNumber = \Carbon\Carbon::parse($startOfWeek)->weekOfYear;
+        $startOfWeek = Carbon::parse($startDate)->startOfWeek(Carbon::MONDAY);
+        $weekNumber = Carbon::parse($startOfWeek)->weekOfYear;
 
         $weekData = TrainingPlanWeek::updateOrCreate(
             [
@@ -104,7 +105,7 @@ class AllocateTrainingPlan extends Page
 
         // Mettre à jour la propriété $weeks pour refléter le changement dans l'interface
         foreach ($this->weeks as $key => $week) {
-            if ($week['start_date'] === $startOfWeek) {
+            if ($week['start_date'] === $startOfWeek->toDateString()) {
                 $this->weeks[$key][$field] = $value;
                 break;
             }

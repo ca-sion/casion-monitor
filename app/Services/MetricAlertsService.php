@@ -132,7 +132,7 @@ class MetricAlertsService
         $alerts = [];
         $weekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
-        $trainingPlanWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate->toDateString());
+        $trainingPlanWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate);
 
         $alerts = array_merge($alerts, $this->evaluateCihCphRatioAlerts($athlete, $weekStartDate, $trainingPlanWeek, $athleteMetrics));
         $alerts = array_merge($alerts, $this->evaluateWeeklySbmAlerts($athlete, $weekStartDate, $athleteMetrics));

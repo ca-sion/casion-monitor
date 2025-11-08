@@ -154,7 +154,7 @@ class MetricReadinessService
         // 5. Impact du ratio de charge (CIH/CPH) - à évaluer sur la semaine en cours
         $currentWeekStartDate = now()->startOfWeek(Carbon::MONDAY);
         $trainingPlanWeeks = $athlete->currentTrainingPlan?->weeks ?? collect();
-        $currentTrainingPlanWeek = $trainingPlanWeeks->firstWhere('start_date', $currentWeekStartDate->toDateString());
+        $currentTrainingPlanWeek = $trainingPlanWeeks->firstWhere('start_date', $currentWeekStartDate);
         $metricsForCurrentWeek = $allMetrics->whereBetween('date', [$currentWeekStartDate, $currentWeekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]);
 
         $currentCih = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForCurrentWeek);
