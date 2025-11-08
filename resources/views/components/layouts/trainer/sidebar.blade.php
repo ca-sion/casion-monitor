@@ -126,6 +126,7 @@
 
         {{ $slot }}
 
+        <x-pwa-install-banner />
         @livewire('notifications')
         @fluxScripts
         @filamentScripts
