@@ -326,21 +326,23 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         $this->athlete->save();
 
         // Calculate Readiness Score
-        $readinessService = resolve(MetricReadinessService::class);
-        $allMetrics = Metric::where('athlete_id', $this->athlete->id)
-            ->where('date', '<=', $this->date->copy()->endOfDay())
-            ->get();
-        $this->readinessStatus = $readinessService->getAthleteReadinessStatus($this->athlete, $allMetrics);
-        $this->js(
-            <<<'JS'
-            Alpine.nextTick(() => { 
-                const element = document.getElementById('up');
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        JS
-        );
+        if ($this->date->isToday()) {
+            $readinessService = resolve(MetricReadinessService::class);
+            $allMetrics = Metric::where('athlete_id', $this->athlete->id)
+                ->where('date', '<=', $this->date->copy()->endOfDay())
+                ->get();
+            $this->readinessStatus = $readinessService->getAthleteReadinessStatus($this->athlete, $allMetrics);
+            $this->js(
+                <<<'JS'
+                Alpine.nextTick(() => { 
+                    const element = document.getElementById('up');
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            JS
+            );
+        }
 
         $this->suggestInjuryDeclaration();
 
