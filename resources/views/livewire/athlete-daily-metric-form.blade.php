@@ -1,5 +1,5 @@
 <x-slot:title>{{ $athlete->name }} - Formulaire quotidien</x-slot>
-<div class="mx-auto max-w-sm">
+<div class="mx-auto max-w-sm" id="up">
 
     <flux:heading size="xl" level="1">{{ $athlete->name }}</flux:heading>
     <flux:text class="mb-6 mt-2 text-base">Rentrer les métriques pour le jour choisi.</flux:text>
@@ -61,6 +61,8 @@
             </svg>
         </a>
     </div>
+
+    <x-readiness-status-card :readiness-status="$readinessStatus" />
 
     <form wire:submit="save">
         {{ $this->form }}

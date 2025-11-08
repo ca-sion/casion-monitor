@@ -69,7 +69,7 @@ class AthleteController extends Controller
             'include_latest_daily_metrics' => true,
             'include_alerts'               => ['general', 'charge', 'readiness', 'menstrual'],
             'include_menstrual_cycle'      => true,
-            'include_readiness_status'     => false,
+            'include_readiness_status'     => true,
             'include_weekly_metrics'       => true, // Pour les métriques hebdomadaires (volume, intensité)
         ];
 

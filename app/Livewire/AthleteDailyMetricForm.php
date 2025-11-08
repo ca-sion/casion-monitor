@@ -20,6 +20,7 @@ use Illuminate\Contracts\View\View;
 use Filament\Support\Icons\Heroicon;
 use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
+use App\Services\MetricReadinessService;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
@@ -51,6 +52,8 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
     public bool $canGetNextDay;
 
     public ?TrainingPlanWeek $athleteCurrentTrainingPlanWeek;
+
+    public ?array $readinessStatus = null;
 
     public function mount(): void
     {
@@ -322,7 +325,25 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         $this->athlete->last_activity = now();
         $this->athlete->save();
 
+        // Calculate Readiness Score
+        $readinessService = resolve(MetricReadinessService::class);
+        $allMetrics = Metric::where('athlete_id', $this->athlete->id)
+            ->where('date', '<=', $this->date->copy()->endOfDay())
+            ->get();
+        $this->readinessStatus = $readinessService->getAthleteReadinessStatus($this->athlete, $allMetrics);
+        $this->js(
+            <<<'JS'
+            Alpine.nextTick(() => { 
+                const element = document.getElementById('up');
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        JS
+        );
+
         $this->suggestInjuryDeclaration();
+
         Notification::make()
             ->title('Sauvegardé')
             ->success()

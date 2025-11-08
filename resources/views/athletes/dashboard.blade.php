@@ -97,6 +97,10 @@
         </div>
     @endif
 
+    @if ($readinessStatus)
+        <x-readiness-status-card :readiness-status="$readinessStatus" />
+    @endif
+
     <flux:separator class="mb-4" variant="subtle" />
     <flux:heading class="text-base">Cette semaine</flux:heading>
 
