@@ -318,6 +318,10 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             }
         }
 
+        // Update
+        $this->athlete->last_activity = now();
+        $this->athlete->save();
+
         $this->suggestInjuryDeclaration();
         Notification::make()
             ->title('Sauvegardé')

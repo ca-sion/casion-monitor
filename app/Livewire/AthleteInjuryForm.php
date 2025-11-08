@@ -121,6 +121,10 @@ class AthleteInjuryForm extends Component implements HasForms
 
         Injury::create($data);
 
+        // Update
+        $this->athlete->last_activity = now();
+        $this->athlete->save();
+
         Notification::make()
             ->title('Blessure déclarée avec succès !')
             ->success()

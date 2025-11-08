@@ -115,12 +115,12 @@
                             <div class="mt-2 text-xs">
                                 <x-filament::link class="color-zinc-500! font-normal"
                                     icon="heroicon-o-clock"
-                                    tooltip="Dernière connexion"
-                                    label="Dernière connexion"
+                                    tooltip="Dernière activité"
+                                    label="Dernière activité"
                                     color="gray"
                                     size="xs"
                                     x-data="{}">
-                                    {{ $athlete->last_connection ? $athlete->last_connection->timezone('Europe/Zurich')->locale('fr_CH')->shortAbsoluteDiffForHumans() : 'Jamais' }}
+                                    {{ $athlete->last_activity ? $athlete->last_activity->timezone('Europe/Zurich')->locale('fr_CH')->shortAbsoluteDiffForHumans() : 'Jamais' }}
                                 </x-filament::link>
                             </div>
                         </a>

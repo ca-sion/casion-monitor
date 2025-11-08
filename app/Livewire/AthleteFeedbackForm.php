@@ -206,7 +206,11 @@ class AthleteFeedbackForm extends Component implements HasSchemas
                     ->delete();
             }
         }
-        $this->dispatch('feedback-saved'); // Déclenche un événement pour notifier la sauvegarde si besoin
+
+        // Update
+        $this->athlete->last_activity = now();
+        $this->athlete->save();
+
         Notification::make()
             ->title('Sauvegardé')
             ->success()

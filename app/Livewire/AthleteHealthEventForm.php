@@ -169,6 +169,10 @@ class AthleteHealthEventForm extends Component implements HasActions, HasSchemas
                 ->send();
         }
 
+        // Update
+        $this->athlete->last_activity = now();
+        $this->athlete->save();
+
         if ($this->injury) {
             $this->redirect(route('athletes.injuries.show', ['hash' => $this->athlete->hash, 'injury' => $this->injury->id]));
         } else {

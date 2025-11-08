@@ -24,6 +24,10 @@ class AthleteForm
                         'm' => 'Homme',
                         'w' => 'Femme',
                     ]),
+                DateTimePicker::make('last_activity')
+                    ->native(false)
+                    ->displayFormat('d.m.Y H:i')
+                    ->locale('fr'),
                 DateTimePicker::make('last_connection')
                     ->native(false)
                     ->displayFormat('d.m.Y H:i')
