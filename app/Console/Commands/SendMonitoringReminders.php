@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Carbon\Carbon;
+use App\Models\Athlete;
 use Illuminate\Console\Command;
 use App\Models\NotificationPreference;
 use App\Notifications\SendDailyReminder;
@@ -21,7 +22,7 @@ class SendMonitoringReminders extends Command
      *
      * @var string
      */
-    protected $description = 'Send daily monitoring reminders to athletes and trainers.';
+    protected $description = 'Send daily monitoring reminders to athletes.';
 
     /**
      * Execute the console command.
@@ -32,42 +33,38 @@ class SendMonitoringReminders extends Command
         $currentDay = $currentTime->dayOfWeek; // 0 for Sunday, 6 for Saturday
 
         // Determine the exact 15-minute mark this cron run is responsible for
-        // e.g., if cron runs at 08:00-08:14, it's responsible for 08:00
-        // if cron runs at 08:15-08:29, it's responsible for 08:15
         $responsibleMinute = floor($currentTime->minute / 15) * 15;
         $responsibleTime = $currentTime->copy()->minute($responsibleMinute)->second(0)->format('H:i');
 
         $this->info("Cron running at {$currentTime->format('H:i')}. Responsible for reminders at {$responsibleTime} on day {$currentDay}...");
 
-        $preferences = NotificationPreference::all(); // Fetch all preferences to process rounding in PHP
+        // Find preferences for athletes matching the rounded time and current day.
+        $preferences = NotificationPreference::where('notifiable_type', Athlete::class)
+            ->get()
+            ->filter(function ($preference) use ($responsibleTime, $currentDay) {
+                // Round the preference's notification_time to the nearest 15-minute interval
+                $prefTime = Carbon::createFromFormat('H:i', $preference->notification_time);
+                $roundedPrefMinute = round($prefTime->minute / 15) * 15;
+
+                if ($roundedPrefMinute == 60) {
+                    $roundedPrefTime = $prefTime->copy()->addHour()->minute(0)->format('H:i');
+                } else {
+                    $roundedPrefTime = $prefTime->copy()->minute($roundedPrefMinute)->second(0)->format('H:i');
+                }
+
+                // Check if the rounded time matches this cron's responsible time and day
+                return $roundedPrefTime === $responsibleTime && in_array($currentDay, $preference->notification_days);
+            });
 
         foreach ($preferences as $preference) {
-            // Round the preference's notification_time to the nearest 15-minute interval
-            $prefTime = Carbon::createFromFormat('H:i', $preference->notification_time);
-            $roundedPrefMinute = round($prefTime->minute / 15) * 15;
-            if ($roundedPrefMinute == 60) { // Handle rounding up to next hour
-                $roundedPrefTime = $prefTime->copy()->addHour()->minute(0)->format('H:i');
-            } else {
-                $roundedPrefTime = $prefTime->copy()->minute($roundedPrefMinute)->second(0)->format('H:i');
-            }
+            $athlete = $preference->notifiable;
 
-            // Check if the rounded preference time matches the responsible time for this cron run
-            if ($roundedPrefTime === $responsibleTime) {
-                // Check if the current day is in the notification_days array
-                if (in_array($currentDay, $preference->notification_days)) {
-                    $notifiable = $preference->notifiable;
-
-                    if ($notifiable && $notifiable->pushSubscriptions()->exists()) {
-                        $this->info("Sending reminder to {$notifiable->name} for {$preference->notification_time} (rounded to {$roundedPrefTime})...");
-
-                        $notifiable->notify(new SendDailyReminder(
-                            'Rappel Monitoring',
-                            "N'oubliez pas de remplir votre monitoring quotidien !",
-                            $notifiable->accountLink
-                        ));
-                    } else {
-                        $this->warn("Notifiable {$notifiable->name} has no active push subscriptions.");
-                    }
+            if ($athlete) {
+                if ($athlete->pushSubscriptions()->exists() || $athlete->telegram_chat_id) {
+                    $this->info("Sending reminder to athlete {$athlete->name} for {$preference->notification_time}...");
+                    $athlete->notify(new SendDailyReminder());
+                } else {
+                    $this->warn("Athlete {$athlete->name} has no active push or Telegram subscriptions.");
                 }
             }
         }

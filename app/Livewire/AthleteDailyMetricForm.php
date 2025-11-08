@@ -404,7 +404,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas, HasActions
         $this->suggestInjuryDeclaration();
 
         Notification::make()
-            ->title('Sauvegardé')
+            ->title('Merci 🚀 ! Métriques enregistrées.')
             ->success()
             ->send();
     }

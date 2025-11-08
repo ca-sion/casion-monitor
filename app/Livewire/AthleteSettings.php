@@ -355,11 +355,7 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
         }
 
         try {
-            $this->notifiable->notify(new SendDailyReminder(
-                'Notification de test',
-                'Si vous recevez ceci, les notifications sont bien configurées.',
-                $this->notifiable->accountLink
-            ));
+            $this->notifiable->notify(new SendDailyReminder($this->notifiable));
 
             Notification::make()
                 ->title('Notification de test envoyée.')

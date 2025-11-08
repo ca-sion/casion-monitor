@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\Athlete;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
@@ -13,20 +14,12 @@ class SendDailyReminder extends Notification
 {
     use Queueable;
 
-    protected $title;
-
-    protected $body;
-
-    protected $url;
-
     /**
      * Create a new notification instance.
      */
-    public function __construct($title, $body, $url = null)
+    public function __construct()
     {
-        $this->title = $title;
-        $this->body = $body;
-        $this->url = $url;
+        //
     }
 
     /**
@@ -49,26 +42,49 @@ class SendDailyReminder extends Notification
         return $channels;
     }
 
+    private function getTitle(Athlete $athlete): string
+    {
+        $streak = $athlete->metadata['gamification']['current_streak'] ?? 0;
+
+        if ($streak > 1) {
+            return "Bravo, continue ta série ! 🔥";
+        }
+
+        return "C'est l'heure de tes métriques !";
+    }
+
+    private function getBody(Athlete $athlete): string
+    {
+        $streak = $athlete->metadata['gamification']['current_streak'] ?? 0;
+        $name = $athlete->first_name;
+
+        if ($streak > 1) {
+            return "Salut {$name}, tu es sur une série de {$streak} jours ! Ne la brise pas, saisis tes données maintenant.";
+        }
+
+        return "Salut {$name}, n'oublie pas de remplir tes données aujourd'hui.";
+    }
+
+    private function getUrl(Athlete $athlete): string
+    {
+        return $athlete->account_link;
+    }
+
     /**
      * Get the web push representation of the notification.
      */
     public function toWebPush(object $notifiable, $notification)
     {
-        $message = (new WebPushMessage)
-            ->title($this->title)
-            ->body($this->body)
+        return (new WebPushMessage)
+            ->title($this->getTitle($notifiable))
+            ->body($this->getBody($notifiable))
             ->options([
                 'TTL'     => 1000, // Time to live in seconds
                 'urgency' => 'normal',
-                'icon'    => '/favicon.png', // Icon for the notification
-            ]);
-
-        if ($this->url) {
-            $message->action('Ouvrir', 'open_url');
-            $message->data(['url' => $this->url]);
-        }
-
-        return $message;
+                'icon'    => '/favicon-96x96.png', // Icon for the notification
+            ])
+            ->action('Ouvrir', 'open_url')
+            ->data(['url' => $this->getUrl($notifiable)]);
     }
 
     /**
@@ -76,14 +92,9 @@ class SendDailyReminder extends Notification
      */
     public function toTelegram(object $notifiable)
     {
-        $message = TelegramMessage::create()
+        return TelegramMessage::create()
             ->to($notifiable->routeNotificationFor('telegram'))
-            ->content('*'.$this->title."*\n".$this->body);
-
-        if ($this->url) {
-            $message->button('Ouvrir', $this->url);
-        }
-
-        return $message;
+            ->content('*'.$this->getTitle($notifiable)."*\n".$this->getBody($notifiable))
+            ->button('Ouvrir', $this->getUrl($notifiable));
     }
 }
