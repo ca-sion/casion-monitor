@@ -156,31 +156,5 @@
         </button>
     </div>
 
-    <div class="mb-6">
-        <h3 class="text-lg font-medium mb-2">Installer l'application (PWA)</h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Pour un accès plus rapide et une expérience similaire à une application native, vous pouvez installer notre PWA (Progressive Web App) sur votre smartphone.
-        </p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-            <div>
-                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Sur Android (avec Chrome)</h4>
-                <ol class="list-decimal list-inside text-sm text-gray-600 dark:text-gray-400 mt-2 space-y-1">
-                    <li>Appuyez sur le bouton de menu (les trois points verticaux) en haut à droite.</li>
-                    <li>Sélectionnez <strong>"Installer l'application"</strong> ou <strong>"Ajouter à l'écran d'accueil"</strong>.</li>
-                    <li>Suivez les instructions pour confirmer.</li>
-                </ol>
-            </div>
-            <div>
-                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Sur iOS (avec Safari)</h4>
-                <ol class="list-decimal list-inside text-sm text-gray-600 dark:text-gray-400 mt-2 space-y-1">
-                    <li>Appuyez sur l'icône de partage (le carré avec une flèche vers le haut) dans la barre de menu.</li>
-                    <li>Faites défiler vers le bas et sélectionnez <strong>"Sur l'écran d'accueil"</strong>.</li>
-                    <li>Appuyez sur <strong>"Ajouter"</strong> en haut à droite.</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-
     <x-filament-actions::modals />
 </div>
