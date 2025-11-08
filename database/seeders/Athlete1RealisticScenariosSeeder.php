@@ -38,14 +38,14 @@ class Athlete1RealisticScenariosSeeder extends Seeder
         $currentDate = $startDate->copy();
 
         // Paramètres de base pour les métriques
-        $baseFatigue = 3.5; // Échelle 1-10
+        $baseFatigue = 4; // Échelle 1-10
         $baseHrv = 120.0;    // ms
-        $baseSleepQuality = 7.5; // Échelle 1-10
+        $baseSleepQuality = 8; // Échelle 1-10
         $baseBodyWeight = 75.0; // kg
         $baseRestingHr = 52.0; // bpm
-        $basePerformanceFeel = 7.5; // Échelle 1-10
-        $baseSubjectiveFatigue = 4.0; // Échelle 1-10
-        $basePain = 1.0; // Échelle 1-10
+        $basePerformanceFeel = 8; // Échelle 1-10
+        $baseSubjectiveFatigue = 4; // Échelle 1-10
+        $basePain = 1; // Échelle 1-10
 
         // Simuler des phases d'entraînement (intensité, récupération)
         $trainingPhases = [
@@ -93,19 +93,19 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                 }
 
                 // Fatigue Générale (MORNING_GENERAL_FATIGUE)
-                $fatigue = max(1.0, min(10.0, $baseFatigue + $phaseParams['fatigue_mod'] + (rand(-10, 10) / 100)));
+                $fatigue = round(max(1, min(10, $baseFatigue + $phaseParams['fatigue_mod'] + (rand(-10, 10) / 100))));
                 $this->insertMetric($athlete->id, MetricType::MORNING_GENERAL_FATIGUE, $daysAgo, $fatigue);
 
                 // VFC (MORNING_HRV)
-                $hrv = max(80.0, min(160.0, $baseHrv + ($baseHrv * $phaseParams['hrv_mod']) + (rand(-50, 50) / 100)));
+                $hrv = round(max(80.0, min(160.0, $baseHrv + ($baseHrv * $phaseParams['hrv_mod']) + (rand(-50, 50) / 100))));
                 $this->insertMetric($athlete->id, MetricType::MORNING_HRV, $daysAgo, $hrv);
 
                 // Qualité de Sommeil (MORNING_SLEEP_QUALITY)
-                $sleepQuality = max(1.0, min(10.0, $baseSleepQuality + $phaseParams['sleep_mod'] + (rand(-5, 5) / 10)));
+                $sleepQuality = round(max(1, min(10, $baseSleepQuality + $phaseParams['sleep_mod'] + (rand(-5, 5) / 10))));
                 $this->insertMetric($athlete->id, MetricType::MORNING_SLEEP_QUALITY, $daysAgo, $sleepQuality);
 
                 // Bien-être Matin (MORNING_MOOD_WELLBEING)
-                $moodWellbeing = max(1.0, min(10.0, 7.5 + $phaseParams['sleep_mod'] + (rand(-5, 5) / 10)));
+                $moodWellbeing = round(max(1, min(10, 7.5 + $phaseParams['sleep_mod'] + (rand(-5, 5) / 10))));
                 $this->insertMetric($athlete->id, MetricType::MORNING_MOOD_WELLBEING, $daysAgo, $moodWellbeing);
 
                 // Fréquence Cardiaque au Repos (MORNING_RESTING_HEART_RATE)
@@ -113,26 +113,26 @@ class Athlete1RealisticScenariosSeeder extends Seeder
                 // $this->insertMetric($athlete->id, MetricType::MORNING_RESTING_HEART_RATE, $daysAgo, $restingHr);
 
                 // Énergie pré-session (PRE_SESSION_ENERGY_LEVEL)
-                $preSessionEnergyLevel = max(1.0, min(10.0, 5.5 + $phaseParams['fatigue_mod'] / 2 + rand(-1, 1)));
+                $preSessionEnergyLevel = round(max(1, min(10, 5.5 + $phaseParams['fatigue_mod'] / 2 + rand(-1, 1))));
                 $this->insertMetric($athlete->id, MetricType::PRE_SESSION_ENERGY_LEVEL, $daysAgo, $preSessionEnergyLevel);
 
                 // Ressenti des Jambes pré-session (PRE_SESSION_LEG_FEEL)
-                $preSessionLegFeel = max(1.0, min(10.0, 5.5 + $phaseParams['fatigue_mod'] * 0.4 + (rand(-2, 2))));
+                $preSessionLegFeel = round(max(1, min(10, 5.5 + $phaseParams['fatigue_mod'] * 0.4 + (rand(-2, 2)))));
                 if ($preSessionLegFeel < 3) { // Amélioration si en deçà de seuil faible
                     $preSessionLegFeel = $preSessionLegFeel + 1;
                 }
                 $this->insertMetric($athlete->id, MetricType::PRE_SESSION_LEG_FEEL, $daysAgo, $preSessionLegFeel);
 
                 // Ressenti de Performance Post-Séance (POST_SESSION_PERFORMANCE_FEEL)
-                $performanceFeel = max(1.0, min(10.0, $basePerformanceFeel + $phaseParams['perf_mod'] + (rand(-5, 5) / 10)));
+                $performanceFeel = round(max(1, min(10, $basePerformanceFeel + $phaseParams['perf_mod'] + (rand(-5, 5) / 10))));
                 $this->insertMetric($athlete->id, MetricType::POST_SESSION_PERFORMANCE_FEEL, $daysAgo, $performanceFeel);
 
                 // Fatigue Subjective Post-Séance (POST_SESSION_SUBJECTIVE_FATIGUE)
-                $subjectiveFatigue = max(1.0, min(10.0, $baseSubjectiveFatigue + $phaseParams['subj_fatigue_mod'] + (rand(-5, 5) / 10)));
+                $subjectiveFatigue = round(max(1, min(10, $baseSubjectiveFatigue + $phaseParams['subj_fatigue_mod'] + (rand(-5, 5) / 10))));
                 $this->insertMetric($athlete->id, MetricType::POST_SESSION_SUBJECTIVE_FATIGUE, $daysAgo, $subjectiveFatigue);
 
                 // Charge de la Séance Post-Séance (POST_SESSION_SESSION_LOAD)
-                $sessionLoad = max(1.0, min(10.0, (rand(10, 100) / 10))); // Valeur entre 1.0 et 10.0
+                $sessionLoad = round(max(1, min(10, (rand(10, 100) / 10)))); // Valeur entre 1.0 et 10.0
                 $this->insertMetric($athlete->id, MetricType::POST_SESSION_SESSION_LOAD, $daysAgo, $sessionLoad);
 
                 // Douleur (MORNING_PAIN) - sporadiquement et généralement basse
