@@ -86,9 +86,12 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
                 Section::make('Préférences d\'affichage')
                     ->compact()
                     ->schema([
-                        Toggle::make('show_hrv')
+                        Toggle::make('show_morning_hrv')
                             ->label('Afficher le champ HRV')
                             ->helperText('Masque ou affiche le champ de la variabilité de la fréquence cardiaque (HRV) dans le formulaire quotidien.'),
+                        Toggle::make('show_morning_sleep_duration')
+                            ->label('Afficher le champ Durée du sommeil')
+                            ->helperText('Masque ou affiche le champ de Durée du sommeil dans le formulaire quotidien.'),
                     ]),
             ]);
     }

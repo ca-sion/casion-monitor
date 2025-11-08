@@ -17,11 +17,14 @@ use App\Services\MetricService;
 use Livewire\Attributes\Layout;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Contracts\View\View;
-use App\Services\GamificationService;
 use Filament\Support\Icons\Heroicon;
+use App\Services\GamificationService;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
 use App\Services\MetricReadinessService;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
@@ -29,11 +32,13 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 
-class AthleteDailyMetricForm extends Component implements HasSchemas
+class AthleteDailyMetricForm extends Component implements HasSchemas, HasActions
 {
     use InteractsWithSchemas;
+    use InteractsWithActions;
 
     public ?array $data = [];
 
@@ -116,7 +121,54 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
                             ->minValue(10)
                             ->maxValue(200)
                             ->suffix('ms')
-                            ->visible(fn () => $this->athlete->getPreference('show_hrv', true)),
+                            ->visible(fn () => $this->athlete->getPreference('show_morning_hrv', false)),
+                        TextInput::make(MetricType::MORNING_SLEEP_DURATION->value)
+                            ->label(MetricType::MORNING_SLEEP_DURATION->getLabel())
+                            ->afterLabel([
+                                Icon::make(Heroicon::OutlinedInformationCircle)
+                                    ->color('gray')
+                                    ->tooltip(MetricType::MORNING_SLEEP_DURATION->getHint()),
+                            ])
+                            ->numeric()
+                            ->suffix('h')
+                            ->visible(fn () => $this->athlete->getPreference('show_morning_sleep_duration', false))
+                            ->beforeContent(
+                                Action::make('calculate_sleep_duration')
+                                    ->label('')
+                                    ->icon('heroicon-o-clock')
+                                    ->iconSize('lg')
+                                    ->tooltip('Calculer la durée du sommeil')
+                                    ->modalHeading('Calculer la durée du sommeil')
+                                    ->modalSubmitActionLabel('Calculer')
+                                    ->schema([
+                                        TextInput::make('bedtime')
+                                            ->label('Heure de coucher')
+                                            ->type('time')
+                                            ->required(),
+                                        TextInput::make('wakeup_time')
+                                            ->label('Heure de réveil')
+                                            ->type('time')
+                                            ->required(),
+                                    ])
+                                    ->action(function (array $data, Set $set) {
+                                        $bedtime = $data['bedtime'];
+                                        $wakeupTime = $data['wakeup_time'];
+
+                                        if ($bedtime && $wakeupTime) {
+                                            $bed = Carbon::parse($bedtime);
+                                            $wakeup = Carbon::parse($wakeupTime);
+
+                                            if ($wakeup->lessThan($bed)) {
+                                                $wakeup->addDay();
+                                            }
+
+                                            $durationInMinutes = $wakeup->diffInMinutes($bed, true);
+                                            $durationInHours = round($durationInMinutes / 60, 1);
+
+                                            $set(MetricType::MORNING_SLEEP_DURATION->value, $durationInHours);
+                                        }
+                                    })
+                            ),
                         ToggleButtons::make(MetricType::MORNING_SLEEP_QUALITY->value)
                             ->label(MetricType::MORNING_SLEEP_QUALITY->getLabel())
                             ->helperText(MetricType::MORNING_SLEEP_QUALITY->getScaleHint())
@@ -345,7 +397,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
             JS
             );
         }
-        
+
         // Update Gamification
         resolve(GamificationService::class)->processEntry($this->athlete, $this->date, $data);
 
@@ -362,6 +414,7 @@ class AthleteDailyMetricForm extends Component implements HasSchemas
         return [
             MetricType::MORNING_HRV->value,
             MetricType::MORNING_SLEEP_QUALITY->value,
+            MetricType::MORNING_SLEEP_DURATION->value,
             MetricType::MORNING_GENERAL_FATIGUE->value,
             MetricType::MORNING_MOOD_WELLBEING->value,
             MetricType::MORNING_FIRST_DAY_PERIOD->value,

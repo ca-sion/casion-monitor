@@ -10,6 +10,7 @@ enum MetricType: string implements HasLabel
     case MORNING_BODY_WEIGHT_KG = 'morning_body_weight_kg';
     case MORNING_HRV = 'morning_hrv';
     case MORNING_SLEEP_QUALITY = 'morning_sleep_quality';
+    case MORNING_SLEEP_DURATION = 'morning_sleep_duration';
     case MORNING_GENERAL_FATIGUE = 'morning_general_fatigue';
     case MORNING_PAIN = 'morning_pain';
     case MORNING_PAIN_LOCATION = 'morning_pain_location';
@@ -32,6 +33,7 @@ enum MetricType: string implements HasLabel
             self::MORNING_BODY_WEIGHT_KG   => 'Poids corporel le matin',
             self::MORNING_HRV              => 'Variabilité de la fréquence cardiaque',
             self::MORNING_SLEEP_QUALITY    => 'Qualité du sommeil',
+            self::MORNING_SLEEP_DURATION   => 'Durée du sommeil',
             self::MORNING_GENERAL_FATIGUE  => 'Fatigue générale',
             self::MORNING_PAIN             => 'Douleurs musculaires/articulaires',
             self::MORNING_PAIN_LOCATION    => 'Localisation des douleurs',
@@ -53,7 +55,8 @@ enum MetricType: string implements HasLabel
         return match ($this) {
             self::MORNING_BODY_WEIGHT_KG   => 'Poids',
             self::MORNING_HRV              => 'VFC',
-            self::MORNING_SLEEP_QUALITY    => 'Sommeil',
+            self::MORNING_SLEEP_QUALITY    => 'Qual. sommeil',
+            self::MORNING_SLEEP_DURATION   => 'Dur. sommeil',
             self::MORNING_GENERAL_FATIGUE  => 'Fatigue mat.',
             self::MORNING_PAIN             => 'Douleurs',
             self::MORNING_PAIN_LOCATION    => 'Loc. douleurs',
@@ -76,6 +79,7 @@ enum MetricType: string implements HasLabel
             self::MORNING_BODY_WEIGHT_KG   => 'Poids corporel au matin.',
             self::MORNING_HRV              => 'Valeur de la Variabilité de la fréquence cardiaque (VFC/HRV) au matin.',
             self::MORNING_SLEEP_QUALITY    => 'Évaluation subjective de la qualité du sommeil au matin.',
+            self::MORNING_SLEEP_DURATION   => 'Durée totale du sommeil en heures.',
             self::MORNING_GENERAL_FATIGUE  => 'Évaluation subjective de la fatigue générale au matin.',
             self::MORNING_PAIN             => 'Évaluation subjective des douleurs musculaires/articulaires au matin.',
             self::MORNING_PAIN_LOCATION    => "Localisation des douleurs si l'évaluation subjective des douleurs au matin est supérieure à 3.",
@@ -95,66 +99,41 @@ enum MetricType: string implements HasLabel
     public function getScale(): ?string
     {
         return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => null,
-            self::MORNING_HRV              => null,
-            self::MORNING_SLEEP_QUALITY    => 10,
-            self::MORNING_GENERAL_FATIGUE  => 10,
-            self::MORNING_PAIN             => 10,
-            self::MORNING_PAIN_LOCATION    => 10,
-            self::MORNING_MOOD_WELLBEING   => 10,
+            self::MORNING_BODY_WEIGHT_KG,
+            self::MORNING_HRV,
+            self::MORNING_SLEEP_DURATION,
             self::MORNING_FIRST_DAY_PERIOD => null,
 
-            self::PRE_SESSION_ENERGY_LEVEL => 10,
-            self::PRE_SESSION_LEG_FEEL     => 10,
-
-            self::POST_SESSION_SESSION_LOAD       => 10,
-            self::POST_SESSION_PERFORMANCE_FEEL   => 10,
-            self::POST_SESSION_SUBJECTIVE_FATIGUE => 10,
-            self::POST_SESSION_PAIN               => 10,
+            self::MORNING_SLEEP_QUALITY,
+            self::MORNING_GENERAL_FATIGUE,
+            self::MORNING_PAIN,
+            self::MORNING_PAIN_LOCATION,
+            self::MORNING_MOOD_WELLBEING,
+            self::PRE_SESSION_ENERGY_LEVEL,
+            self::PRE_SESSION_LEG_FEEL,
+            self::POST_SESSION_SESSION_LOAD,
+            self::POST_SESSION_PERFORMANCE_FEEL,
+            self::POST_SESSION_SUBJECTIVE_FATIGUE,
+            self::POST_SESSION_PAIN => 10,
         };
     }
 
     public function getValueColumn(): ?string
     {
         return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => 'value',
-            self::MORNING_HRV              => 'value',
-            self::MORNING_SLEEP_QUALITY    => 'value',
-            self::MORNING_GENERAL_FATIGUE  => 'value',
-            self::MORNING_PAIN             => 'value',
-            self::MORNING_PAIN_LOCATION    => 'note',
-            self::MORNING_MOOD_WELLBEING   => 'value',
-            self::MORNING_FIRST_DAY_PERIOD => 'value',
+            self::MORNING_PAIN_LOCATION => 'note',
 
-            self::PRE_SESSION_ENERGY_LEVEL => 'value',
-            self::PRE_SESSION_LEG_FEEL     => 'value',
-
-            self::POST_SESSION_SESSION_LOAD       => 'value',
-            self::POST_SESSION_PERFORMANCE_FEEL   => 'value',
-            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'value',
-            self::POST_SESSION_PAIN               => 'value',
+            default => 'value',
         };
     }
 
     public function getUnit(): ?string
     {
         return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => 'kg',
-            self::MORNING_HRV              => 'ms',
-            self::MORNING_SLEEP_QUALITY    => null,
-            self::MORNING_GENERAL_FATIGUE  => null,
-            self::MORNING_PAIN             => null,
-            self::MORNING_PAIN_LOCATION    => null,
-            self::MORNING_MOOD_WELLBEING   => null,
-            self::MORNING_FIRST_DAY_PERIOD => null,
-
-            self::PRE_SESSION_ENERGY_LEVEL => null,
-            self::PRE_SESSION_LEG_FEEL     => null,
-
-            self::POST_SESSION_SESSION_LOAD       => null,
-            self::POST_SESSION_PERFORMANCE_FEEL   => null,
-            self::POST_SESSION_SUBJECTIVE_FATIGUE => null,
-            self::POST_SESSION_PAIN               => null,
+            self::MORNING_BODY_WEIGHT_KG => 'kg',
+            self::MORNING_HRV            => 'ms',
+            self::MORNING_SLEEP_DURATION => 'h',
+            default                      => null,
         };
     }
 
@@ -165,6 +144,7 @@ enum MetricType: string implements HasLabel
     {
         return match ($this) {
             self::MORNING_BODY_WEIGHT_KG => 2, // Poids en kg, souvent avec décimales
+            self::MORNING_SLEEP_DURATION => 1,
             default                      => 0, // La plupart des autres métriques sont des entiers ou des scores
         };
     }
@@ -175,14 +155,10 @@ enum MetricType: string implements HasLabel
     public function getScaleHint(): ?string
     {
         return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => null,
-            self::MORNING_HRV              => null,
             self::MORNING_SLEEP_QUALITY    => 'très mauvaise ➝ excellente',
             self::MORNING_GENERAL_FATIGUE  => 'pas fatigué ➝ épuisé',
             self::MORNING_PAIN             => 'aucune ➝ très fortes',
-            self::MORNING_PAIN_LOCATION    => null,
             self::MORNING_MOOD_WELLBEING   => 'très mauvaise ➝ excellente',
-            self::MORNING_FIRST_DAY_PERIOD => null,
 
             self::PRE_SESSION_ENERGY_LEVEL => 'très bas ➝ très haut',
             self::PRE_SESSION_LEG_FEEL     => 'très lourdes ➝ très légères',
@@ -191,6 +167,7 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_PERFORMANCE_FEEL   => 'mauvais ➝ excellent',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'aucune ➝ extrême',
             self::POST_SESSION_PAIN               => 'aucune ➝ très fortes',
+            default                               => null,
         };
     }
 
@@ -206,6 +183,7 @@ enum MetricType: string implements HasLabel
                 1 = Nuit horrible, tu as très mal dormi, tu te sens épuisé(e).
                 5 = Nuit moyenne, tu as dormi mais tu ne te sens pas super frais(fraîche).
                 10 = Nuit parfaite, tu as dormi comme un bébé et tu te sens en pleine forme !',
+            self::MORNING_SLEEP_DURATION => 'Durée totale de sommeil, calculée automatiquement à partir de l\'heure de coucher et de réveil.',
             self::MORNING_GENERAL_FATIGUE => "Comment te sens-tu globalement ce matin ? Évalue ton niveau de fatigue sur une échelle de 1 à 10.
                 1 = Pas fatigué(e) du tout, tu as plein d'énergie.
                 5 = Fatigue normale, tu sens que tu as besoin de te réveiller.
@@ -257,6 +235,7 @@ enum MetricType: string implements HasLabel
         return match ($this) {
             self::MORNING_HRV,
             self::MORNING_SLEEP_QUALITY,
+            self::MORNING_SLEEP_DURATION,
             self::MORNING_MOOD_WELLBEING,
             self::PRE_SESSION_ENERGY_LEVEL,
             self::PRE_SESSION_LEG_FEEL,
@@ -283,6 +262,7 @@ enum MetricType: string implements HasLabel
             self::MORNING_BODY_WEIGHT_KG   => 'icon-[material-symbols-light--weight-outline]',
             self::MORNING_HRV              => 'icon-[material-symbols-light--monitor-heart-outline]',
             self::MORNING_SLEEP_QUALITY    => 'icon-[material-symbols-light--bedtime-outline]',
+            self::MORNING_SLEEP_DURATION   => 'icon-[material-symbols-light--bedtime-outline]',
             self::MORNING_GENERAL_FATIGUE  => 'icon-[material-symbols-light--wb-twilight-outline]',
             self::MORNING_PAIN             => 'icon-[material-symbols-light--sick-outline]',
             self::MORNING_PAIN_LOCATION    => 'icon-[material-symbols-light--my-location-outline]',
@@ -305,22 +285,26 @@ enum MetricType: string implements HasLabel
     public function getColor(): ?string
     {
         return match ($this) {
-            self::MORNING_BODY_WEIGHT_KG   => 'zinc',
-            self::MORNING_HRV              => 'zinc',
-            self::MORNING_SLEEP_QUALITY    => 'cyan',
-            self::MORNING_GENERAL_FATIGUE  => 'cyan',
-            self::MORNING_PAIN             => 'cyan',
-            self::MORNING_PAIN_LOCATION    => 'cyan',
-            self::MORNING_MOOD_WELLBEING   => 'cyan',
+            self::MORNING_BODY_WEIGHT_KG,
+            self::MORNING_HRV,
+            self::MORNING_SLEEP_QUALITY,
+            self::MORNING_SLEEP_DURATION,
+            self::MORNING_GENERAL_FATIGUE,
+            self::MORNING_PAIN,
+            self::MORNING_PAIN_LOCATION,
+            self::MORNING_MOOD_WELLBEING => 'cyan',
+
             self::MORNING_FIRST_DAY_PERIOD => 'purple',
 
-            self::PRE_SESSION_ENERGY_LEVEL => 'yellow',
-            self::PRE_SESSION_LEG_FEEL     => 'yellow',
+            self::PRE_SESSION_ENERGY_LEVEL,
+            self::PRE_SESSION_LEG_FEEL => 'yellow',
 
-            self::POST_SESSION_SESSION_LOAD       => 'blue',
-            self::POST_SESSION_PERFORMANCE_FEEL   => 'blue',
-            self::POST_SESSION_SUBJECTIVE_FATIGUE => 'blue',
-            self::POST_SESSION_PAIN               => 'blue',
+            self::POST_SESSION_SESSION_LOAD,
+            self::POST_SESSION_PERFORMANCE_FEEL,
+            self::POST_SESSION_SUBJECTIVE_FATIGUE,
+            self::POST_SESSION_PAIN => 'blue',
+
+            default => 'zinc',
         };
     }
 }
