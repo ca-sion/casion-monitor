@@ -19,26 +19,25 @@ use App\Models\TrainingPlanWeek;
 use Illuminate\Contracts\View\View;
 use Filament\Support\Icons\Heroicon;
 use App\Services\GamificationService;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Icon;
 use Filament\Forms\Components\Textarea;
 use App\Services\MetricReadinessService;
-use Filament\Actions\Concerns\InteractsWithActions;
-use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 
-class AthleteDailyMetricForm extends Component implements HasSchemas, HasActions
+class AthleteDailyMetricForm extends Component implements HasActions, HasSchemas
 {
-    use InteractsWithSchemas;
     use InteractsWithActions;
+    use InteractsWithSchemas;
 
     public ?array $data = [];
 

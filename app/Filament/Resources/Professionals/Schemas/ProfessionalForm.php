@@ -2,11 +2,11 @@
 
 namespace App\Filament\Resources\Professionals\Schemas;
 
+use Filament\Schemas\Schema;
 use App\Enums\ProfessionalType;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
 
 class ProfessionalForm
 {

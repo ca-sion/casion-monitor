@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MetricType;
-use App\Enums\CalculatedMetric;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use App\Enums\CalculatedMetric;
 use App\Services\MetricService;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Http\JsonResponse;
@@ -129,7 +129,7 @@ class AthleteController extends Controller
             foreach ($sbmData['labels'] as $index => $label) {
                 $combinedWeeklyChartData[] = [
                     'label' => $label,
-                    'sbm' => $sbmData['data'][$index] ?? null,
+                    'sbm'   => $sbmData['data'][$index] ?? null,
                     'ratio' => $ratioData['data'][$index] ?? null,
                 ];
             }
@@ -158,7 +158,7 @@ class AthleteController extends Controller
             'display_table_metric_types'    => $displayTableMetricTypes,
             'weekly_planned_volume'         => $weeklyPlannedVolume,
             'weekly_planned_intensity'      => $weeklyPlannedIntensity,
-            'healthEvents'             => $athlete->healthEvents()->limit(12)->orderBy('date', 'desc')->get(),
+            'healthEvents'                  => $athlete->healthEvents()->limit(12)->orderBy('date', 'desc')->get(),
             'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
             'combinedWeeklyChartData'       => $combinedWeeklyChartData,

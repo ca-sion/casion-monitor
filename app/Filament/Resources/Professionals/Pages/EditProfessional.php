@@ -2,11 +2,11 @@
 
 namespace App\Filament\Resources\Professionals\Pages;
 
-use App\Filament\Resources\Professionals\ProfessionalResource;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
+use Filament\Actions\ForceDeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Resources\Professionals\ProfessionalResource;
 
 class EditProfessional extends EditRecord
 {

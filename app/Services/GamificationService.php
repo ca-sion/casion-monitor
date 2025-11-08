@@ -3,28 +3,29 @@
 namespace App\Services;
 
 use App\Models\Athlete;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 
 class GamificationService
 {
     private const POINTS_PER_ENTRY = 10;
+
     private const POINTS_FOR_FEEDBACK = 5;
 
     private const LEVELS = [
         3000 => 'Légende',
         1500 => 'Expert',
-        750 => 'Confirmé',
-        250 => 'Régulier',
-        0 => 'Débutant',
+        750  => 'Confirmé',
+        250  => 'Régulier',
+        0    => 'Débutant',
     ];
 
     /**
      * Process a new data entry for an athlete and update all gamification metrics.
      *
-     * @param Athlete $athlete The athlete to update.
-     * @param Carbon $entryDate The date of the new entry.
-     * @param array $formData The submitted form data to check for completeness.
+     * @param  Athlete  $athlete  The athlete to update.
+     * @param  Carbon  $entryDate  The date of the new entry.
+     * @param  array  $formData  The submitted form data to check for completeness.
      */
     public function processEntry(Athlete $athlete, Carbon $entryDate, array $formData): void
     {
@@ -91,11 +92,12 @@ class GamificationService
         $points = self::POINTS_PER_ENTRY;
 
         // Add bonus for feedback
-        if (!empty(Arr::get($formData, 'post_session_sensation')) || !empty(Arr::get($formData, 'pre_session_goals'))) {
+        if (! empty(Arr::get($formData, 'post_session_sensation')) || ! empty(Arr::get($formData, 'pre_session_goals'))) {
             $points += self::POINTS_FOR_FEEDBACK;
         }
 
         $gamification['points'] = ($gamification['points'] ?? 0) + $points;
+
         return $gamification;
     }
 
@@ -111,6 +113,7 @@ class GamificationService
                 break;
             }
         }
+
         return $gamification;
     }
 
@@ -122,19 +125,20 @@ class GamificationService
         $badges = $gamification['badges'] ?? [];
 
         // Streak badges
-        if ($gamification['current_streak'] >= 10 && !in_array('streak_10', $badges)) {
+        if ($gamification['current_streak'] >= 10 && ! in_array('streak_10', $badges)) {
             $badges[] = 'streak_10';
         }
-        if ($gamification['current_streak'] >= 30 && !in_array('streak_30', $badges)) {
+        if ($gamification['current_streak'] >= 30 && ! in_array('streak_30', $badges)) {
             $badges[] = 'streak_30';
         }
 
         // Points badges
-        if ($gamification['points'] >= 1000 && !in_array('points_1000', $badges)) {
+        if ($gamification['points'] >= 1000 && ! in_array('points_1000', $badges)) {
             $badges[] = 'points_1000';
         }
 
         $gamification['badges'] = $badges;
+
         return $gamification;
     }
 
@@ -144,12 +148,12 @@ class GamificationService
     private function getDefaultGamificationData(): array
     {
         return [
-            'current_streak' => 0,
-            'longest_streak' => 0,
+            'current_streak'  => 0,
+            'longest_streak'  => 0,
             'last_entry_date' => null,
-            'points' => 0,
-            'level' => 'Débutant',
-            'badges' => [],
+            'points'          => 0,
+            'level'           => 'Débutant',
+            'badges'          => [],
         ];
     }
 }

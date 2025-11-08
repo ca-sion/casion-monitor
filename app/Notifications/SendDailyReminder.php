@@ -47,7 +47,7 @@ class SendDailyReminder extends Notification
         $streak = $athlete->metadata['gamification']['current_streak'] ?? 0;
 
         if ($streak > 1) {
-            return "Bravo, continue ta série ! 🔥";
+            return 'Bravo, continue ta série ! 🔥';
         }
 
         return "C'est l'heure de tes métriques !";

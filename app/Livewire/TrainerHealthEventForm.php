@@ -7,14 +7,12 @@ use App\Models\Athlete;
 use App\Models\Trainer;
 use Livewire\Component;
 use App\Models\HealthEvent;
-use App\Models\Professional;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Url;
 use App\Enums\HealthEventType;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Components\Textarea;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\TextInput;
@@ -24,7 +22,6 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 
@@ -69,8 +66,8 @@ class TrainerHealthEventForm extends Component implements HasActions, HasSchemas
 
         if (! $this->healthEvent) {
             $this->form->fill([
-                'injury_id'  => $this->injury?->id,
-                'date'       => $date,
+                'injury_id'           => $this->injury?->id,
+                'date'                => $date,
                 'reported_by_athlete' => true,
             ]);
         }

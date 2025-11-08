@@ -155,10 +155,10 @@ enum MetricType: string implements HasLabel
     public function getScaleHint(): ?string
     {
         return match ($this) {
-            self::MORNING_SLEEP_QUALITY    => 'très mauvaise ➝ excellente',
-            self::MORNING_GENERAL_FATIGUE  => 'pas fatigué ➝ épuisé',
-            self::MORNING_PAIN             => 'aucune ➝ très fortes',
-            self::MORNING_MOOD_WELLBEING   => 'très mauvaise ➝ excellente',
+            self::MORNING_SLEEP_QUALITY   => 'très mauvaise ➝ excellente',
+            self::MORNING_GENERAL_FATIGUE => 'pas fatigué ➝ épuisé',
+            self::MORNING_PAIN            => 'aucune ➝ très fortes',
+            self::MORNING_MOOD_WELLBEING  => 'très mauvaise ➝ excellente',
 
             self::PRE_SESSION_ENERGY_LEVEL => 'très bas ➝ très haut',
             self::PRE_SESSION_LEG_FEEL     => 'très lourdes ➝ très légères',
@@ -183,7 +183,7 @@ enum MetricType: string implements HasLabel
                 1 = Nuit horrible, tu as très mal dormi, tu te sens épuisé(e).
                 5 = Nuit moyenne, tu as dormi mais tu ne te sens pas super frais(fraîche).
                 10 = Nuit parfaite, tu as dormi comme un bébé et tu te sens en pleine forme !',
-            self::MORNING_SLEEP_DURATION => 'Durée totale de sommeil, calculée automatiquement à partir de l\'heure de coucher et de réveil.',
+            self::MORNING_SLEEP_DURATION  => 'Durée totale de sommeil, calculée automatiquement à partir de l\'heure de coucher et de réveil.',
             self::MORNING_GENERAL_FATIGUE => "Comment te sens-tu globalement ce matin ? Évalue ton niveau de fatigue sur une échelle de 1 à 10.
                 1 = Pas fatigué(e) du tout, tu as plein d'énergie.
                 5 = Fatigue normale, tu sens que tu as besoin de te réveiller.

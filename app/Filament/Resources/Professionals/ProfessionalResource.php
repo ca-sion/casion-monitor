@@ -2,19 +2,19 @@
 
 namespace App\Filament\Resources\Professionals;
 
-use App\Filament\Resources\Professionals\Pages\CreateProfessional;
-use App\Filament\Resources\Professionals\Pages\EditProfessional;
-use App\Filament\Resources\Professionals\Pages\ListProfessionals;
-use App\Filament\Resources\Professionals\Schemas\ProfessionalForm;
-use App\Filament\Resources\Professionals\Tables\ProfessionalsTable;
-use App\Models\Professional;
 use BackedEnum;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use App\Models\Professional;
+use Filament\Schemas\Schema;
+use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Resources\Professionals\Pages\EditProfessional;
+use App\Filament\Resources\Professionals\Pages\ListProfessionals;
+use App\Filament\Resources\Professionals\Pages\CreateProfessional;
+use App\Filament\Resources\Professionals\Schemas\ProfessionalForm;
+use App\Filament\Resources\Professionals\Tables\ProfessionalsTable;
 
 class ProfessionalResource extends Resource
 {
@@ -44,9 +44,9 @@ class ProfessionalResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListProfessionals::route('/'),
+            'index'  => ListProfessionals::route('/'),
             'create' => CreateProfessional::route('/create'),
-            'edit' => EditProfessional::route('/{record}/edit'),
+            'edit'   => EditProfessional::route('/{record}/edit'),
         ];
     }
 

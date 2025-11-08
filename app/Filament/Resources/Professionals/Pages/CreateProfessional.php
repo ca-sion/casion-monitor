@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Professionals\Pages;
 
-use App\Filament\Resources\Professionals\ProfessionalResource;
 use Filament\Resources\Pages\CreateRecord;
+use App\Filament\Resources\Professionals\ProfessionalResource;
 
 class CreateProfessional extends CreateRecord
 {

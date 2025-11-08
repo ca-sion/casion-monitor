@@ -8,7 +8,6 @@ use App\Livewire\AthleteInjuryList;
 use App\Livewire\AthleteInjuryShow;
 use App\Livewire\AthleteMonthlyForm;
 use App\Livewire\AthleteFeedbackForm;
-use App\Livewire\MedicalFeedbackForm;
 use App\Livewire\TrainerFeedbackForm;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -20,7 +19,6 @@ use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
 use App\Http\Controllers\ManifestController;
-use App\Livewire\TrainerMedicalFeedbackEdit;
 
 Route::get('/', function () {
     return view('welcome');

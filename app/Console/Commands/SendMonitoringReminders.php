@@ -62,7 +62,7 @@ class SendMonitoringReminders extends Command
             if ($athlete) {
                 if ($athlete->pushSubscriptions()->exists() || $athlete->telegram_chat_id) {
                     $this->info("Sending reminder to athlete {$athlete->name} for {$preference->notification_time}...");
-                    $athlete->notify(new SendDailyReminder());
+                    $athlete->notify(new SendDailyReminder);
                 } else {
                     $this->warn("Athlete {$athlete->name} has no active push or Telegram subscriptions.");
                 }

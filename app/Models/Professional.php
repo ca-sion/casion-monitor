@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Professional extends Model
@@ -20,7 +19,7 @@ class Professional extends Model
     protected function casts(): array
     {
         return [
-            'type'   => ProfessionalType::class,
+            'type' => ProfessionalType::class,
         ];
     }
 
@@ -28,17 +27,15 @@ class Professional extends Model
     {
         return $this->hasMany(HealthEvent::class);
     }
-    
+
     /**
      * Définit le mutateur pour l'attribut 'name'.
-     *
-     * @return \Illuminate\Database\Eloquent\Casts\Attribute
      */
     protected function name(): Attribute
     {
         return Attribute::make(
             set: fn (?string $value) => [
-                'name' => $this->first_name . ' ' . $this->last_name,
+                'name' => $this->first_name.' '.$this->last_name,
             ],
         );
     }
