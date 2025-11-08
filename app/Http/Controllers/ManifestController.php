@@ -26,11 +26,17 @@ class ManifestController extends Controller
             'display'          => 'standalone',
             'background_color' => '#FFFFFF',
             'theme_color'      => '#000000',
-            'description'      => 'Application de monitoring pour le CA Sion.',
+            'description'      => 'Application de suivi des athlètes pour le CA Sion.',
             'icons'            => [
                 [
-                    'src'     => url('favicon.png'),
+                    'src'     => url('web-app-manifest-192x192.png'),
                     'sizes'   => '192x192',
+                    'type'    => 'image/png',
+                    'purpose' => 'any maskable',
+                ],
+                [
+                    'src'     => url('web-app-manifest-512x512.png'),
+                    'sizes'   => '512x512',
                     'type'    => 'image/png',
                     'purpose' => 'any maskable',
                 ],
