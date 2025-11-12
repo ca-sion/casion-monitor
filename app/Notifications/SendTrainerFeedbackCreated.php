@@ -2,8 +2,8 @@
 
 namespace App\Notifications;
 
-use App\Models\Feedback;
 use App\Models\Trainer;
+use App\Models\Feedback;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
