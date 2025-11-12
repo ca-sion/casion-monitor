@@ -141,4 +141,91 @@ class MetricMenstrualService
             'last_period_start' => $lastPeriodStart ? $lastPeriodStart->format('d.m.Y') : null,
         ];
     }
+
+    /**
+     * Compare la moyenne d'une métrique donnée entre deux phases du cycle menstruel.
+     *
+     * @param string $phaseA Phase de comparaison (ex: 'Lutéale')
+     * @param string $phaseB Phase de référence (ex: 'Folliculaire')
+     * @param int $daysToAnalyze Nombre de jours à analyser en arrière.
+     * @return array Résultat de la comparaison.
+     */
+    public function compareMetricAcrossPhases(
+        Athlete $athlete,
+        MetricType $metricType,
+        string $phaseA = 'Lutéale',
+        string $phaseB = 'Folliculaire',
+        int $daysToAnalyze = 90
+    ): array {
+        // 1. Récupérer l'historique des cycles (J1) sur la dernière année pour être robuste
+        $j1Metrics = $athlete->metrics()
+            ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
+            ->where('value', 1)
+            ->where('date', '>=', Carbon::now()->subYear())
+            ->orderBy('date', 'asc')
+            ->get();
+
+        if ($j1Metrics->count() < 2) {
+            return ['impact' => 'n/a', 'reason' => 'Données de cycle insuffisantes (moins de 2 J1).'];
+        }
+
+        // 2. Récupérer les métriques à analyser sur la période voulue
+        $metricsToAnalyze = $athlete->metrics()
+            ->where('metric_type', $metricType->value)
+            ->where('date', '>=', Carbon::now()->subDays($daysToAnalyze))
+            ->orderBy('date', 'asc')
+            ->get();
+
+        $metricsByPhase = [$phaseA => [], $phaseB => []];
+
+        // 3. Attribuer chaque métrique à une phase
+        foreach ($metricsToAnalyze as $metric) {
+            $metricDate = Carbon::parse($metric->date);
+            
+            // Trouver le J1 qui précède ou correspond à la date de la métrique
+            $previousJ1 = $j1Metrics->last(fn ($j1) => Carbon::parse($j1->date) <= $metricDate);
+            if (!$previousJ1) continue;
+
+            // Trouver le J1 qui suit
+            $nextJ1 = $j1Metrics->first(fn ($j1) => Carbon::parse($j1->date) > Carbon::parse($previousJ1->date));
+            if (!$nextJ1) continue;
+
+            $cycleLength = Carbon::parse($nextJ1->date)->diffInDays(Carbon::parse($previousJ1->date));
+            $dayInCycle = $metricDate->diffInDays(Carbon::parse($previousJ1->date)) + 1;
+
+            // Déterminer la phase (logique simplifiée de `deduceMenstrualCyclePhase`)
+            $phase = 'Inconnue';
+            if ($dayInCycle <= 5) $phase = 'Menstruelle';
+            elseif ($dayInCycle > 5 && $dayInCycle < ($cycleLength / 2)) $phase = 'Folliculaire';
+            elseif ($dayInCycle >= ($cycleLength / 2) && $dayInCycle <= ($cycleLength / 2) + 2) $phase = 'Ovulatoire';
+            elseif ($dayInCycle > ($cycleLength / 2) + 2) $phase = 'Lutéale';
+
+            if (array_key_exists($phase, $metricsByPhase)) {
+                $metricsByPhase[$phase][] = $metric->value;
+            }
+        }
+
+        // 4. Calculer les moyennes et comparer
+        $avgA = !empty($metricsByPhase[$phaseA]) ? array_sum($metricsByPhase[$phaseA]) / count($metricsByPhase[$phaseA]) : null;
+        $avgB = !empty($metricsByPhase[$phaseB]) ? array_sum($metricsByPhase[$phaseB]) / count($metricsByPhase[$phaseB]) : null;
+
+        if ($avgA === null || $avgB === null) {
+            return ['impact' => 'n/a', 'reason' => "Pas assez de données pour la phase {$phaseA} ou {$phaseB}."];
+        }
+
+        $difference = $avgA - $avgB;
+        $impact = 'stable';
+        // Seuil de 10% de la moyenne de référence pour être significatif
+        if ($difference > ($avgB * 0.1)) $impact = 'higher'; 
+        if ($difference < -($avgB * 0.1)) $impact = 'lower';
+
+        return [
+            'impact' => $impact,
+            'difference' => round(abs($difference), 1),
+            'avg_phase_a' => round($avgA, 1),
+            'avg_phase_b' => round($avgB, 1),
+            'phase_a' => $phaseA,
+            'phase_b' => $phaseB,
+        ];
+    }
 }

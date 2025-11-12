@@ -100,7 +100,7 @@ class MetricAlertsService
             $allAlerts = array_merge($allAlerts, $this->getReadinessAlerts($athlete, $athleteMetrics));
         }
 
-        if (in_array('menstrual', $includeAlerts) && $athlete->gender->value === 'w') {
+        if (in_array('menstrual', $includeAlerts) && $athlete->gender?->value === 'w') {
             $allAlerts = array_merge($allAlerts, $this->getMenstrualAlerts($athlete, $athleteMetrics));
         }
 
@@ -455,5 +455,26 @@ class MetricAlertsService
     protected function addAlert(array &$alerts, string $type, string $message): void
     {
         $alerts[] = ['type' => $type, 'message' => $message];
+    }
+
+    /**
+     * Point d'entrée simplifié pour le ReportService pour vérifier toutes les alertes pertinentes pour une journée.
+     *
+     * @param Athlete $athlete
+     * @param Collection $dailyMetrics
+     * @return array
+     */
+    public function checkAllAlerts(Athlete $athlete, Collection $dailyMetrics): array
+    {
+        $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $athletePlanWeeks = $athlete->currentTrainingPlan?->weeks ?? collect();
+        
+        // Définir les types d'alertes à inclure pour une vérification quotidienne
+        $options = [
+            'include_alerts' => ['general', 'charge', 'readiness', 'menstrual'],
+        ];
+
+        // Utiliser la méthode getAlerts existante avec les métriques quotidiennes et le plan de la semaine
+        return $this->getAlerts($athlete, $dailyMetrics, $athletePlanWeeks, $options);
     }
 }

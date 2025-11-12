@@ -156,4 +156,12 @@ class GamificationService
             'badges'          => [],
         ];
     }
+
+    /**
+     * Retrieve gamification data for an athlete.
+     */
+    public function getGamificationData(Athlete $athlete): array
+    {
+        return $athlete->metadata['gamification'] ?? $this->getDefaultGamificationData();
+    }
 }

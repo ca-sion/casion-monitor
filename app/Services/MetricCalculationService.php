@@ -179,4 +179,32 @@ class MetricCalculationService
 
         return $cih / $cph;
     }
+
+    /**
+     * Orchestre le calcul et retourne le dernier ratio CIH/CPH pour la semaine se terminant à $endDate.
+     */
+    public function getLastRatioCihCph(Athlete $athlete, Carbon $endDate): float
+    {
+        $startOfWeek = $endDate->copy()->startOfWeek();
+        $endOfWeek = $endDate->copy()->endOfWeek(Carbon::MONDAY);
+        
+        $planWeek = $athlete->currentTrainingPlan?->weeks()->where('start_date', $startOfWeek)->first();
+
+        if (! $planWeek) {
+            return 0.0; // Pas de semaine de plan correspondante
+        }
+
+        // 2. Calculer la CPH (Charge Planifiée)
+        $cph = $this->calculateCph($planWeek);
+
+        // 3. Calculer la CIH (Charge Interne)
+        $metricsForWeek = $athlete->metrics()
+            ->whereBetween('date', [$startOfWeek, $endOfWeek])
+            ->get();
+        
+        $cih = $this->calculateCihForCollection($metricsForWeek);
+
+        // 4. Calculer et retourner le ratio
+        return $this->calculateRatio($cih, $cph);
+    }
 }

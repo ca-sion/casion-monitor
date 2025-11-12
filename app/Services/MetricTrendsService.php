@@ -192,4 +192,179 @@ class MetricTrendsService
             'change' => $change,
         ];
     }
+
+    /**
+     * Calcule le ratio de charge de travail aiguë:chronique (ACWR).
+     * Charge aiguë = Moyenne de la CIH sur les 7 derniers jours.
+     * Charge chronique = Moyenne de la CIH sur les 28 derniers jours (4 semaines).
+     *
+     * @return array ['ratio' => float, 'acute_load' => float, 'chronic_load' => float]
+     */
+    public function calculateAcwr(Athlete $athlete, Carbon $endDate): array
+    {
+        // On a besoin de 4 semaines complètes + la semaine actuelle, donc ~35 jours de données.
+        $startDate = $endDate->copy()->subDays(34);
+
+        $cihMetrics = $athlete->metrics()
+            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get()
+            ->groupBy(fn ($m) => Carbon::parse($m->date)->startOfWeek()->toDateString())
+            ->map(fn ($weekMetrics) => $weekMetrics->sum('value'));
+
+        if ($cihMetrics->count() < 4) {
+            return ['ratio' => 0, 'acute_load' => 0, 'chronic_load' => 0, 'reason' => 'Données insuffisantes.'];
+        }
+
+        // La charge aiguë est la charge de la dernière semaine disponible.
+        $acuteLoad = $cihMetrics->last();
+
+        // La charge chronique est la moyenne des 4 dernières semaines.
+        $chronicLoad = $cihMetrics->slice(0, 4)->avg();
+
+        if ($chronicLoad == 0) {
+            return ['ratio' => 0, 'acute_load' => $acuteLoad, 'chronic_load' => 0];
+        }
+
+        $acwr = $acuteLoad / $chronicLoad;
+
+        return [
+            'ratio'        => round($acwr, 2),
+            'acute_load'   => $acuteLoad,
+            'chronic_load' => round($chronicLoad, 2),
+        ];
+    }
+
+    /**
+     * Compte le nombre de jours de "Damping" (amortissement psychologique).
+     * Damping = Humeur élevée malgré une VFC ou un SBM bas.
+     */
+    public function getDampingCount(Athlete $athlete, Carbon $startDate, Carbon $endDate): int
+    {
+        $metrics = $athlete->metrics()
+            ->whereIn('metric_type', [
+                MetricType::MORNING_HRV->value,
+                MetricType::MORNING_MOOD_WELLBEING->value,
+            ])
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get();
+
+        $sbmMetrics = collect();
+        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+            $dailyMetrics = $metrics->where('date', $date->toDateString());
+            $sbm = app(MetricCalculationService::class)->calculateSbmForCollection($dailyMetrics);
+            if ($sbm !== null) {
+                $sbmMetrics->push((object)['date' => $date->toDateString(), 'value' => $sbm]);
+            }
+        }
+
+        $hrvAvg = $metrics->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
+        $sbmAvg = $sbmMetrics->avg('value');
+
+        if ($hrvAvg == 0 || $sbmAvg == 0) {
+            return 0;
+        }
+
+        $dampingDays = 0;
+        $groupedMetrics = $metrics->groupBy('date');
+
+        foreach ($groupedMetrics as $date => $dailyMetrics) {
+            $hrv = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_HRV->value)?->value;
+            $mood = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)?->value;
+            $sbm = $sbmMetrics->firstWhere('date', $date)?->value;
+
+            if ($mood === null || $mood < 8) continue;
+
+            $physioFatigue = false;
+            if ($hrv !== null && $hrv < $hrvAvg * 0.9) $physioFatigue = true;
+            if ($sbm !== null && $sbm < $sbmAvg * 0.9) $physioFatigue = true;
+
+            if ($physioFatigue) {
+                $dampingDays++;
+            }
+        }
+
+        return $dampingDays;
+    }
+
+    /**
+     * Vérifie si on a assez de données pour une corrélation.
+     */
+    public function hasEnoughDataForCorrelation(Athlete $athlete, string $metricA, string $metricB, int $days): bool
+    {
+        $metricsA = $athlete->metrics()->where('metric_type', $metricA)->where('date', '>=', Carbon::now()->subDays($days))->count();
+        $metricsB = $athlete->metrics()->where('metric_type', $metricB)->where('date', '>=', Carbon::now()->subDays($days))->count();
+        
+        // On a besoin d'au moins 5 points de données pour une corrélation minimale
+        return min($metricsA, $metricsB) >= 5;
+    }
+
+    /**
+     * Calcule la corrélation de Pearson entre deux types de métriques sur une période donnée.
+     *
+     * @return array ['correlation' => float|null, 'impact_size' => float|null, 'reason' => string|null]
+     */
+    public function calculateCorrelation(Athlete $athlete, MetricType $metricTypeA, MetricType $metricTypeB, int $days): array
+    {
+        $startDate = Carbon::now()->subDays($days);
+        
+        $collectionA = $athlete->metrics()
+            ->where('metric_type', $metricTypeA->value)
+            ->where('date', '>=', $startDate)
+            ->orderBy('date')
+            ->get()->map(fn($m) => (object)['date' => $m->date->toDateString(), 'value' => $m->value]);
+
+        $collectionB = $athlete->metrics()
+            ->where('metric_type', $metricTypeB->value)
+            ->where('date', '>=', $startDate)
+            ->orderBy('date')
+            ->get()->map(fn($m) => (object)['date' => $m->date->toDateString(), 'value' => $m->value]);
+
+        return $this->calculateCorrelationFromCollections($collectionA, $collectionB);
+    }
+
+    /**
+     * Calcule la corrélation de Pearson entre deux collections de données.
+     *
+     * @param Collection $collectionA Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
+     * @param Collection $collectionB Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
+     * @return array ['correlation' => float|null, 'impact_size' => float|null, 'reason' => string|null]
+     */
+    public function calculateCorrelationFromCollections(Collection $collectionA, Collection $collectionB): array
+    {
+        $valuesA = $collectionA->keyBy('date');
+        $valuesB = $collectionB->keyBy('date');
+
+        $commonDates = $valuesA->keys()->intersect($valuesB->keys());
+
+        if ($commonDates->count() < 5) {
+            return ['correlation' => null, 'impact_size' => null, 'reason' => 'Pas assez de points de données communs (min 5).'];
+        }
+
+        $vecA = $commonDates->map(fn ($date) => $valuesA[$date]->value)->values();
+        $vecB = $commonDates->map(fn ($date) => $valuesB[$date]->value)->values();
+
+        $n = $commonDates->count();
+        $sumA = $vecA->sum();
+        $sumB = $vecB->sum();
+        $sumASq = $vecA->map(fn ($v) => $v * $v)->sum();
+        $sumBSq = $vecB->map(fn ($v) => $v * $v)->sum();
+        $pSum = $commonDates->map(fn ($date) => $valuesA[$date]->value * $valuesB[$date]->value)->sum();
+
+        $num = $pSum - ($sumA * $sumB / $n);
+        $den = sqrt(($sumASq - pow($sumA, 2) / $n) * ($sumBSq - pow($sumB, 2) / $n));
+
+        if ($den == 0) {
+            return ['correlation' => 0, 'impact_size' => 0, 'reason' => 'Dénominateur nul, corrélation nulle.'];
+        }
+
+        $correlation = $num / $den;
+        $slope = ($den > 0) ? $num / ($sumASq - pow($sumA, 2) / $n) : 0;
+
+        return [
+            'correlation' => round($correlation, 2),
+            'impact_size' => round($slope, 2),
+        ];
+    }
 }

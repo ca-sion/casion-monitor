@@ -19,6 +19,7 @@ use App\Http\Controllers\TrainerController;
 use App\Http\Middleware\AthleteHashProtect;
 use App\Http\Middleware\TrainerHashProtect;
 use App\Http\Controllers\ManifestController;
+use App\Http\Controllers\ReportController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -52,6 +53,10 @@ Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}/health-events/create', AthleteHealthEventForm::class)->name('athletes.health-events.create');
     Route::get('/a/{hash}/health-events/{healthEvent}/edit', AthleteHealthEventForm::class)->name('athletes.health-events.edit');
     Route::get('/a/{hash}/injuries/{injury}/health-events/create', AthleteHealthEventForm::class)->name('athletes.injuries.health-events.create');
+    Route::get('/a/{hash}/reports/daily', [ReportController::class, 'showDailyReport'])->name('reports.daily.show');
+    Route::get('/a/{hash}/reports/weekly', [ReportController::class, 'showWeeklyReport'])->name('reports.weekly.show');
+    Route::get('/a/{hash}/reports/monthly', [ReportController::class, 'showMonthlyReport'])->name('reports.monthly.show');
+    Route::get('/a/{hash}/reports/biannual', [ReportController::class, 'showBiannualReport'])->name('reports.biannual.show');
 });
 
 Route::get('/run/reminders', function () {
