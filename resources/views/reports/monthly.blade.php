@@ -1,5 +1,5 @@
 <x-layouts.athlete :title="$athlete->name">
-<div class="container mx-auto px-4 py-8 space-y-6">
+<div class="container mx-auto py-8 space-y-6">
     <div>
         <h1 class="text-3xl font-bold text-gray-800">Rapport mensuel</h1>
         <p class="text-gray-500">Mois se terminant le : {{ \Carbon\Carbon::parse($report['end_date'])->locale('fr_CH')->isoFormat('LL') }}</p>
