@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Enums\CalculatedMetric;
 use App\Services\MetricService;
+use App\Services\ReportService;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -120,20 +121,11 @@ class AthleteController extends Controller
             false
         );
 
-        // Préparer les données pour le graphique hebdomadaire combiné
-        $sbmData = $athleteData->weekly_metrics_data['sbm']['chart_data'] ?? ['labels' => [], 'data' => []];
-        $ratioData = $athleteData->weekly_metrics_data['ratio_cih_normalized_cph']['chart_data'] ?? ['labels' => [], 'data' => []];
+        // Reports
+        $endDate = Carbon::today(); 
+        $reportWeeklyData = resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate);
 
-        $combinedWeeklyChartData = [];
-        if (! empty($sbmData['labels'])) {
-            foreach ($sbmData['labels'] as $index => $label) {
-                $combinedWeeklyChartData[] = [
-                    'label' => $label,
-                    'sbm'   => round(data_get($sbmData['data'], $index), 2) ?? null,
-                    'ratio' => round(data_get($ratioData['data'], $index), 2) ?? null,
-                ];
-            }
-        }
+        $reportData = $reportWeeklyData;
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
@@ -155,13 +147,12 @@ class AthleteController extends Controller
             'period_label'                  => $period,
             'period_options'                => $periodOptions,
             'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable,
-            'display_table_metric_types'    => $displayTableMetricTypes,
             'weekly_planned_volume'         => $weeklyPlannedVolume,
             'weekly_planned_intensity'      => $weeklyPlannedIntensity,
             'healthEvents'                  => $athlete->healthEvents()->limit(12)->orderBy('date', 'desc')->get(),
             'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
-            'combinedWeeklyChartData'       => $combinedWeeklyChartData,
+            'report'                        => $reportData,
         ];
 
         if ($request->expectsJson()) {
@@ -232,24 +223,6 @@ class AthleteController extends Controller
             }
         }
 
-        // Semaines du plan d'entraînement (si un lundi)
-        // if ($athlete->currentTrainingPlan) {
-        //     $trainingPlanWeeks = TrainingPlanWeek::where('training_plan_id', $athlete->currentTrainingPlan->id)
-        //         ->when($startDate, fn ($q) => $q->where('start_date', '>=', $startDate))
-        //         ->get();
-
-        //     foreach ($trainingPlanWeeks as $week) {
-        //         $weekStartDate = Carbon::parse($week->start_date);
-        //         if ($weekStartDate->isMonday()) {
-        //             $allTimelineItems[] = [
-        //                 'date' => $weekStartDate,
-        //                 'type' => 'training_plan_week',
-        //                 'data' => $week,
-        //             ];
-        //         }
-        //     }
-        // }
-
         // 3. Trier tous les éléments par date, puis les grouper
         $groupedItems = collect($allTimelineItems)
             ->sortByDesc(fn ($item) => Carbon::parse($item['date']))
@@ -278,12 +251,129 @@ class AthleteController extends Controller
             'periodOptions'     => $periodOptions,
             'currentPeriod'     => $period,
         ];
-        // dd($groupedItems);
 
         if ($request->expectsJson()) {
             return response()->json($data);
         }
 
         return view('athletes.journal', $data);
+    }
+
+    public function statistics(Request $request): View|JsonResponse
+    {
+        $athlete = Auth::guard('athlete')->user();
+
+        if (! $athlete) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        $period = $request->input('period', 'last_30_days');
+
+        // Définir les types de métriques "brutes" à afficher dans les cartes individuelles
+        $dashboardMetricTypes = [
+            MetricType::MORNING_HRV,
+            MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::MORNING_PAIN,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
+            MetricType::MORNING_BODY_WEIGHT_KG,
+        ];
+
+        // Définir les types de métriques à afficher dans le tableau des données quotidiennes
+        $displayTableMetricTypes = [
+            MetricType::MORNING_HRV,
+            MetricType::MORNING_GENERAL_FATIGUE,
+            MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::MORNING_MOOD_WELLBEING,
+            MetricType::MORNING_PAIN,
+            MetricType::MORNING_PAIN_LOCATION,
+            MetricType::POST_SESSION_SESSION_LOAD,
+            MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
+            MetricType::MORNING_BODY_WEIGHT_KG,
+        ];
+
+        // Définir les types de métriques "calculées" à afficher
+        $calculatedMetricTypes = [
+            CalculatedMetric::SBM,
+            CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
+        ];
+
+        // Préparer les options pour l'appel unique à getAthletesData
+        $options = [
+            'period'                       => $period,
+            'metric_types'                 => $dashboardMetricTypes,
+            'calculated_metrics'           => $calculatedMetricTypes,
+            'include_dashboard_metrics'    => true,
+            'include_latest_daily_metrics' => true,
+            'include_alerts'               => [],
+            'include_menstrual_cycle'      => false,
+            'include_readiness_status'     => false,
+            'include_weekly_metrics'       => true,
+        ];
+
+        // Appel unique pour avoir toutes les données de l'athlète
+        $athleteData = $this->metricService->getAthletesData(collect([$athlete]), $options)->first();
+
+        // Extraire les données de l'athlète enrichi
+        $metricsDataForDashboard = $athleteData->dashboard_metrics_data ?? [];
+        $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
+
+
+        // Traiter l'historique des métriques pour la préparation du tableau
+        $processedDailyMetricsForTable = $this->metricService->prepareDailyMetricsForTableView(
+            $latestDailyMetrics,
+            $displayTableMetricTypes,
+            $athlete,
+            false
+        );
+
+        // Préparer les données pour le graphique hebdomadaire combiné
+        $sbmData = $athleteData->weekly_metrics_data['sbm']['chart_data'] ?? ['labels' => [], 'data' => []];
+        $ratioData = $athleteData->weekly_metrics_data['ratio_cih_normalized_cph']['chart_data'] ?? ['labels' => [], 'data' => []];
+
+        $combinedWeeklyChartData = [];
+        if (! empty($sbmData['labels'])) {
+            foreach ($sbmData['labels'] as $index => $label) {
+                $combinedWeeklyChartData[] = [
+                    'label' => $label,
+                    'sbm'   => round(data_get($sbmData['data'], $index), 2) ?? null,
+                    'ratio' => round(data_get($ratioData['data'], $index), 2) ?? null,
+                ];
+            }
+        }
+
+        $periodOptions = [
+            'last_7_days'   => '7 derniers jours',
+            'last_14_days'  => '14 derniers jours',
+            'last_30_days'  => '30 derniers jours',
+            'last_90_days'  => '90 derniers jours',
+            'last_6_months' => '6 derniers mois',
+            'last_year'     => 'Dernière année',
+            'all_time'      => 'Depuis le début',
+        ];
+
+        $data = [
+            'athlete'                       => $athlete,
+            'dashboard_metrics_data'        => $metricsDataForDashboard,
+            'period_label'                  => $period,
+            'period_options'                => $periodOptions,
+            'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable,
+            'display_table_metric_types'    => $displayTableMetricTypes,
+            'combinedWeeklyChartData'       => $combinedWeeklyChartData,
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json($data);
+        }
+
+        return view('athletes.statistics', $data);
     }
 }

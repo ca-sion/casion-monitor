@@ -44,6 +44,7 @@ Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}', [AthleteController::class, 'dashboard'])->name('athletes.dashboard');
     Route::get('/a/{hash}/settings', AthleteSettings::class)->name('athletes.settings');
     Route::get('/a/{hash}/journal', [AthleteController::class, 'journal'])->name('athletes.journal');
+    Route::get('/a/{hash}/statistics', [AthleteController::class, 'statistics'])->name('athletes.statistics');
     Route::get('/a/{hash}/metrics/daily/form', AthleteDailyMetricForm::class)->name('athletes.metrics.daily.form');
     Route::get('/a/{hash}/metrics/monthly/form', AthleteMonthlyForm::class)->name('athletes.metrics.monthly.form');
     Route::get('/a/{hash}/feedbacks/create', AthleteFeedbackForm::class)->name('athletes.feedbacks.create');
