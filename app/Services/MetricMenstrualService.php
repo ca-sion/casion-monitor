@@ -348,7 +348,7 @@ class MetricMenstrualService
                 return [
                     'action'        => 'STOP! (Alerte Santé)',
                     'justification' => "Arrêtez les charges d'entraînement intenses et consultez un spécialiste. Votre cycle indique un déséquilibre potentiellement lié à un déficit énergétique ou un stress physique excessif.",
-                    'status'        => 'critical',
+                    'status'        => 'high_risk',
                 ];
             default:
                 return [

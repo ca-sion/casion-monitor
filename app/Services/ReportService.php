@@ -751,9 +751,9 @@ class ReportService
 
         // Point 3 : Tendance à long terme (le point qui 'claque')
         if ($longTermTrend['trend'] === 'worsening') {
-            $data['status'] = 'critical';
+            $data['status'] = 'high_risk';
             $data['points'][] = [
-                'status' => 'critical',
+                'status' => 'high_risk',
                 'text'   => "Tendance sur 6 mois : AGGRAVATION. L'écart de fatigue Lutéale/Folliculaire a augmenté de {$longTermTrend['change']} points. C'est un signe de désadaptation à la charge sur le long terme. Une pause active (micro-cycle de récupération) est fortement recommandée.",
             ];
         } elseif ($longTermTrend['trend'] === 'improving') {
@@ -773,10 +773,10 @@ class ReportService
         // -----------------------------------------------------------
 
         $data['recommendation'] = "Recommandation pour cette phase ({$currentPhase}) : {$phaseRec['action']}. {$phaseRec['justification']}";
-        // Le statut global est le pire des statuts entre 'critical' et le statut de la recommandation.
+        // Le statut global est le pire des statuts entre 'high_risk' et le statut de la recommandation.
         $data['status'] = match (true) {
-            $data['status'] === 'critical'     => 'critical',
-            $phaseRec['status'] === 'critical' => 'critical',
+            $data['status'] === 'high_risk'     => 'high_risk',
+            $phaseRec['status'] === 'high_risk' => 'high_risk',
             $phaseRec['status'] === 'warning'  => 'warning',
             default                            => 'optimal',
         };
