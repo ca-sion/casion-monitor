@@ -136,6 +136,14 @@ class ReportService
             'details' => $readinessStatusData['details'] ?? []
         ];
 
+        if (($score === 0 || $score == 'n/a') && $level === 'neutral' && empty($readinessStatusData['details'])) {
+            $data['status'] = 'neutral';
+            $data['summary'] = 'Veuillez renseigner vos métriques pour calculer votre score de Readiness.';
+            $data['points'] = [['status' => 'neutral', 'text' => 'Pas assez des données n\'ont été renseignées aujourd\'hui.']];
+            $data['recommendation'] = 'Renseignez vos métriques matinales, au moins, pour obtenir une analyse personnalisée de votre état de forme.';
+            return $data;
+        }
+
         if ($level === 'red') {
             $data['summary'] = 'Alerte : Risque Élevé';
             $data['points'][] = ['status' => 'high_risk', 'text' => "Un facteur majeur ({$mainPenaltyReason}) impacte fortement votre capacité à performer aujourd'hui."];
@@ -157,44 +165,103 @@ class ReportService
 
     protected function getInconsistencyAlerts(Athlete $athlete, Collection $dailyMetrics): array
     {
+        // Définir les métriques minimales pour JUSTIFIER d'afficher la section "Incohérences".
+        // On ne dépendra que de l'humeur OU des métriques de session, par exemple.
+        $minimalRelevantMetricTypes = [
+            MetricType::MORNING_MOOD_WELLBEING->value,
+            MetricType::POST_SESSION_SESSION_LOAD->value,
+        ];
+
+        $hasMinimalRelevantMetrics = $dailyMetrics->whereIn('metric_type', $minimalRelevantMetricTypes)->isNotEmpty();
+
+        // ----------------------------------------------------------------------------------
+        // 1. GESTION DES DONNÉES MINIMALES MANQUANTES
+        // ----------------------------------------------------------------------------------
+        if (!$hasMinimalRelevantMetrics) {
+            return [
+                'title' => 'Alertes et Incohérences',
+                'explanation' => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent. Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
+                'status' => 'neutral',
+                'main_metric' => null,
+                'summary' => 'Données insuffisantes pour l\'analyse des incohérences.',
+                'points' => [['status' => 'neutral', 'text' => 'Veuillez renseigner au moins une métrique matinale et/ou de session pour activer cette analyse.']],
+                // Recommandation très spécifique pour obtenir l'analyse
+                'recommendation' => 'Renseignez vos métriques post-séance (charge, fatigue, performance) et matinales (Humeur, Fatigue) pour une analyse complète.'
+            ];
+        }
+
         $alerts = $this->alertsService->checkAllAlerts($athlete, $dailyMetrics);
         $inconsistencies = [];
 
-        // ... (existing inconsistency logic)
+        // ----------------------------------------------------------------------------------
+        // 2. TESTS D'INCOHÉRENCE (Indépendants de la VFC)
+        // ----------------------------------------------------------------------------------
+
+        // TEST 1 : Charge faible / Fatigue subjective élevée (Fatigue non liée au sport)
         $sessionLoad = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)?->value;
         $subjectiveFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value)?->value;
+        // Seuil ajusté pour l'interprétation : Charge <= 4 (Faible) ET Fatigue > 7 (Très haute)
         if ($sessionLoad !== null && $subjectiveFatigue !== null && $sessionLoad < 4 && $subjectiveFatigue > 7) {
-            $inconsistencies[] = ['status' => 'warning', 'text' => "Charge d'entraînement faible ({$sessionLoad}/10) mais vous vous sentez très fatigué ({$subjectiveFatigue}/10). Cela peut indiquer une fatigue non liée au sport (stress, travail) ou un besoin nutritionnel."];
+            $inconsistencies[] = ['status' => 'warning', 'text' => "Charge d'entraînement faible ({$sessionLoad}/10) mais vous vous sentez très fatigué ({$subjectiveFatigue}/10). Cela peut indiquer une fatigue non liée au sport (stress, travail, sommeil) ou un besoin nutritionnel."];
         }
         
+        // TEST 2 : Énergie subjective haute / Performance ressentie basse (Problème technique/tactique ou "mauvais jour")
+        $energyLevel = $dailyMetrics->firstWhere('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)?->value;
+        $perfFeel = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL->value)?->value;
+        // Seuil ajusté : Énergie > 8 (Élevée) ET Performance < 5 (Moyenne à faible)
+        if ($energyLevel !== null && $perfFeel !== null && $energyLevel > 8 && $perfFeel < 5) {
+            $inconsistencies[] = ['status' => 'warning', 'text' => "Vous vous sentiez plein d'énergie avant la séance ({$energyLevel}/10) mais la performance n'a pas suivi ({$perfFeel}/10). Le problème n'est peut-être pas physique, mais plutôt d'ordre technique, tactique ou lié au pacing."];
+        }
+
+        // ----------------------------------------------------------------------------------
+        // 3. TEST D'INCOHÉRENCE DÉPENDANT DE LA VFC (Le fameux "Damping")
+        // ----------------------------------------------------------------------------------
         $hrv = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_HRV->value)?->value;
         $mood = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)?->value;
+
+        $hrvDampingAlerted = false;
         if ($hrv !== null && $mood !== null) {
+            // NOTE : On récupère l'historique de l'athlète, ce qui peut être coûteux en base.
+            // Assurez-vous que l'appel est optimisé (indexation, cache).
             $hrvAvg = $athlete->metrics()->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
+
+            // VFC basse (chute de 10% par rapport à la moyenne) ET moral/humeur excellent (> 8)
             if ($hrvAvg > 0 && $hrv < $hrvAvg * 0.90 && $mood > 8) { 
-                $inconsistencies[] = ['status' => 'warning', 'text' => "Votre corps montre des signes de fatigue (VFC basse : {$hrv}ms) mais votre moral est excellent ({$mood}/10). Votre motivation pourrait masquer un état de fatigue réel."];
+                $inconsistencies[] = ['status' => 'high_risk', 'text' => "Votre corps montre des signes de fatigue (VFC basse : {$hrv}ms) mais votre moral est excellent ({$mood}/10). C'est un risque de Damping (Amortissement psychologique), où votre motivation masque un état de fatigue réel. Récupération recommandée."];
+                $hrvDampingAlerted = true;
             }
         }
         
-        $energyLevel = $dailyMetrics->firstWhere('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)?->value;
-        $perfFeel = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL->value)?->value;
-        if ($energyLevel !== null && $perfFeel !== null && $energyLevel > 8 && $perfFeel < 5) {
-             $inconsistencies[] = ['status' => 'warning', 'text' => "Vous vous sentiez plein d'énergie avant la séance ({$energyLevel}/10) mais la performance n'a pas suivi ({$perfFeel}/10). Le problème n'est peut-être pas physique, mais plutôt d'ordre technique ou tactique."];
-        }
-
+        // ----------------------------------------------------------------------------------
+        // 4. CONSTRUCTION DU RAPPORT FINAL
+        // ----------------------------------------------------------------------------------
         $allPoints = array_merge(
             array_map(fn($a) => ['status' => 'high_risk', 'text' => $a['message']], $alerts),
             $inconsistencies
         );
+        
+        $finalStatus = empty($allPoints) ? 'optimal' : 'warning';
+        if ($hrvDampingAlerted) {
+            $finalStatus = 'high_risk'; // Surcharge un "warning" si l'alerte Damping est présente
+        }
+
+        // GESTION DE LA RECOMMANDATION LORSQUE VFC MANQUE MAIS QUE LES AUTRES DONNÉES SONT LÀ
+        $finalRecommendation = empty($allPoints) ? null : 'Analysez ces points. Ils peuvent révéler une fatigue cachée ou d\'autres facteurs qui influencent votre performance.';
+        
+        // Si l'athlète n'a pas renseigné la VFC mais a renseigné l'humeur, on lui rappelle ce qu'il manque.
+        if ($hrv === null && $mood !== null && !$hrvDampingAlerted) {
+            $finalRecommendation = ($finalRecommendation ? $finalRecommendation . ' ' : '') . 
+                "Astuce Pro : Pour détecter les incohérences les plus fines (comme le Damping), la VFC est cruciale. Si vous n'avez pas l'équipement, vous pouvez utiliser un score de Sensation Jambes Matinal à la place pour détecter la fatigue physique." ;
+        }
 
         return [
             'title' => 'Alertes et Incohérences',
             'explanation' => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent (par exemple, votre corps montre des signes de fatigue). Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
-            'status' => empty($allPoints) ? 'optimal' : 'warning',
+            'status' => $finalStatus,
             'main_metric' => null,
             'summary' => empty($allPoints) ? 'Aucun signal faible ou alerte détecté.' : (count($allPoints) . ' point(s) d\'attention aujourd\'hui.'),
             'points' => $allPoints,
-            'recommendation' => empty($allPoints) ? null : 'Analysez ces points. Ils peuvent révéler une fatigue cachée ou d\'autres facteurs qui influencent votre performance.'
+            'recommendation' => $finalRecommendation,
         ];
     }
 
@@ -233,10 +300,13 @@ class ReportService
             } else {
                 $data['points'][] = ['status' => 'optimal', 'text' => "L'impact de la charge d'hier est modéré. Votre récupération semble aussi dépendre d'autres facteurs importants comme la qualité de votre sommeil, votre nutrition ou votre niveau de stress."];
             }
-        } else {
-            $data['points'][] = ['status' => 'neutral', 'text' => "Continuez à renseigner vos données chaque jour pour une analyse plus rapide."];
-        }
+                    } else {
+                        $sbmDates = $sbmHistoryShifted->pluck('date')->unique();
+                        $loadDates = $loadHistory->pluck('date')->unique();
+                        $validDaysCount = $sbmDates->intersect($loadDates)->count();
         
+                        $data['points'][] = ['status' => 'neutral', 'text' => "5 jours de données Charge/SBM sont nécessaires (actuellement {$validDaysCount}/5). Renseignez vos données pour activer cette analyse personnalisée."];
+                    }        
         return $data;
     }
 
@@ -254,7 +324,7 @@ class ReportService
             'red' => 'STOP. Priorité absolue à la récupération. La séance d\'aujourd\'hui doit être annulée ou remplacée par des soins (massage, étirements légers).',
             'orange', 'yellow' => 'EASY. Votre corps demande un peu de repos. Réduisez la charge prévue d\'environ 20% et concentrez-vous sur la qualité technique plutôt que sur l\'intensité.',
             'green' => 'GO ! Tous les signaux sont au vert. C\'est une excellente journée pour une séance de haute qualité et pour vous dépasser.',
-            default => 'Renseignez vos métriques du matin pour une recommandation personnalisée.',
+            default => 'Renseignez vos métriques pour une recommandation personnalisée.',
         };
         
         $summaryText = match ($status) {
@@ -264,7 +334,7 @@ class ReportService
             default => 'Données Manquantes'
         };
 
-        return [
+        $data = [
             'title' => 'Recommandation du Jour',
             'explanation' => 'Cette recommandation est votre guide personnalisé pour la journée. Elle prend en compte toutes vos données (récupération, fatigue, etc.) pour vous dire si vous devriez vous entraîner normalement ("GO !"), alléger votre séance ("EASY"), ou même prendre un repos complet ("STOP"). C\'est un conseil clair pour optimiser votre entraînement et éviter les risques.',
             'status' => $statusMap[$status] ?? 'neutral',
@@ -273,6 +343,13 @@ class ReportService
             'points' => [],
             'recommendation' => $recommendationText,
         ];
+
+        // Add a specific point if the recommendation is due to missing morning metrics
+        if ($status === 'neutral' && ($readinessStatusData['readiness_score'] ?? 0) === 0 && empty($readinessStatusData['details'])) {
+            $data['points'][] = ['status' => 'neutral', 'text' => 'La recommandation est générique car les métriques matinales nécessaires au calcul de votre Readiness sont manquantes.'];
+        }
+
+        return $data;
     }
 
     // WEEKLY ANALYSIS
@@ -294,7 +371,7 @@ class ReportService
             'title' => 'Adhésion charge planifiée (CPH)',
             'explanation' => 'Cette analyse compare la charge d\'entraînement que vous avez réellement ressentie (CIH) avec celle que votre entraîneur avait prévue (CPH). Un ratio proche de 1 signifie que vous avez suivi le plan à la lettre. Si le ratio est trop élevé, vous en avez fait plus que prévu ; s\'il est trop bas, vous en avez fait moins. Cela aide à ajuster les futurs entraînements.',
             'main_metric' => [
-                'value' => $ratioCihCph > 0 ? number_format($ratioCihCph, 2) : 'N/A',
+                'value' => $ratioCihCph > 0 ? number_format($ratioCihCph, 2) : 'n/a',
                 'label' => 'Ratio CIH/CPH',
                 'type' => 'gauge',
                 'max' => 2.0, // Max value for the gauge, can be adjusted
@@ -324,8 +401,9 @@ class ReportService
             $data['points'][] = ['status' => 'optimal', 'text' => 'Félicitations ! Votre ressenti de l\'effort correspond parfaitement à ce qui était planifié (ratio entre 0.7 et 1.3).'];
         } else {
             $data['status'] = 'neutral';
-            $data['summary'] = 'Données manquantes';
-            $data['points'][] = ['status' => 'neutral', 'text' => 'Il manque des données de charge ou un plan d\'entraînement pour calculer votre adhésion cette semaine.'];
+            $data['summary'] = 'Données insuffisantes pour l\'analyse d\'adhésion';
+            $data['points'][] = ['status' => 'neutral', 'text' => 'Il manque des données de charge (CIH) ou un plan d\'entraînement (CPH) pour calculer votre adhésion cette semaine.'];
+            $data['recommendation'] = 'Assurez-vous de renseigner vos métriques de charge post-séance et qu\'un plan d\'entraînement est assigné.';
         }
 
         return $data;
@@ -340,7 +418,7 @@ class ReportService
             'title' => 'Dépistage du risque de surcharge (ACWR)',
             'explanation' => 'L\'ACWR (Acute:Chronic Workload Ratio) est un indicateur clé pour prévenir les blessures. Il compare votre charge d\'entraînement de cette semaine (charge aiguë) à votre moyenne des 4 dernières semaines (charge chronique). Si vous augmentez trop vite votre charge (ACWR élevé), le risque de blessure augmente. L\'objectif est de rester dans une "zone idéale" pour progresser en toute sécurité.',
             'main_metric' => [
-                'value' => $acwr > 0 ? number_format($acwr, 2) : 'N/A',
+                'value' => $acwr > 0 ? number_format($acwr, 2) : 'n/a',
                 'label' => 'ACWR',
                 'type' => 'gauge',
                 'max' => 2.0,
@@ -377,7 +455,7 @@ class ReportService
         } else {
             $data['status'] = 'neutral';
             $data['summary'] = 'Données manquantes';
-            $data['points'][] = ['status' => 'neutral', 'text' => 'Il manque des données de charge sur les 4 dernières semaines pour calculer l\'ACWR.'];
+            $data['points'][] = ['status' => 'neutral', 'text' => 'Il manque des données de charge sur les 4 dernières semaines pour calculer l\'ACWR. (Historique de 28 jours de charge nécessaire).'];
         }
 
         return $data;

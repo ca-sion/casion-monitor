@@ -71,7 +71,7 @@
             </div>
         </div>
 
-        @if(isset($section['main_metric']) && $section['main_metric']['value'] !== 'N/A')
+        @if(isset($section['main_metric']) && $section['main_metric']['value'] !== 'n/a')
             <div class="mt-4 sm:mt-0 sm:ml-auto flex-shrink-0 text-left sm:text-right w-full sm:w-auto">
                 <div class="flex items-center justify-between sm:justify-end">
                     <p class="text-3xl font-extrabold text-gray-900">{{ $section['main_metric']['value'] }}</p>
