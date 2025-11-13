@@ -7,7 +7,6 @@ use App\Models\Athlete;
 use App\Enums\MetricType;
 use App\Enums\CalculatedMetric;
 use Illuminate\Support\Collection;
-use App\Models\Metric; // Pour le typage et l'accès aux données de base
 
 /**
  * ReportService : Orchestre la génération de rapports analytiques et narratifs.
@@ -17,9 +16,13 @@ use App\Models\Metric; // Pour le typage et l'accès aux données de base
 class ReportService
 {
     protected MetricCalculationService $calculationService;
+
     protected MetricTrendsService $trendsService;
+
     protected MetricAlertsService $alertsService;
+
     protected MetricReadinessService $readinessService;
+
     protected MetricMenstrualService $menstrualService;
 
     public function __construct(
@@ -42,19 +45,19 @@ class ReportService
     public function generateReport(Athlete $athlete, string $periodType, Carbon $endDate): array
     {
         $period = $this->getPeriodDates($periodType, $endDate);
-        
+
         // On récupère TOUTES les métriques nécessaires pour la plus grande période de calcul (ACWR/Damping)
         // On trie par date descendante pour fiabiliser les `take()`
         $requiredMetrics = $athlete->metrics()
             ->whereBetween('date', [$endDate->copy()->subMonths(6)->startOfDay(), $endDate->endOfDay()])
             ->orderBy('date', 'desc')
             ->get();
-        
+
         $report = [
-            'athlete_id' => $athlete->id,
+            'athlete_id'  => $athlete->id,
             'period_type' => $periodType,
-            'end_date' => $period['endDate']->toDateString(),
-            'sections' => [],
+            'end_date'    => $period['endDate']->toDateString(),
+            'sections'    => [],
         ];
 
         switch ($periodType) {
@@ -86,6 +89,7 @@ class ReportService
         $days = match ($periodType) {
             'daily' => 0, 'weekly' => 6, 'monthly' => 29, 'biannual' => 182, default => 0,
         };
+
         return ['startDate' => $startDate->subDays($days), 'endDate' => $endDate];
     }
 
@@ -96,10 +100,10 @@ class ReportService
         $previousDayMetrics = $allMetrics->where('date', $endDate->copy()->subDay()->toDateString());
 
         return [
-            'readiness_status' => $this->getReadinessStatus($athlete, $dailyMetrics, $allMetrics),
+            'readiness_status'           => $this->getReadinessStatus($athlete, $dailyMetrics, $allMetrics),
             'alerts_and_inconsistencies' => $this->getInconsistencyAlerts($athlete, $dailyMetrics),
-            'j_minus_1_correlation' => $this->getInterDayCorrelation($athlete, $allMetrics, $endDate),
-            'recommendation' => $this->getDailyRecommendation($athlete, $dailyMetrics),
+            'j_minus_1_correlation'      => $this->getInterDayCorrelation($athlete, $allMetrics, $endDate),
+            'recommendation'             => $this->getDailyRecommendation($athlete, $dailyMetrics),
         ];
     }
 
@@ -114,26 +118,26 @@ class ReportService
         $mainPenaltyReason = $readinessStatusData['details'][0]['metric_short_label'] ?? $readinessStatusData['message'] ?? 'Facteur inconnu';
 
         $statusMap = ['red' => 'high_risk', 'orange' => 'warning', 'yellow' => 'warning', 'green' => 'optimal'];
-        
+
         $data = [
-            'title' => 'Statut de Readiness quotidien',
+            'title'       => 'Statut de Readiness quotidien',
             'explanation' => 'Le score de Readiness est comme un bulletin météo de votre corps pour la journée. Il vous indique à quel point vous êtes "prêt" à vous entraîner, en prenant en compte votre sommeil, votre niveau de stress, votre humeur et votre récupération physique. Un score élevé signifie que vous êtes en pleine forme !',
-            'status' => $statusMap[$level] ?? 'neutral',
+            'status'      => $statusMap[$level] ?? 'neutral',
             'main_metric' => [
-                'value' => $score,
-                'label' => 'Score /100',
-                'type' => 'gauge',
-                'max' => 100,
+                'value'  => $score,
+                'label'  => 'Score /100',
+                'type'   => 'gauge',
+                'max'    => 100,
                 'ranges' => [
                     'high_risk' => [0, 39],
-                    'warning' => [40, 69],
-                    'optimal' => [70, 100],
+                    'warning'   => [40, 69],
+                    'optimal'   => [70, 100],
                 ],
             ],
-            'summary' => "Votre score de Readiness est de {$score}/100.",
-            'points' => [],
+            'summary'        => "Votre score de Readiness est de {$score}/100.",
+            'points'         => [],
             'recommendation' => null,
-            'details' => $readinessStatusData['details'] ?? []
+            'details'        => $readinessStatusData['details'] ?? [],
         ];
 
         if (($score === 0 || $score == 'n/a') && $level === 'neutral' && empty($readinessStatusData['details'])) {
@@ -141,13 +145,14 @@ class ReportService
             $data['summary'] = 'Veuillez renseigner vos métriques pour calculer votre score de Readiness.';
             $data['points'] = [['status' => 'neutral', 'text' => 'Pas assez des données n\'ont été renseignées aujourd\'hui.']];
             $data['recommendation'] = 'Renseignez vos métriques matinales, au moins, pour obtenir une analyse personnalisée de votre état de forme.';
+
             return $data;
         }
 
         if ($level === 'red') {
             $data['summary'] = 'Alerte : Risque Élevé';
             $data['points'][] = ['status' => 'high_risk', 'text' => "Un facteur majeur ({$mainPenaltyReason}) impacte fortement votre capacité à performer aujourd'hui."];
-            $data['recommendation'] = "Discutez-en urgemment avec votre entraîneur. Une modification ou un report de la session est très probable.";
+            $data['recommendation'] = 'Discutez-en urgemment avec votre entraîneur. Une modification ou un report de la session est très probable.';
         } elseif ($level === 'orange' || $level === 'yellow') {
             $trendChange = number_format(abs($sbmTrend['change'] ?? 0), 1);
             $data['summary'] = 'Attention : Fatigue Modérée';
@@ -157,7 +162,7 @@ class ReportService
         } else {
             $data['summary'] = 'Tout est au vert !';
             $data['points'][] = ['status' => 'optimal', 'text' => 'Votre état de forme (SBM) est stable et élevé. Vous êtes prêt à performer.'];
-            $data['recommendation'] = "Excellente préparation ! Continuez sur cette lancée et donnez le meilleur de vous-même.";
+            $data['recommendation'] = 'Excellente préparation ! Continuez sur cette lancée et donnez le meilleur de vous-même.';
         }
 
         return $data;
@@ -177,16 +182,16 @@ class ReportService
         // ----------------------------------------------------------------------------------
         // 1. GESTION DES DONNÉES MINIMALES MANQUANTES
         // ----------------------------------------------------------------------------------
-        if (!$hasMinimalRelevantMetrics) {
+        if (! $hasMinimalRelevantMetrics) {
             return [
-                'title' => 'Alertes et Incohérences',
+                'title'       => 'Alertes et Incohérences',
                 'explanation' => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent. Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
-                'status' => 'neutral',
+                'status'      => 'neutral',
                 'main_metric' => null,
-                'summary' => 'Données insuffisantes pour l\'analyse des incohérences.',
-                'points' => [['status' => 'neutral', 'text' => 'Veuillez renseigner au moins une métrique matinale et/ou de session pour activer cette analyse.']],
+                'summary'     => 'Données insuffisantes pour l\'analyse des incohérences.',
+                'points'      => [['status' => 'neutral', 'text' => 'Veuillez renseigner au moins une métrique matinale et/ou de session pour activer cette analyse.']],
                 // Recommandation très spécifique pour obtenir l'analyse
-                'recommendation' => 'Renseignez vos métriques post-séance (charge, fatigue, performance) et matinales (Humeur, Fatigue) pour une analyse complète.'
+                'recommendation' => 'Renseignez vos métriques post-séance (charge, fatigue, performance) et matinales (Humeur, Fatigue) pour une analyse complète.',
             ];
         }
 
@@ -204,7 +209,7 @@ class ReportService
         if ($sessionLoad !== null && $subjectiveFatigue !== null && $sessionLoad < 4 && $subjectiveFatigue > 7) {
             $inconsistencies[] = ['status' => 'warning', 'text' => "Charge d'entraînement faible ({$sessionLoad}/10) mais vous vous sentez très fatigué ({$subjectiveFatigue}/10). Cela peut indiquer une fatigue non liée au sport (stress, travail, sommeil) ou un besoin nutritionnel."];
         }
-        
+
         // TEST 2 : Énergie subjective haute / Performance ressentie basse (Problème technique/tactique ou "mauvais jour")
         $energyLevel = $dailyMetrics->firstWhere('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)?->value;
         $perfFeel = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL->value)?->value;
@@ -226,20 +231,20 @@ class ReportService
             $hrvAvg = $athlete->metrics()->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
 
             // VFC basse (chute de 10% par rapport à la moyenne) ET moral/humeur excellent (> 8)
-            if ($hrvAvg > 0 && $hrv < $hrvAvg * 0.90 && $mood > 8) { 
+            if ($hrvAvg > 0 && $hrv < $hrvAvg * 0.90 && $mood > 8) {
                 $inconsistencies[] = ['status' => 'high_risk', 'text' => "Votre corps montre des signes de fatigue (VFC basse : {$hrv}ms) mais votre moral est excellent ({$mood}/10). C'est un risque de Damping (Amortissement psychologique), où votre motivation masque un état de fatigue réel. Récupération recommandée."];
                 $hrvDampingAlerted = true;
             }
         }
-        
+
         // ----------------------------------------------------------------------------------
         // 4. CONSTRUCTION DU RAPPORT FINAL
         // ----------------------------------------------------------------------------------
         $allPoints = array_merge(
-            array_map(fn($a) => ['status' => 'high_risk', 'text' => $a['message']], $alerts),
+            array_map(fn ($a) => ['status' => 'high_risk', 'text' => $a['message']], $alerts),
             $inconsistencies
         );
-        
+
         $finalStatus = empty($allPoints) ? 'optimal' : 'warning';
         if ($hrvDampingAlerted) {
             $finalStatus = 'high_risk'; // Surcharge un "warning" si l'alerte Damping est présente
@@ -247,20 +252,20 @@ class ReportService
 
         // GESTION DE LA RECOMMANDATION LORSQUE VFC MANQUE MAIS QUE LES AUTRES DONNÉES SONT LÀ
         $finalRecommendation = empty($allPoints) ? null : 'Analysez ces points. Ils peuvent révéler une fatigue cachée ou d\'autres facteurs qui influencent votre performance.';
-        
+
         // Si l'athlète n'a pas renseigné la VFC mais a renseigné l'humeur, on lui rappelle ce qu'il manque.
-        if ($hrv === null && $mood !== null && !$hrvDampingAlerted) {
-            $finalRecommendation = ($finalRecommendation ? $finalRecommendation . ' ' : '') . 
-                "Astuce Pro : Pour détecter les incohérences les plus fines (comme le Damping), la VFC est cruciale. Si vous n'avez pas l'équipement, vous pouvez utiliser un score de Sensation Jambes Matinal à la place pour détecter la fatigue physique." ;
+        if ($hrv === null && $mood !== null && ! $hrvDampingAlerted) {
+            $finalRecommendation = ($finalRecommendation ? $finalRecommendation.' ' : '').
+                "Astuce Pro : Pour détecter les incohérences les plus fines (comme le Damping), la VFC est cruciale. Si vous n'avez pas l'équipement, vous pouvez utiliser un score de Sensation Jambes Matinal à la place pour détecter la fatigue physique.";
         }
 
         return [
-            'title' => 'Alertes et Incohérences',
-            'explanation' => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent (par exemple, votre corps montre des signes de fatigue). Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
-            'status' => $finalStatus,
-            'main_metric' => null,
-            'summary' => empty($allPoints) ? 'Aucun signal faible ou alerte détecté.' : (count($allPoints) . ' point(s) d\'attention aujourd\'hui.'),
-            'points' => $allPoints,
+            'title'          => 'Alertes et Incohérences',
+            'explanation'    => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent (par exemple, votre corps montre des signes de fatigue). Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
+            'status'         => $finalStatus,
+            'main_metric'    => null,
+            'summary'        => empty($allPoints) ? 'Aucun signal faible ou alerte détecté.' : (count($allPoints).' point(s) d\'attention aujourd\'hui.'),
+            'points'         => $allPoints,
             'recommendation' => $finalRecommendation,
         ];
     }
@@ -268,23 +273,23 @@ class ReportService
     protected function getInterDayCorrelation(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
         $currentSbm = $this->calculationService->calculateSbmForCollection($allMetrics->where('date', $endDate->toDateString()));
-        
+
         $sbmHistory = $this->getCalculatedMetricHistory($athlete, CalculatedMetric::SBM, 14, $endDate, $allMetrics);
         $loadHistory = $allMetrics
             ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
             ->where('date', '>=', $endDate->copy()->subDays(14))
-            ->map(fn($m) => (object)['date' => $m->date->toDateString(), 'value' => $m->value]);
+            ->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
 
-        $sbmHistoryShifted = $sbmHistory->map(fn($s) => (object)['date' => Carbon::parse($s->date)->subDay()->toDateString(), 'value' => $s->value]);
+        $sbmHistoryShifted = $sbmHistory->map(fn ($s) => (object) ['date' => Carbon::parse($s->date)->subDay()->toDateString(), 'value' => $s->value]);
         $correlationData = $this->trendsService->calculateCorrelationFromCollections($loadHistory, $sbmHistoryShifted);
 
         $data = [
-            'title' => 'Corrélation J-1 vs J : l\'impact de l\'effort',
-            'explanation' => 'Cette analyse examine le lien entre l\'intensité de votre entraînement d\'hier et votre niveau de récupération aujourd\'hui. En clair : est-ce que vos grosses séances ont un impact direct sur votre forme du lendemain ? Comprendre ce lien vous aide à mieux planifier votre récupération (sommeil, nutrition) après un effort important.',
-            'status' => 'neutral',
-            'main_metric' => null,
-            'summary' => "Votre SBM d'aujourd'hui est de ".number_format($currentSbm, 1).".",
-            'points' => [],
+            'title'          => 'Corrélation J-1 vs J : l\'impact de l\'effort',
+            'explanation'    => 'Cette analyse examine le lien entre l\'intensité de votre entraînement d\'hier et votre niveau de récupération aujourd\'hui. En clair : est-ce que vos grosses séances ont un impact direct sur votre forme du lendemain ? Comprendre ce lien vous aide à mieux planifier votre récupération (sommeil, nutrition) après un effort important.',
+            'status'         => 'neutral',
+            'main_metric'    => null,
+            'summary'        => "Votre SBM d'aujourd'hui est de ".number_format($currentSbm, 1).'.',
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -292,7 +297,7 @@ class ReportService
             $correlation = $correlationData['correlation'];
             $data['main_metric'] = [
                 'value' => number_format($correlation, 2),
-                'label' => 'Corrélation Charge/SBM'
+                'label' => 'Corrélation Charge/SBM',
             ];
             if ($correlation < -0.6) {
                 $data['points'][] = ['status' => 'warning', 'text' => "Le lien est clair : vos grosses séances d'entraînement ont un impact direct et important sur votre récupération du lendemain."];
@@ -300,13 +305,14 @@ class ReportService
             } else {
                 $data['points'][] = ['status' => 'optimal', 'text' => "L'impact de la charge d'hier est modéré. Votre récupération semble aussi dépendre d'autres facteurs importants comme la qualité de votre sommeil, votre nutrition ou votre niveau de stress."];
             }
-                    } else {
-                        $sbmDates = $sbmHistoryShifted->pluck('date')->unique();
-                        $loadDates = $loadHistory->pluck('date')->unique();
-                        $validDaysCount = $sbmDates->intersect($loadDates)->count();
-        
-                        $data['points'][] = ['status' => 'neutral', 'text' => "5 jours de données Charge/SBM sont nécessaires (actuellement {$validDaysCount}/5). Renseignez vos données pour activer cette analyse personnalisée."];
-                    }        
+        } else {
+            $sbmDates = $sbmHistoryShifted->pluck('date')->unique();
+            $loadDates = $loadHistory->pluck('date')->unique();
+            $validDaysCount = $sbmDates->intersect($loadDates)->count();
+
+            $data['points'][] = ['status' => 'neutral', 'text' => "5 jours de données Charge/SBM sont nécessaires (actuellement {$validDaysCount}/5). Renseignez vos données pour activer cette analyse personnalisée."];
+        }
+
         return $data;
     }
 
@@ -326,7 +332,7 @@ class ReportService
             'green' => 'GO ! Tous les signaux sont au vert. C\'est une excellente journée pour une séance de haute qualité et pour vous dépasser.',
             default => 'Renseignez vos métriques pour une recommandation personnalisée.',
         };
-        
+
         $summaryText = match ($status) {
             'red' => 'Récupération Nécessaire',
             'orange', 'yellow' => 'Fatigue à Gérer',
@@ -335,12 +341,12 @@ class ReportService
         };
 
         $data = [
-            'title' => 'Recommandation du Jour',
-            'explanation' => 'Cette recommandation est votre guide personnalisé pour la journée. Elle prend en compte toutes vos données (récupération, fatigue, etc.) pour vous dire si vous devriez vous entraîner normalement ("GO !"), alléger votre séance ("EASY"), ou même prendre un repos complet ("STOP"). C\'est un conseil clair pour optimiser votre entraînement et éviter les risques.',
-            'status' => $statusMap[$status] ?? 'neutral',
-            'main_metric' => null,
-            'summary' => $summaryText,
-            'points' => [],
+            'title'          => 'Recommandation du Jour',
+            'explanation'    => 'Cette recommandation est votre guide personnalisé pour la journée. Elle prend en compte toutes vos données (récupération, fatigue, etc.) pour vous dire si vous devriez vous entraîner normalement ("GO !"), alléger votre séance ("EASY"), ou même prendre un repos complet ("STOP"). C\'est un conseil clair pour optimiser votre entraînement et éviter les risques.',
+            'status'         => $statusMap[$status] ?? 'neutral',
+            'main_metric'    => null,
+            'summary'        => $summaryText,
+            'points'         => [],
             'recommendation' => $recommendationText,
         ];
 
@@ -356,10 +362,10 @@ class ReportService
     protected function generateWeeklyAnalysis(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
         return [
-            'load_adherence' => $this->getLoadAdherenceAnalysis($athlete, $endDate),
+            'load_adherence'       => $this->getLoadAdherenceAnalysis($athlete, $endDate),
             'acwr_risk_assessment' => $this->getAcwrAnalysis($athlete, $endDate),
-            'recovery_debt' => $this->getRecoveryDebtAnalysis($athlete, $allMetrics, $endDate),
-            'day_patterns' => $this->getDayPatternsAnalysis($athlete, $allMetrics, $endDate),
+            'recovery_debt'        => $this->getRecoveryDebtAnalysis($athlete, $allMetrics, $endDate),
+            'day_patterns'         => $this->getDayPatternsAnalysis($athlete, $allMetrics, $endDate),
         ];
     }
 
@@ -368,20 +374,20 @@ class ReportService
         $ratioCihCph = $this->calculationService->getLastRatioCihCph($athlete, $endDate);
 
         $data = [
-            'title' => 'Adhésion charge planifiée (CPH)',
+            'title'       => 'Adhésion charge planifiée (CPH)',
             'explanation' => 'Cette analyse compare la charge d\'entraînement que vous avez réellement ressentie (CIH) avec celle que votre entraîneur avait prévue (CPH). Un ratio proche de 1 signifie que vous avez suivi le plan à la lettre. Si le ratio est trop élevé, vous en avez fait plus que prévu ; s\'il est trop bas, vous en avez fait moins. Cela aide à ajuster les futurs entraînements.',
             'main_metric' => [
-                'value' => $ratioCihCph > 0 ? number_format($ratioCihCph, 2) : 'n/a',
-                'label' => 'Ratio CIH/CPH',
-                'type' => 'gauge',
-                'max' => 2.0, // Max value for the gauge, can be adjusted
+                'value'  => $ratioCihCph > 0 ? number_format($ratioCihCph, 2) : 'n/a',
+                'label'  => 'Ratio CIH/CPH',
+                'type'   => 'gauge',
+                'max'    => 2.0, // Max value for the gauge, can be adjusted
                 'ranges' => [
-                    'warning' => [0, 0.69], // Sous-charge
-                    'optimal' => [0.7, 1.3], // Adhésion optimale
+                    'warning'   => [0, 0.69], // Sous-charge
+                    'optimal'   => [0.7, 1.3], // Adhésion optimale
                     'high_risk' => [1.31, 2.0], // Surcharge (using high_risk for consistency with other gauges)
                 ],
             ],
-            'points' => [],
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -415,21 +421,21 @@ class ReportService
         $acwr = $acwrData['ratio'] ?? 0;
 
         $data = [
-            'title' => 'Dépistage du risque de surcharge (ACWR)',
+            'title'       => 'Dépistage du risque de surcharge (ACWR)',
             'explanation' => 'L\'ACWR (Acute:Chronic Workload Ratio) est un indicateur clé pour prévenir les blessures. Il compare votre charge d\'entraînement de cette semaine (charge aiguë) à votre moyenne des 4 dernières semaines (charge chronique). Si vous augmentez trop vite votre charge (ACWR élevé), le risque de blessure augmente. L\'objectif est de rester dans une "zone idéale" pour progresser en toute sécurité.',
             'main_metric' => [
-                'value' => $acwr > 0 ? number_format($acwr, 2) : 'n/a',
-                'label' => 'ACWR',
-                'type' => 'gauge',
-                'max' => 2.0,
+                'value'  => $acwr > 0 ? number_format($acwr, 2) : 'n/a',
+                'label'  => 'ACWR',
+                'type'   => 'gauge',
+                'max'    => 2.0,
                 'ranges' => [
-                    'low_risk' => [0, 0.79],
-                    'optimal' => [0.8, 1.29],
-                    'warning' => [1.3, 1.49],
+                    'low_risk'  => [0, 0.79],
+                    'optimal'   => [0.8, 1.29],
+                    'warning'   => [1.3, 1.49],
                     'high_risk' => [1.5, 2.0],
                 ],
             ],
-            'points' => [],
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -464,7 +470,7 @@ class ReportService
     protected function getRecoveryDebtAnalysis(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
         $sbmHistory30d = $this->getCalculatedMetricHistory($athlete, CalculatedMetric::SBM, 30, $endDate, $allMetrics);
-        
+
         $sbmAvg7d = $sbmHistory30d->where('date', '>=', $endDate->copy()->subDays(6)->toDateString())->avg('value');
         $sbmAvg30d = $sbmHistory30d->avg('value');
 
@@ -474,30 +480,30 @@ class ReportService
         }
 
         $data = [
-            'title' => 'Dette de récupération (fatigue aiguë vs chronique)',
+            'title'       => 'Dette de récupération (fatigue aiguë vs chronique)',
             'explanation' => 'La "dette de récupération" compare votre état de forme récent (moyenne des 7 derniers jours) à votre état de forme habituel (moyenne des 30 derniers jours). Si votre forme récente est nettement plus basse, cela signifie que vous accumulez de la fatigue et que vous ne récupérez pas suffisamment. C\'est un signal pour lever le pied !',
             'main_metric' => [
-                'value' => number_format($diffPercent, 1) . '%',
-                'label' => 'Tendance SBM 7j vs 30j',
-                'type' => 'gauge',
-                'min' => -20,
-                'max' => 20,
+                'value'  => number_format($diffPercent, 1).'%',
+                'label'  => 'Tendance SBM 7j vs 30j',
+                'type'   => 'gauge',
+                'min'    => -20,
+                'max'    => 20,
                 'ranges' => [
                     'warning' => [-20, -5.1], // Dette de récupération
                     'optimal' => [-5, 5],    // Équilibre maintenu
                     'neutral' => [5.1, 20],  // Tendance positive (pas de dette)
                 ],
             ],
-            'points' => [],
+            'points'         => [],
             'recommendation' => null,
         ];
-        $data['points'][] = ['status' => 'neutral', 'text' => "Votre forme moyenne sur 7 jours est de ".number_format($sbmAvg7d, 1)."/100."];
-        $data['points'][] = ['status' => 'neutral', 'text' => "Votre forme moyenne sur 30 jours est de ".number_format($sbmAvg30d, 1)."/100."];
+        $data['points'][] = ['status' => 'neutral', 'text' => 'Votre forme moyenne sur 7 jours est de '.number_format($sbmAvg7d, 1).'/100.'];
+        $data['points'][] = ['status' => 'neutral', 'text' => 'Votre forme moyenne sur 30 jours est de '.number_format($sbmAvg30d, 1).'/100.'];
 
         if ($diffPercent < -5) {
             $data['status'] = 'warning';
             $data['summary'] = 'Dette de Récupération';
-            $data['points'][] = ['status' => 'warning', 'text' => "Votre état de forme est en baisse de ".number_format(abs($diffPercent), 1)."% cette semaine par rapport à votre moyenne du mois. Vous accumulez de la fatigue."];
+            $data['points'][] = ['status' => 'warning', 'text' => 'Votre état de forme est en baisse de '.number_format(abs($diffPercent), 1).'% cette semaine par rapport à votre moyenne du mois. Vous accumulez de la fatigue.'];
             $data['recommendation'] = 'Il est temps de lever le pied. Prévoyez un jour de repos complet ou une séance de récupération très légère (étirements, mobilité).';
         } else {
             $data['status'] = 'optimal';
@@ -511,20 +517,21 @@ class ReportService
     protected function getDayPatternsAnalysis(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
         $recentMetrics = $allMetrics->where('date', '>=', $endDate->copy()->subWeeks(4));
-        
+
         $data = [
-            'title' => 'Patterns et jours clés (4 Semaines)',
-            'explanation' => 'Cette analyse vous aide à identifier vos "jours forts" et "jours faibles" au cours de la semaine, en se basant sur vos performances et ressentis des 4 dernières semaines. L\'objectif est de mieux comprendre quand vous êtes le plus performant ou le plus fatigué, pour adapter votre programme d\'entraînement et optimiser vos séances.',
-            'status' => 'neutral',
-            'main_metric' => null,
-            'summary' => 'Analyse des tendances hebdomadaires.',
-            'points' => [],
+            'title'          => 'Patterns et jours clés (4 Semaines)',
+            'explanation'    => 'Cette analyse vous aide à identifier vos "jours forts" et "jours faibles" au cours de la semaine, en se basant sur vos performances et ressentis des 4 dernières semaines. L\'objectif est de mieux comprendre quand vous êtes le plus performant ou le plus fatigué, pour adapter votre programme d\'entraînement et optimiser vos séances.',
+            'status'         => 'neutral',
+            'main_metric'    => null,
+            'summary'        => 'Analyse des tendances hebdomadaires.',
+            'points'         => [],
             'recommendation' => null,
         ];
 
         if ($recentMetrics->count() < 10) {
             $data['summary'] = 'Données insuffisantes';
             $data['points'][] = ['status' => 'neutral', 'text' => 'Pas assez de données sur les 4 dernières semaines pour identifier des tendances fiables.'];
+
             return $data;
         }
 
@@ -533,7 +540,7 @@ class ReportService
 
         $bestPerfDay = $dayAvgPerformance->sortDesc()->keys()->first();
         $worstLegFeelDay = $dayAvgLegFeel->sort()->keys()->first();
-        
+
         if ($bestPerfDay) {
             $data['points'][] = ['status' => 'optimal', 'text' => "Jour de Pic : Le {$bestPerfDay} semble être votre meilleur jour pour performer. Pensez à y placer vos séances les plus intenses."];
         }
@@ -553,28 +560,29 @@ class ReportService
         $startDate = $endDate->copy()->subDays(29);
         $sections = [
             'damping_summary' => $this->getDampingSummary($athlete, $startDate, $endDate),
-            'sleep_impact' => $this->getSleepImpactAnalysis($athlete, $allMetrics, $endDate),
-            'pain_hotspot' => $this->getPainHotspotAnalysis($athlete, $allMetrics, $endDate),
+            'sleep_impact'    => $this->getSleepImpactAnalysis($athlete, $allMetrics, $endDate),
+            'pain_hotspot'    => $this->getPainHotspotAnalysis($athlete, $allMetrics, $endDate),
         ];
 
-        if (method_exists($athlete, 'isFemale') && $athlete->isFemale()) { 
+        if ($athlete->gender == 'w') {
             $sections['menstrual_summary'] = $this->getMenstrualImpactSummary($athlete);
         }
+
         return $sections;
     }
 
     protected function getDampingSummary(Athlete $athlete, Carbon $startDate, Carbon $endDate): array
     {
         $dampingCount = $this->trendsService->getDampingCount($athlete, $startDate, $endDate);
-        
+
         $data = [
-            'title' => 'Dépistage de l\'amortissement psychologique (Damping)',
+            'title'       => 'Dépistage de l\'amortissement psychologique (Damping)',
             'explanation' => 'Le "Damping" (ou amortissement psychologique) se produit quand votre moral est excellent, mais que votre corps montre des signes de fatigue importants (par exemple, une VFC basse). C\'est un signal d\'alerte précoce de surentraînement : votre motivation vous pousse à ignorer la fatigue physique. Il est important d\'écouter ces signaux pour éviter l\'épuisement.',
             'main_metric' => [
                 'value' => $dampingCount,
                 'label' => 'Jours de Damping',
             ],
-            'points' => [],
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -586,32 +594,32 @@ class ReportService
             $data['status'] = 'warning';
             $data['summary'] = "Damping détecté {$dampingCount} fois ce mois-ci";
             $data['points'][] = ['status' => 'warning', 'text' => "Attention, votre moral élevé semble parfois masquer une fatigue physique bien réelle. C'est un signal précoce de surentraînement."];
-            $data['recommendation'] = "Accordez-vous un jour de repos *mental* complet. Déconnectez du sport pour mieux recharger les batteries, corps et esprit.";
+            $data['recommendation'] = 'Accordez-vous un jour de repos *mental* complet. Déconnectez du sport pour mieux recharger les batteries, corps et esprit.';
         }
 
         return $data;
     }
-    
+
     protected function getSleepImpactAnalysis(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
         $correlationData = $this->trendsService->calculateCorrelation($athlete, MetricType::MORNING_SLEEP_DURATION, MetricType::MORNING_GENERAL_FATIGUE, 30);
         $avgDuration = $allMetrics->where('metric_type', MetricType::MORNING_SLEEP_DURATION->value)->where('date', '>=', $endDate->copy()->subDays(29))->avg('value');
 
         $data = [
-            'title' => 'Analyse de l\'impact du sommeil (30j)',
+            'title'       => 'Analyse de l\'impact du sommeil (30j)',
             'explanation' => 'Cette analyse étudie le lien entre la durée de votre sommeil et votre niveau de fatigue général sur le dernier mois. Elle vous aide à comprendre si dormir plus longtemps réduit directement votre fatigue et à quel point le sommeil est crucial pour votre récupération et vos performances.',
             'main_metric' => [
                 'value' => number_format($avgDuration, 1),
                 'label' => 'Heures / nuit',
             ],
-            'summary' => 'En moyenne, vous dormez '.number_format($avgDuration, 1).' heures par nuit.',
-            'points' => [],
+            'summary'        => 'En moyenne, vous dormez '.number_format($avgDuration, 1).' heures par nuit.',
+            'points'         => [],
             'recommendation' => null,
         ];
 
         if (isset($correlationData['correlation'])) {
             $correlation = $correlationData['correlation'];
-            $data['points'][] = ['status' => 'neutral', 'text' => 'Corrélation Sommeil/Fatigue : ' . number_format($correlation, 2)];
+            $data['points'][] = ['status' => 'neutral', 'text' => 'Corrélation Sommeil/Fatigue : '.number_format($correlation, 2)];
 
             if ($correlation < -0.4) {
                 $data['status'] = 'optimal'; // Good that we found a key insight
@@ -636,10 +644,10 @@ class ReportService
         $painMetrics = $monthlyMetrics->where('metric_type', MetricType::MORNING_PAIN->value)->filter(fn ($m) => $m->value > 4);
 
         $data = [
-            'title' => 'Analyse des hotspots de douleur (30j)',
-            'explanation' => 'Cette analyse identifie les zones de votre corps où la douleur est la plus fréquente ou la plus intense sur le dernier mois. C\'est un "hotspot" de douleur. Repérer ces zones permet de comprendre si un problème persiste et d\'agir avant qu\'il ne se transforme en blessure plus sérieuse.',
-            'main_metric' => null,
-            'points' => [],
+            'title'          => 'Analyse des hotspots de douleur (30j)',
+            'explanation'    => 'Cette analyse identifie les zones de votre corps où la douleur est la plus fréquente ou la plus intense sur le dernier mois. C\'est un "hotspot" de douleur. Repérer ces zones permet de comprendre si un problème persiste et d\'agir avant qu\'il ne se transforme en blessure plus sérieuse.',
+            'main_metric'    => null,
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -647,6 +655,7 @@ class ReportService
             $data['status'] = 'optimal';
             $data['summary'] = 'Aucune Douleur Significative';
             $data['points'][] = ['status' => 'optimal', 'text' => 'Excellente nouvelle ! Aucune douleur supérieure à 4/10 n\'a été signalée ce mois-ci.'];
+
             return $data;
         }
 
@@ -655,9 +664,9 @@ class ReportService
             ->groupBy('value')
             ->map(fn ($g) => $g->count())
             ->sortDesc();
-        
+
         $dominantLocation = $hotspots->keys()->first() ?? 'Non spécifiée';
-        
+
         $data['main_metric'] = [
             'value' => $painMetrics->count(),
             'label' => 'Jours avec douleur > 4',
@@ -675,44 +684,103 @@ class ReportService
 
         return $data;
     }
-    
+
     protected function getMenstrualImpactSummary(Athlete $athlete): array
     {
-        $summary = $this->menstrualService->deduceMenstrualCyclePhase($athlete);
+        // L'analyse de base pour déterminer la phase actuelle (Menstruelle, Folliculaire, etc.)
+        $currentPhaseSummary = $this->menstrualService->deduceMenstrualCyclePhase($athlete);
+        $currentPhase = $currentPhaseSummary['phase'];
+
+        // 1. Impact sur la Fatigue (Lutéale vs. Folliculaire)
+        $fatigueImpact = $this->menstrualService->compareMetricAcrossPhases($athlete, MetricType::MORNING_GENERAL_FATIGUE);
+
+        // 2. Impact sur la Performance (Ressenti Post-Session)
+        $perfImpact = $this->menstrualService->compareMetricAcrossPhases($athlete, MetricType::POST_SESSION_PERFORMANCE_FEEL);
+
+        // 3. Tendance à Long Terme (Fatigue)
+        $longTermTrend = $this->menstrualService->getLongTermPhaseTrend($athlete, MetricType::MORNING_GENERAL_FATIGUE);
+
+        // 4. Recommandation pour la phase actuelle (Le Call to Action)
+        $phaseRec = $this->menstrualService->getPhaseSpecificRecommendation($athlete, $currentPhase);
+
+        // --- CONSTRUCTION DU RAPPORT FINAL ---
 
         $data = [
-            'title' => 'Analyse du Cycle Menstruel',
-            'explanation' => 'Cette analyse vous aide à comprendre comment les différentes phases de votre cycle menstruel peuvent influencer votre récupération, votre fatigue et vos performances. L\'objectif est d\'adapter votre entraînement pour qu\'il soit en harmonie avec votre corps, et non contre lui, afin d\'optimiser vos résultats et votre bien-être.',
-            'main_metric' => null,
-            'points' => [],
+            'title'          => 'Analyse du Cycle Menstruel & Adaptation',
+            'explanation'    => 'Cette analyse personnalisée révèle comment chaque phase de votre cycle influence votre corps. Le but et de vous aider à adapter votre charge d\'entraînement pour optimiser les performances et minimiser les risques. Ceci est votre clé pour une progression en harmonie avec votre biologie.',
+            'status'         => 'neutral',
+            'summary'        => "Vous êtes actuellement en phase : {$currentPhase}.",
+            'main_metric'    => ['value' => number_format($currentPhaseSummary['days_in_phase'], 0), 'label' => 'Jours dans la phase'],
+            'points'         => [],
             'recommendation' => null,
         ];
 
-        if (empty($summary['phase']) || $summary['phase'] === 'Inconnue') {
-            $data['status'] = 'neutral';
-            $data['summary'] = 'Personnalisez votre suivi';
-            $data['points'][] = ['status' => 'neutral', 'text' => 'Renseignez les informations de votre cycle pour recevoir une analyse 100% personnalisée et adapter votre entraînement.'];
+        if ($currentPhase === 'Inconnue') {
+            $data['summary'] .= ' (Données manquantes)';
+            $data['recommendation'] = $phaseRec['justification'];
+
             return $data;
         }
 
+        // -----------------------------------------------------------
+        // AJOUT DES POINTS D'ANALYSE CLÉS
+        // -----------------------------------------------------------
+
         $data['status'] = 'neutral';
-        $data['summary'] = "Vous êtes actuellement en phase : {$summary['phase']}";
-        $data['main_metric'] = [
-            'value' => $summary['days_in_phase'],
-            'label' => "Jours dans la phase",
-        ];
 
-        $fatigueImpact = $this->menstrualService->compareMetricAcrossPhases($athlete, MetricType::MORNING_GENERAL_FATIGUE);
-
-        if (isset($fatigueImpact['impact']) && $fatigueImpact['impact'] === 'higher') {
-            $data['status'] = 'warning';
-            $data['points'][] = ['status' => 'warning', 'text' => "Impact notable : Votre fatigue matinale est en moyenne {$fatigueImpact['difference']} points plus élevée en phase {$fatigueImpact['phase_a']} qu'en phase {$fatigueImpact['phase_b']}."];
-            $data['recommendation'] = "C'est une information clé. Pensez à adapter votre charge d'entraînement et à prioriser la récupération durant cette phase plus sensible.";
-        } else {
-            $data['status'] = 'optimal';
-            $data['points'][] = ['status' => 'optimal', 'text' => 'Votre récupération et votre fatigue semblent stables tout au long de votre cycle. C\'est un signe de bon équilibre.'];
+        // Point 1 : Résultat du comparatif Fatigue
+        if ($fatigueImpact['impact'] === 'higher') {
+            $data['points'][] = [
+                'status' => 'warning',
+                'text'   => "Fatigue en Lutéale : Impact notable. Votre fatigue est en moyenne {$fatigueImpact['difference']} points plus élevée en phase Lutéale qu'en phase Folliculaire. C'est le signal pour potentiellement lever le pied et se concentrer sur la récupération.",
+            ];
+        } elseif ($fatigueImpact['impact'] === 'stable') {
+            $data['points'][] = [
+                'status' => 'optimal',
+                'text'   => "Stabilité de la Fatigue : Aucune différence significative n'est détectée. Les règles n'ont pas d'influence majeure sur votre récupération perçue.",
+            ];
         }
-        
+
+        // Point 2 : Résultat du comparatif Performance
+        if ($perfImpact['impact'] === 'lower') {
+            $data['points'][] = [
+                'status' => 'warning',
+                'text'   => "Performance en Lutéale : Efficacité en baisse. Votre ressenti de performance est en moyenne {$perfImpact['difference']} points plus faible. Utilisez cette phase pour le travail technique ou les séances de faible intensité (endurance).",
+            ];
+        }
+
+        // Point 3 : Tendance à long terme (le point qui 'claque')
+        if ($longTermTrend['trend'] === 'worsening') {
+            $data['status'] = 'critical';
+            $data['points'][] = [
+                'status' => 'critical',
+                'text'   => "Tendance sur 6 mois : AGGRAVATION. L'écart de fatigue Lutéale/Folliculaire a augmenté de {$longTermTrend['change']} points. C'est un signe de désadaptation à la charge sur le long terme. Une pause active (micro-cycle de récupération) est fortement recommandée.",
+            ];
+        } elseif ($longTermTrend['trend'] === 'improving') {
+            $data['points'][] = [
+                'status' => 'optimal',
+                'text'   => "Tendance sur 6 mois : AMÉLIORATION. L'impact de votre cycle sur votre fatigue a diminué, preuve que votre stratégie d'adaptation fonctionne. Continuez ainsi !",
+            ];
+        } else {
+            $data['points'][] = [
+                'status' => 'neutral',
+                'text'   => "Tendance sur 6 mois : Stable. L'impact de votre cycle est constant. Continuez à ajuster vos séances phase par phase.",
+            ];
+        }
+
+        // -----------------------------------------------------------
+        // RÉSUMÉ ET RECOMMANDATION (Le "Call to Action")
+        // -----------------------------------------------------------
+
+        $data['recommendation'] = "Recommandation pour cette phase ({$currentPhase}) : {$phaseRec['action']}. {$phaseRec['justification']}";
+        // Le statut global est le pire des statuts entre 'critical' et le statut de la recommandation.
+        $data['status'] = match (true) {
+            $data['status'] === 'critical'     => 'critical',
+            $phaseRec['status'] === 'critical' => 'critical',
+            $phaseRec['status'] === 'warning'  => 'warning',
+            default                            => 'optimal',
+        };
+
         return $data;
     }
 
@@ -720,11 +788,12 @@ class ReportService
     protected function generateBiannualAnalysis(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
         $startDate = $endDate->copy()->subMonths(6);
+
         return [
-            'long_term_adaptation' => $this->getAdaptationAnalysis($athlete, $allMetrics, $startDate, $endDate),
+            'long_term_adaptation'    => $this->getAdaptationAnalysis($athlete, $allMetrics, $startDate, $endDate),
             'efficiency_gap_analysis' => $this->getEfficiencyGapAnalysis($athlete, $allMetrics, $startDate, $endDate),
-            'injury_pattern' => $this->getInjuryPatternAnalysis($athlete, $allMetrics, $endDate),
-            'pacing_strategy' => $this->getChargePacingAnalysis($athlete, $endDate),
+            'injury_pattern'          => $this->getInjuryPatternAnalysis($athlete, $allMetrics, $endDate),
+            'pacing_strategy'         => $this->getChargePacingAnalysis($athlete, $endDate),
         ];
     }
 
@@ -736,10 +805,10 @@ class ReportService
         $hrvTrend = $this->trendsService->calculateMetricEvolutionTrend($hrvHistory, MetricType::MORNING_HRV);
 
         $data = [
-            'title' => 'Adaptation à long terme (6 mois)',
-            'explanation' => 'Cette analyse évalue comment votre corps s\'adapte à votre programme d\'entraînement sur une longue période (6 mois). En regardant l\'évolution de votre forme générale (SBM) et de votre système nerveux (VFC), nous pouvons voir si vous devenez plus fort et plus résilient, ou si la fatigue s\'accumule. C\'est essentiel pour ajuster votre entraînement sur le long terme.',
-            'main_metric' => null,
-            'points' => [],
+            'title'          => 'Adaptation à long terme (6 mois)',
+            'explanation'    => 'Cette analyse évalue comment votre corps s\'adapte à votre programme d\'entraînement sur une longue période (6 mois). En regardant l\'évolution de votre forme générale (SBM) et de votre système nerveux (VFC), nous pouvons voir si vous devenez plus fort et plus résilient, ou si la fatigue s\'accumule. C\'est essentiel pour ajuster votre entraînement sur le long terme.',
+            'main_metric'    => null,
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -758,6 +827,7 @@ class ReportService
             $data['summary'] = 'Adaptation à Améliorer';
             $data['recommendation'] = 'Il est temps de faire le point avec votre entraîneur sur la planification et les facteurs de stress externes (sommeil, travail, etc.) pour optimiser votre progression.';
         }
+
         return $data;
     }
 
@@ -766,32 +836,35 @@ class ReportService
         $performanceGapMetrics = $allMetrics
             ->whereBetween('date', [$startDate, $endDate])
             ->whereIn('metric_type', [MetricType::POST_SESSION_PERFORMANCE_FEEL->value, MetricType::POST_SESSION_SESSION_LOAD->value])
-            ->groupBy(fn($m) => $m->date->toDateString())
+            ->groupBy(fn ($m) => $m->date->toDateString())
             ->map(function ($group) {
                 $perf = $group->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL->value)?->value;
                 $load = $group->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)?->value;
-                if ($perf === null || $load === null) return null;
+                if ($perf === null || $load === null) {
+                    return null;
+                }
+
                 return $perf - $load;
             })->filter();
 
         $avgGap = $performanceGapMetrics->avg();
 
         $data = [
-            'title' => 'Analyse de l\'efficacité (6 mois)',
+            'title'       => 'Analyse de l\'efficacité (6 mois)',
             'explanation' => 'L\'analyse de l\'efficacité mesure votre "retour sur investissement" pour chaque effort. En comparant votre performance perçue à la charge ressentie, nous voyons si vous obtenez de bons résultats avec un effort modéré (bonne efficacité) ou si vous devez forcer beaucoup pour peu de résultats (faible efficacité). Cela peut indiquer une fatigue sous-jacente ou un besoin d\'ajuster votre technique.',
             'main_metric' => [
-                'value' => number_format($avgGap, 1),
-                'label' => 'Perf - Charge',
-                'type' => 'gauge',
-                'min' => -5,
-                'max' => 5,
+                'value'  => number_format($avgGap, 1),
+                'label'  => 'Perf - Charge',
+                'type'   => 'gauge',
+                'min'    => -5,
+                'max'    => 5,
                 'ranges' => [
                     'warning' => [-5, -1.1], // Faible efficacité
                     'neutral' => [-1, 1.4],  // Efficacité neutre
                     'optimal' => [1.5, 5],   // Efficacité exceptionnelle
                 ],
             ],
-            'points' => [],
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -819,26 +892,26 @@ class ReportService
         $painHistory = $allMetrics
             ->where('metric_type', MetricType::MORNING_PAIN->value)
             ->where('date', '>=', $endDate->copy()->subDays(90))
-            ->map(fn($m) => (object)['date' => $m->date->toDateString(), 'value' => $m->value]);
+            ->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
 
         $chargePainCorrelation = $this->trendsService->calculateCorrelationFromCollections($cihHistory, $painHistory);
-        
+
         $data = [
-            'title' => 'Analyse des modèles de blessures (3 mois)',
-            'explanation' => 'Cette analyse cherche à comprendre si vos douleurs sont liées à votre volume d\'entraînement sur les 3 derniers mois. En comparant votre charge hebdomadaire (CIH) et vos niveaux de douleur, nous pouvons déterminer si la gestion de la charge est la clé pour éviter les douleurs, ou si leur origine est ailleurs (par exemple, un problème de technique ou d\'équipement).',
-            'main_metric' => null,
-            'points' => [],
+            'title'          => 'Analyse des modèles de blessures (3 mois)',
+            'explanation'    => 'Cette analyse cherche à comprendre si vos douleurs sont liées à votre volume d\'entraînement sur les 3 derniers mois. En comparant votre charge hebdomadaire (CIH) et vos niveaux de douleur, nous pouvons déterminer si la gestion de la charge est la clé pour éviter les douleurs, ou si leur origine est ailleurs (par exemple, un problème de technique ou d\'équipement).',
+            'main_metric'    => null,
+            'points'         => [],
             'recommendation' => null,
         ];
 
         if (isset($chargePainCorrelation['correlation'])) {
             $correlation = $chargePainCorrelation['correlation'];
             $data['main_metric'] = [
-                'value' => number_format($correlation, 2),
-                'label' => 'Corrélation Charge/Douleur',
-                'type' => 'gauge',
-                'min' => -1,
-                'max' => 1,
+                'value'  => number_format($correlation, 2),
+                'label'  => 'Corrélation Charge/Douleur',
+                'type'   => 'gauge',
+                'min'    => -1,
+                'max'    => 1,
                 'ranges' => [
                     'neutral' => [-1, 0.49], // Pas de forte corrélation
                     'warning' => [0.5, 1],   // Corrélation positive
@@ -860,13 +933,14 @@ class ReportService
             $data['summary'] = 'Données Insuffisantes';
             $data['points'][] = ['status' => 'neutral', 'text' => 'Renseignez vos données de charge et de douleur plus régulièrement pour activer cette analyse.'];
         }
+
         return $data;
     }
-    
+
     protected function getChargePacingAnalysis(Athlete $athlete, Carbon $endDate): array
     {
         $cihMetrics = $this->getCalculatedMetricHistory($athlete, CalculatedMetric::CIH, 180, $endDate);
-        
+
         $cihValues = $cihMetrics->pluck('value');
         $averageCih = $cihValues->avg();
         $stdDevCih = $this->calculateStdDev($cihValues);
@@ -877,20 +951,20 @@ class ReportService
         }
 
         $data = [
-            'title' => 'Stratégie de Pacing (6 mois)',
+            'title'       => 'Stratégie de Pacing (6 mois)',
             'explanation' => 'Le "Pacing" analyse la régularité de votre charge d\'entraînement de semaine en semaine sur les 6 derniers mois. Une progression linéaire et contrôlée (faible variation) est idéale. Une variation trop importante, avec des semaines très dures suivies de semaines très faciles, peut augmenter le risque de blessure à cause des "chocs" de charge. L\'objectif est de trouver un rythme stable et efficace.',
             'main_metric' => [
-                'value' => number_format($cv * 100, 1) . '%',
-                'label' => 'Coeff. de Variation',
-                'type' => 'gauge',
-                'min' => 0,
-                'max' => 1,
+                'value'  => number_format($cv * 100, 1).'%',
+                'label'  => 'Coeff. de Variation',
+                'type'   => 'gauge',
+                'min'    => 0,
+                'max'    => 1,
                 'ranges' => [
                     'optimal' => [0, 0.39],  // Pacing maîtrisé
                     'warning' => [0.4, 1],   // Pacing erratique
                 ],
             ],
-            'points' => [],
+            'points'         => [],
             'recommendation' => null,
         ];
 
@@ -904,6 +978,7 @@ class ReportService
             $data['summary'] = 'Pacing Maîtrisé';
             $data['points'][] = ['status' => 'optimal', 'text' => 'La variation de votre charge est bien contrôlée. Cela favorise une adaptation solide et durable.'];
         }
+
         return $data;
     }
 
@@ -924,10 +999,10 @@ class ReportService
         return sqrt($variance);
     }
 
-
     /**
      * Helper pour récupérer l'historique d'une métrique calculée (non stockée en DB).
-     * @param Collection|null $allMetrics Optimisation pour ne pas requêter la DB à chaque fois.
+     *
+     * @param  Collection|null  $allMetrics  Optimisation pour ne pas requêter la DB à chaque fois.
      */
     private function getCalculatedMetricHistory(Athlete $athlete, CalculatedMetric $metric, int $days, Carbon $endDate, ?Collection $allMetrics = null): Collection
     {
@@ -935,9 +1010,9 @@ class ReportService
         $startDate = $endDate->copy()->subDays($days - 1);
 
         if ($allMetrics === null) {
-            $metricsForPeriod = $athlete->metrics()->whereBetween('date', [$startDate, $endDate])->get()->groupBy(fn($m) => $m->date->toDateString());
+            $metricsForPeriod = $athlete->metrics()->whereBetween('date', [$startDate, $endDate])->get()->groupBy(fn ($m) => $m->date->toDateString());
         } else {
-            $metricsForPeriod = $allMetrics->whereBetween('date', [$startDate, $endDate])->groupBy(fn($m) => $m->date->toDateString());
+            $metricsForPeriod = $allMetrics->whereBetween('date', [$startDate, $endDate])->groupBy(fn ($m) => $m->date->toDateString());
         }
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
@@ -947,20 +1022,20 @@ class ReportService
 
             if ($metric === CalculatedMetric::SBM) {
                 $value = $this->calculationService->calculateSbmForCollection($dailyMetrics);
-            }
-            elseif ($metric === CalculatedMetric::CIH) {
+            } elseif ($metric === CalculatedMetric::CIH) {
                 $weekStartDate = $date->copy()->subDays(6);
-                $weekMetrics = $allMetrics ? 
+                $weekMetrics = $allMetrics ?
                     $allMetrics->whereBetween('date', [$weekStartDate, $date]) :
                     $athlete->metrics()->whereBetween('date', [$weekStartDate, $date])->get();
-                
+
                 $value = $weekMetrics->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
             }
-            
+
             if ($value !== null) {
-                $history->push((object)['date' => $dateString, 'value' => $value]);
+                $history->push((object) ['date' => $dateString, 'value' => $value]);
             }
         }
+
         return $history;
     }
 
@@ -970,15 +1045,15 @@ class ReportService
     protected function getGlossary(): array
     {
         return [
-            'ACWR' => 'Acute:Chronic Workload Ratio. C\'est un indicateur qui compare votre charge d\'entraînement récente (aiguë) à votre charge habituelle (chronique) sur les 4 dernières semaines. Il aide à évaluer le risque de blessure lié à une augmentation trop rapide de la charge.',
-            'SBM' => 'Subjective Well-being Module. C\'est un score global de votre état de forme et de bien-être, basé sur vos ressentis matinaux (sommeil, fatigue, humeur, stress, douleurs). Un SBM élevé indique une bonne récupération.',
-            'CIH' => 'Charge d\'entraînement Interne Hebdomadaire. C\'est la somme de la charge ressentie pour toutes vos séances d\'entraînement sur une semaine. Elle reflète l\'effort total que votre corps a fourni.',
-            'CPH' => 'Charge d\'entraînement Planifiée Hebdomadaire. C\'est la charge d\'entraînement que votre entraîneur avait prévue pour vous sur une semaine. Comparer CIH et CPH permet de voir si vous avez suivi le plan.',
-            'Damping' => 'Amortissement psychologique. C\'est un état où votre moral est très bon, mais votre corps montre des signes de fatigue importants (par exemple, une VFC basse). C\'est un signal d\'alerte précoce de surentraînement.',
-            'VFC' => 'Variabilité de la Fréquence Cardiaque. C\'est une mesure de la variation du temps entre chaque battement de cœur. Une VFC élevée est généralement un signe de bonne récupération et d\'un système nerveux équilibré, tandis qu\'une VFC basse peut indiquer du stress ou de la fatigue.',
-            'RPE' => 'Rating of Perceived Exertion. C\'est une échelle de 1 à 10 pour évaluer subjectivement l\'intensité de votre effort pendant une séance d\'entraînement. 1 étant très facile et 10 étant un effort maximal.',
+            'ACWR'               => 'Acute:Chronic Workload Ratio. C\'est un indicateur qui compare votre charge d\'entraînement récente (aiguë) à votre charge habituelle (chronique) sur les 4 dernières semaines. Il aide à évaluer le risque de blessure lié à une augmentation trop rapide de la charge.',
+            'SBM'                => 'Subjective Well-being Module. C\'est un score global de votre état de forme et de bien-être, basé sur vos ressentis matinaux (sommeil, fatigue, humeur, stress, douleurs). Un SBM élevé indique une bonne récupération.',
+            'CIH'                => 'Charge d\'entraînement Interne Hebdomadaire. C\'est la somme de la charge ressentie pour toutes vos séances d\'entraînement sur une semaine. Elle reflète l\'effort total que votre corps a fourni.',
+            'CPH'                => 'Charge d\'entraînement Planifiée Hebdomadaire. C\'est la charge d\'entraînement que votre entraîneur avait prévue pour vous sur une semaine. Comparer CIH et CPH permet de voir si vous avez suivi le plan.',
+            'Damping'            => 'Amortissement psychologique. C\'est un état où votre moral est très bon, mais votre corps montre des signes de fatigue importants (par exemple, une VFC basse). C\'est un signal d\'alerte précoce de surentraînement.',
+            'VFC'                => 'Variabilité de la Fréquence Cardiaque. C\'est une mesure de la variation du temps entre chaque battement de cœur. Une VFC élevée est généralement un signe de bonne récupération et d\'un système nerveux équilibré, tandis qu\'une VFC basse peut indiquer du stress ou de la fatigue.',
+            'RPE'                => 'Rating of Perceived Exertion. C\'est une échelle de 1 à 10 pour évaluer subjectivement l\'intensité de votre effort pendant une séance d\'entraînement. 1 étant très facile et 10 étant un effort maximal.',
             'Hotspot de douleur' => 'Zone du corps où la douleur est la plus fréquente ou la plus intense sur une période donnée. Identifier ces hotspots permet de cibler les problèmes persistants.',
-            'Pacing' => 'Stratégie de gestion de la régularité de votre charge d\'entraînement. Un bon pacing signifie une progression linéaire et contrôlée, évitant les "chocs" de charge qui peuvent augmenter le risque de blessure.',
+            'Pacing'             => 'Stratégie de gestion de la régularité de votre charge d\'entraînement. Un bon pacing signifie une progression linéaire et contrôlée, évitant les "chocs" de charge qui peuvent augmenter le risque de blessure.',
         ];
     }
 }

@@ -145,9 +145,9 @@ class MetricMenstrualService
     /**
      * Compare la moyenne d'une métrique donnée entre deux phases du cycle menstruel.
      *
-     * @param string $phaseA Phase de comparaison (ex: 'Lutéale')
-     * @param string $phaseB Phase de référence (ex: 'Folliculaire')
-     * @param int $daysToAnalyze Nombre de jours à analyser en arrière.
+     * @param  string  $phaseA  Phase de comparaison (ex: 'Lutéale')
+     * @param  string  $phaseB  Phase de référence (ex: 'Folliculaire')
+     * @param  int  $daysToAnalyze  Nombre de jours à analyser en arrière.
      * @return array Résultat de la comparaison.
      */
     public function compareMetricAcrossPhases(
@@ -181,24 +181,33 @@ class MetricMenstrualService
         // 3. Attribuer chaque métrique à une phase
         foreach ($metricsToAnalyze as $metric) {
             $metricDate = Carbon::parse($metric->date);
-            
+
             // Trouver le J1 qui précède ou correspond à la date de la métrique
             $previousJ1 = $j1Metrics->last(fn ($j1) => Carbon::parse($j1->date) <= $metricDate);
-            if (!$previousJ1) continue;
+            if (! $previousJ1) {
+                continue;
+            }
 
             // Trouver le J1 qui suit
             $nextJ1 = $j1Metrics->first(fn ($j1) => Carbon::parse($j1->date) > Carbon::parse($previousJ1->date));
-            if (!$nextJ1) continue;
+            if (! $nextJ1) {
+                continue;
+            }
 
             $cycleLength = Carbon::parse($nextJ1->date)->diffInDays(Carbon::parse($previousJ1->date));
             $dayInCycle = $metricDate->diffInDays(Carbon::parse($previousJ1->date)) + 1;
 
             // Déterminer la phase (logique simplifiée de `deduceMenstrualCyclePhase`)
             $phase = 'Inconnue';
-            if ($dayInCycle <= 5) $phase = 'Menstruelle';
-            elseif ($dayInCycle > 5 && $dayInCycle < ($cycleLength / 2)) $phase = 'Folliculaire';
-            elseif ($dayInCycle >= ($cycleLength / 2) && $dayInCycle <= ($cycleLength / 2) + 2) $phase = 'Ovulatoire';
-            elseif ($dayInCycle > ($cycleLength / 2) + 2) $phase = 'Lutéale';
+            if ($dayInCycle <= 5) {
+                $phase = 'Menstruelle';
+            } elseif ($dayInCycle > 5 && $dayInCycle < ($cycleLength / 2)) {
+                $phase = 'Folliculaire';
+            } elseif ($dayInCycle >= ($cycleLength / 2) && $dayInCycle <= ($cycleLength / 2) + 2) {
+                $phase = 'Ovulatoire';
+            } elseif ($dayInCycle > ($cycleLength / 2) + 2) {
+                $phase = 'Lutéale';
+            }
 
             if (array_key_exists($phase, $metricsByPhase)) {
                 $metricsByPhase[$phase][] = $metric->value;
@@ -206,8 +215,8 @@ class MetricMenstrualService
         }
 
         // 4. Calculer les moyennes et comparer
-        $avgA = !empty($metricsByPhase[$phaseA]) ? array_sum($metricsByPhase[$phaseA]) / count($metricsByPhase[$phaseA]) : null;
-        $avgB = !empty($metricsByPhase[$phaseB]) ? array_sum($metricsByPhase[$phaseB]) / count($metricsByPhase[$phaseB]) : null;
+        $avgA = ! empty($metricsByPhase[$phaseA]) ? array_sum($metricsByPhase[$phaseA]) / count($metricsByPhase[$phaseA]) : null;
+        $avgB = ! empty($metricsByPhase[$phaseB]) ? array_sum($metricsByPhase[$phaseB]) / count($metricsByPhase[$phaseB]) : null;
 
         if ($avgA === null || $avgB === null) {
             return ['impact' => 'n/a', 'reason' => "Pas assez de données pour la phase {$phaseA} ou {$phaseB}."];
@@ -216,16 +225,137 @@ class MetricMenstrualService
         $difference = $avgA - $avgB;
         $impact = 'stable';
         // Seuil de 10% de la moyenne de référence pour être significatif
-        if ($difference > ($avgB * 0.1)) $impact = 'higher'; 
-        if ($difference < -($avgB * 0.1)) $impact = 'lower';
+        if ($difference > ($avgB * 0.1)) {
+            $impact = 'higher';
+        }
+        if ($difference < -($avgB * 0.1)) {
+            $impact = 'lower';
+        }
 
         return [
-            'impact' => $impact,
-            'difference' => round(abs($difference), 1),
+            'impact'      => $impact,
+            'difference'  => round(abs($difference), 1),
             'avg_phase_a' => round($avgA, 1),
             'avg_phase_b' => round($avgB, 1),
-            'phase_a' => $phaseA,
-            'phase_b' => $phaseB,
+            'phase_a'     => $phaseA,
+            'phase_b'     => $phaseB,
         ];
+    }
+
+    /**
+     * Analyse la tendance à long terme de l'impact d'une phase sur une métrique (ex: la Lutéale devient-elle plus pénible ?).
+     * Compare l'écart entre Phase A et Phase B sur une période passée (P1) et une période récente (P2).
+     *
+     * @param  string  $phaseA  Phase de comparaison (ex: 'Lutéale')
+     * @param  string  $phaseB  Phase de référence (ex: 'Folliculaire')
+     * @return array Résultat de l'analyse de tendance.
+     */
+    public function getLongTermPhaseTrend(
+        Athlete $athlete,
+        MetricType $metricType,
+        string $phaseA = 'Lutéale',
+        string $phaseB = 'Folliculaire'
+    ): array {
+        $daysInPast = 90; // Durée de chaque période (P2 et P1 = 6 mois total)
+
+        // Période 2 : Récente (T-90 à T-0)
+        $recentAnalysis = $this->compareMetricAcrossPhases($athlete, $metricType, $phaseA, $phaseB, $daysInPast);
+
+        // Période 1 : Ancienne (T-180 à T-90). La date de fin est il y a 90 jours.
+        $pastEndDate = Carbon::now()->subDays($daysInPast);
+        $pastAnalysis = $this->compareMetricAcrossPhases($athlete, $metricType, $phaseA, $phaseB, $daysInPast, $pastEndDate);
+
+        // Si l'une des analyses est incomplète, on ne peut pas comparer la tendance.
+        if ($recentAnalysis['impact'] === 'n/a' || $pastAnalysis['impact'] === 'n/a') {
+            return ['trend' => 'n/a', 'reason' => 'Données insuffisantes pour l\'analyse longue durée (min 6 mois).'];
+        }
+
+        // Calculer l'écart Lutéale - Folliculaire pour chaque période (différence positive = A est supérieur à B)
+        $diffRecent = $recentAnalysis['avg_phase_a'] - $recentAnalysis['avg_phase_b'];
+        $diffPast = $pastAnalysis['avg_phase_a'] - $pastAnalysis['avg_phase_b'];
+
+        $trend = 'stable';
+        $change = $diffRecent - $diffPast; // Positif si l'écart s'est creusé (l'impact de A sur B est plus grand/pire)
+
+        // Seuil de changement : 0.5 point sur l'échelle (ex: 1-10) pour être significatif
+        if ($change > 0.5) {
+            $trend = 'worsening'; // Aggravation de l'écart
+        } elseif ($change < -0.5) {
+            $trend = 'improving'; // Amélioration de l'écart
+        }
+
+        return [
+            'trend'       => $trend,
+            'change'      => round(abs($change), 1),
+            'recent_diff' => round($diffRecent, 1),
+            'past_diff'   => round($diffPast, 1),
+            'reason'      => $trend === 'worsening' ? "L'écart entre la phase {$phaseA} et la phase {$phaseB} s'est aggravé de ".round($change, 1).' points sur les 6 derniers mois.' : null,
+        ];
+    }
+
+    /**
+     * Fournit une recommandation d'adaptation de la charge d'entraînement en fonction de la phase actuelle.
+     * C'est le "Call to Action" du rapport.
+     *
+     * @return array Recommandation claire (action, justification, status).
+     */
+    public function getPhaseSpecificRecommendation(Athlete $athlete, string $currentPhase): array
+    {
+        // On vérifie l'impact global de la phase Lutéale sur la fatigue pour affiner les recommandations sensibles.
+        $fatigueImpact = $this->compareMetricAcrossPhases(
+            $athlete,
+            MetricType::MORNING_GENERAL_FATIGUE,
+            'Lutéale',
+            'Folliculaire'
+        );
+
+        $isLutealFatigueHigh = $fatigueImpact['impact'] === 'higher';
+
+        // Logique de recommandation (inspirée de la littérature sportive)
+        switch ($currentPhase) {
+            case 'Menstruelle':
+                return [
+                    'action'        => 'EASY (Technique/Mobilité)',
+                    'justification' => "L'objectif est la gestion de l'inflammation et de la douleur. C'est la phase idéale pour la récupération active et le travail technique à faible intensité (sauf si l'absence de douleur permet le 'GO').",
+                    'status'        => 'easy',
+                ];
+            case 'Folliculaire':
+                return [
+                    'action'        => 'GO! (Force/Puissance)',
+                    'justification' => "Taux d'oestrogènes en hausse = tolérance à la douleur et récupération accrues. Idéal pour les charges lourdes, les séances de pic et les tests.",
+                    'status'        => 'optimal',
+                ];
+            case 'Ovulatoire (estimée)':
+                return [
+                    'action'        => 'GO! (Endurance/Volume)',
+                    'justification' => "Pic de performance générale. Attention à la potentielle laxité ligamentaire due au pic hormonal : prudence sur les mouvements à haut risque d'entorse.",
+                    'status'        => 'optimal',
+                ];
+            case 'Lutéale':
+                $action = $isLutealFatigueHigh ? 'EASY (Volume Réduit)' : 'MODERATE (Endurance)';
+                $justification = $isLutealFatigueHigh ?
+                    "Votre fatigue est significativement plus haute dans cette phase. **Il faut lever le pied** et réduire le volume d'entraînement de 10-20% pour minimiser le risque de surentraînement. Privilégiez l'endurance à l'intensité pure." :
+                    "Votre corps gère bien cette phase. Maintenez une charge modérée en privilégiant l'endurance. Si la fatigue du jour est élevée, basculez en 'EASY'.";
+                $status = $isLutealFatigueHigh ? 'warning' : 'moderate';
+
+                return [
+                    'action'        => $action,
+                    'justification' => $justification,
+                    'status'        => $status,
+                ];
+            case 'Aménorrhée':
+            case 'Oligoménorrhée':
+                return [
+                    'action'        => 'STOP! (Alerte Santé)',
+                    'justification' => "Arrêtez les charges d'entraînement intenses et consultez un spécialiste. Votre cycle indique un déséquilibre potentiellement lié à un déficit énergétique ou un stress physique excessif.",
+                    'status'        => 'critical',
+                ];
+            default:
+                return [
+                    'action'        => 'EASY (Data Manquantes)',
+                    'justification' => 'Renseignez vos dates de J1 pour une analyse personnalisée et des recommandations fiables.',
+                    'status'        => 'neutral',
+                ];
+        }
     }
 }
