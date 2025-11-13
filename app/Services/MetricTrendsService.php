@@ -255,7 +255,7 @@ class MetricTrendsService
             $dailyMetrics = $metrics->where('date', $date->toDateString());
             $sbm = app(MetricCalculationService::class)->calculateSbmForCollection($dailyMetrics);
             if ($sbm !== null) {
-                $sbmMetrics->push((object)['date' => $date->toDateString(), 'value' => $sbm]);
+                $sbmMetrics->push((object) ['date' => $date->toDateString(), 'value' => $sbm]);
             }
         }
 
@@ -274,11 +274,17 @@ class MetricTrendsService
             $mood = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)?->value;
             $sbm = $sbmMetrics->firstWhere('date', $date)?->value;
 
-            if ($mood === null || $mood < 8) continue;
+            if ($mood === null || $mood < 8) {
+                continue;
+            }
 
             $physioFatigue = false;
-            if ($hrv !== null && $hrv < $hrvAvg * 0.9) $physioFatigue = true;
-            if ($sbm !== null && $sbm < $sbmAvg * 0.9) $physioFatigue = true;
+            if ($hrv !== null && $hrv < $hrvAvg * 0.9) {
+                $physioFatigue = true;
+            }
+            if ($sbm !== null && $sbm < $sbmAvg * 0.9) {
+                $physioFatigue = true;
+            }
 
             if ($physioFatigue) {
                 $dampingDays++;
@@ -295,7 +301,7 @@ class MetricTrendsService
     {
         $metricsA = $athlete->metrics()->where('metric_type', $metricA)->where('date', '>=', Carbon::now()->subDays($days))->count();
         $metricsB = $athlete->metrics()->where('metric_type', $metricB)->where('date', '>=', Carbon::now()->subDays($days))->count();
-        
+
         // On a besoin d'au moins 5 points de données pour une corrélation minimale
         return min($metricsA, $metricsB) >= 5;
     }
@@ -308,18 +314,18 @@ class MetricTrendsService
     public function calculateCorrelation(Athlete $athlete, MetricType $metricTypeA, MetricType $metricTypeB, int $days): array
     {
         $startDate = Carbon::now()->subDays($days);
-        
+
         $collectionA = $athlete->metrics()
             ->where('metric_type', $metricTypeA->value)
             ->where('date', '>=', $startDate)
             ->orderBy('date')
-            ->get()->map(fn($m) => (object)['date' => $m->date->toDateString(), 'value' => $m->value]);
+            ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
 
         $collectionB = $athlete->metrics()
             ->where('metric_type', $metricTypeB->value)
             ->where('date', '>=', $startDate)
             ->orderBy('date')
-            ->get()->map(fn($m) => (object)['date' => $m->date->toDateString(), 'value' => $m->value]);
+            ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
 
         return $this->calculateCorrelationFromCollections($collectionA, $collectionB);
     }
@@ -327,8 +333,8 @@ class MetricTrendsService
     /**
      * Calcule la corrélation de Pearson entre deux collections de données.
      *
-     * @param Collection $collectionA Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
-     * @param Collection $collectionB Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
+     * @param  Collection  $collectionA  Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
+     * @param  Collection  $collectionB  Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
      * @return array ['correlation' => float|null, 'impact_size' => float|null, 'reason' => string|null]
      */
     public function calculateCorrelationFromCollections(Collection $collectionA, Collection $collectionB): array

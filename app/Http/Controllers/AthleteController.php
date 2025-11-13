@@ -9,7 +9,6 @@ use Illuminate\Support\Carbon;
 use App\Enums\CalculatedMetric;
 use App\Services\MetricService;
 use App\Services\ReportService;
-use App\Models\TrainingPlanWeek;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -122,7 +121,7 @@ class AthleteController extends Controller
         );
 
         // Reports
-        $endDate = Carbon::today(); 
+        $endDate = Carbon::today();
         $reportWeeklyData = resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate);
 
         $reportData = $reportWeeklyData;
@@ -325,7 +324,6 @@ class AthleteController extends Controller
         // Extraire les données de l'athlète enrichi
         $metricsDataForDashboard = $athleteData->dashboard_metrics_data ?? [];
         $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
-
 
         // Traiter l'historique des métriques pour la préparation du tableau
         $processedDailyMetricsForTable = $this->metricService->prepareDailyMetricsForTableView(

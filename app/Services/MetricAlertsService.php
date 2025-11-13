@@ -459,16 +459,12 @@ class MetricAlertsService
 
     /**
      * Point d'entrée simplifié pour le ReportService pour vérifier toutes les alertes pertinentes pour une journée.
-     *
-     * @param Athlete $athlete
-     * @param Collection $dailyMetrics
-     * @return array
      */
     public function checkAllAlerts(Athlete $athlete, Collection $dailyMetrics): array
     {
         $currentWeekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
         $athletePlanWeeks = $athlete->currentTrainingPlan?->weeks ?? collect();
-        
+
         // Définir les types d'alertes à inclure pour une vérification quotidienne
         $options = [
             'include_alerts' => ['general', 'charge', 'readiness', 'menstrual'],

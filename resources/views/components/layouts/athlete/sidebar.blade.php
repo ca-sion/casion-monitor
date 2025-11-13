@@ -19,6 +19,9 @@
                     <flux:navlist.item icon="clipboard-document-check" :href="route('athletes.reports.show', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.reports.show')" wire:navigate>Rapport</flux:navlist.item>
                     <flux:navlist.item icon="plus" :href="route('athletes.metrics.daily.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.daily.form')" wire:navigate>Quotidien</flux:navlist.item>
                     <flux:navlist.item icon="plus" :href="route('athletes.metrics.monthly.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.monthly.form')" wire:navigate>Mensuel</flux:navlist.item>
+                    @if (auth('athlete')->user()->gender == 'w')
+                        <flux:navlist.item icon="heart" :href="route('athletes.menstrual-cycle.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.menstrual-cycle.form')" wire:navigate>Cycles menstruels</flux:navlist.item>
+                    @endif
                     <flux:navlist.item icon="chart-bar-square" :href="route('athletes.statistics', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.statistics')" wire:navigate>Statistiques</flux:navlist.item>
                 </flux:navlist.group>
                 <flux:navlist.group heading="Suivi médical" class="grid">

@@ -187,7 +187,7 @@ class MetricCalculationService
     {
         $startOfWeek = $endDate->copy()->startOfWeek();
         $endOfWeek = $endDate->copy()->endOfWeek(Carbon::MONDAY);
-        
+
         $planWeek = $athlete->currentTrainingPlan?->weeks()->where('start_date', $startOfWeek)->first();
 
         if (! $planWeek) {
@@ -201,7 +201,7 @@ class MetricCalculationService
         $metricsForWeek = $athlete->metrics()
             ->whereBetween('date', [$startOfWeek, $endOfWeek])
             ->get();
-        
+
         $cih = $this->calculateCihForCollection($metricsForWeek);
 
         // 4. Calculer et retourner le ratio

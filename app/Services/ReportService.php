@@ -777,8 +777,8 @@ class ReportService
         $data['status'] = match (true) {
             $data['status'] === 'high_risk'     => 'high_risk',
             $phaseRec['status'] === 'high_risk' => 'high_risk',
-            $phaseRec['status'] === 'warning'  => 'warning',
-            default                            => 'optimal',
+            $phaseRec['status'] === 'warning'   => 'warning',
+            default                             => 'optimal',
         };
 
         return $data;
