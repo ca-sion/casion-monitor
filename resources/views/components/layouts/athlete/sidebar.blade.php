@@ -16,6 +16,7 @@
                 <flux:navlist.group heading="Suivi des entraînements" class="grid">
                     <flux:navlist.item icon="home" :href="route('athletes.dashboard', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.dashboard')" wire:navigate>Tableau de bord</flux:navlist.item>
                     <flux:navlist.item icon="queue-list" :href="route('athletes.journal', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.journal')" wire:navigate>Journal</flux:navlist.item>
+                    <flux:navlist.item icon="clipboard-document-check" :href="route('athletes.reports.show', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.reports.show')" wire:navigate>Rapport</flux:navlist.item>
                     <flux:navlist.item icon="plus" :href="route('athletes.metrics.daily.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.daily.form')" wire:navigate>Quotidien</flux:navlist.item>
                     <flux:navlist.item icon="plus" :href="route('athletes.metrics.monthly.form', ['hash' => auth('athlete')->user()->hash])" :current="request()->routeIs('athletes.metrics.monthly.form')" wire:navigate>Mensuel</flux:navlist.item>
                 </flux:navlist.group>

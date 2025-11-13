@@ -5,29 +5,12 @@
         <p class="text-gray-500">Semaine se terminant le : {{ \Carbon\Carbon::parse($report['end_date'])->locale('fr_CH')->isoFormat('LL') }}</p>
     </div>
 
-    @if(isset($report['global_summary']))
-        <div class="lg:col-span-2">
-            <x-report-card :section="$report['global_summary']" />
-        </div>
-    @endif
-
-    @php
-        $gamification = $report['sections']['gamification'] ?? null;
-        $sections = \Illuminate\Support\Arr::except($report['sections'], 'gamification');
-    @endphp
-
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        @foreach($sections as $section)
+        @foreach($report['sections'] as $section)
             @if($section)
                 <x-report-card :section="$section" />
             @endif
         @endforeach
-
-        @if($gamification)
-            <div class="lg:col-span-2">
-                <x-report-card :section="$gamification" />
-            </div>
-        @endif
     </div>
 
     @if(isset($report['glossary']))

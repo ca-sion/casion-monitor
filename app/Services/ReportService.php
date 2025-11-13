@@ -21,7 +21,6 @@ class ReportService
     protected MetricAlertsService $alertsService;
     protected MetricReadinessService $readinessService;
     protected MetricMenstrualService $menstrualService;
-    protected GamificationService $gamificationService;
 
     public function __construct(
         MetricCalculationService $calculationService,
@@ -29,14 +28,12 @@ class ReportService
         MetricAlertsService $alertsService,
         MetricReadinessService $readinessService,
         MetricMenstrualService $menstrualService,
-        GamificationService $gamificationService
     ) {
         $this->calculationService = $calculationService;
         $this->trendsService = $trendsService;
         $this->alertsService = $alertsService;
         $this->readinessService = $readinessService;
         $this->menstrualService = $menstrualService;
-        $this->gamificationService = $gamificationService;
     }
 
     /**
@@ -77,10 +74,6 @@ class ReportService
                 $report['sections']['error'] = ['title' => 'Erreur', 'narrative' => 'Type de rapport non supporté.'];
         }
 
-        $report['sections']['gamification'] = $this->getGamificationSummary($athlete);
-
-        // Générer le résumé global après toutes les sections
-        $report['global_summary'] = $this->generateGlobalSummary($report['sections']);
         $report['glossary'] = $this->getGlossary();
 
         return $report;
@@ -94,33 +87,6 @@ class ReportService
             'daily' => 0, 'weekly' => 6, 'monthly' => 29, 'biannual' => 182, default => 0,
         };
         return ['startDate' => $startDate->subDays($days), 'endDate' => $endDate];
-    }
-
-    protected function getGamificationSummary(Athlete $athlete): array
-    {
-        $gamification = $this->gamificationService->getGamificationData($athlete);
-        
-        $data = [
-            'title' => 'Motivation : votre engagement',
-            'status' => 'optimal',
-            'main_metric' => [
-                'value' => $gamification['current_streak'],
-                'label' => 'Série de jours',
-            ],
-            'summary' => "Félicitations ! Vous avez atteint le niveau {$gamification['level']} avec un total de {$gamification['points']} points.",
-            'points' => [
-                ['status' => 'optimal', 'text' => "Votre série de saisie actuelle est de {$gamification['current_streak']} jours (Record : {$gamification['longest_streak']} jours). Continuez sur cette lancée !"]
-            ],
-            'recommendation' => null,
-        ];
-        
-        if (!empty($gamification['new_badges'])) {
-            foreach ($gamification['new_badges'] as $badge) {
-                $data['points'][] = ['status' => 'optimal', 'text' => "Nouveau badge débloqué : {$badge} !"];
-            }
-        }
-
-        return $data;
     }
 
     // DAILY ANALYSIS
@@ -918,51 +884,6 @@ class ReportService
             }
         }
         return $history;
-    }
-
-    protected function generateGlobalSummary(array $sections): array
-    {
-        $globalStatus = 'optimal';
-        $globalSummary = 'Félicitations ! Tous les indicateurs sont au vert. Vous êtes sur la bonne voie pour atteindre vos objectifs.';
-        $globalRecommendation = 'Continuez sur cette excellente dynamique !';
-        $criticalRecommendations = [];
-
-        // Exclure la section de gamification de l'analyse globale de risque
-        $analyzedSections = \Illuminate\Support\Arr::except($sections, 'gamification');
-
-        foreach ($analyzedSections as $section) {
-            if (!isset($section['status'])) {
-                continue;
-            }
-
-            // Priorité aux statuts les plus critiques
-            if ($section['status'] === 'high_risk') {
-                $globalStatus = 'high_risk';
-                $criticalRecommendations[] = $section['recommendation'] ?? $section['summary'];
-            } elseif ($section['status'] === 'warning' && $globalStatus !== 'high_risk') {
-                $globalStatus = 'warning';
-                $criticalRecommendations[] = $section['recommendation'] ?? $section['summary'];
-            } elseif ($section['status'] === 'neutral' && $globalStatus !== 'high_risk' && $globalStatus !== 'warning') {
-                $globalStatus = 'neutral';
-            }
-        }
-
-        if ($globalStatus === 'high_risk') {
-            $globalSummary = 'Alerte Rouge ! Plusieurs indicateurs critiques nécessitent une attention immédiate.';
-            $globalRecommendation = 'Agissez rapidement sur les points suivants : ' . implode(' ', array_unique($criticalRecommendations));
-        } elseif ($globalStatus === 'warning') {
-            $globalSummary = 'Attention ! Quelques points méritent votre vigilance.';
-            $globalRecommendation = 'Soyez attentif aux signaux et considérez les ajustements suivants : ' . implode(' ', array_unique($criticalRecommendations));
-        } elseif ($globalStatus === 'neutral') {
-            $globalSummary = 'Quelques points à surveiller, mais pas d\'alerte majeure. Votre suivi est en bonne voie.';
-            $globalRecommendation = 'Assurez-vous de bien renseigner toutes vos métriques pour une analyse complète.';
-        }
-
-        return [
-            'status' => $globalStatus,
-            'summary' => $globalSummary,
-            'recommendation' => $globalRecommendation,
-        ];
     }
 
     /**
