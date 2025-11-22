@@ -284,11 +284,15 @@
                                         <span class="{{ $metricInfo->getIconifyTailwind() }} size-4"></span>
                                     </flux:badge>
                                     <flux:text class="ms-1 font-bold">
-                                        @if ($metricData['is_last_value_today'])
+                                        @if ($metricData['is_latest_daily_value_today'])
                                             <span class="icon-[material-symbols-light--check-small] size-4 align-middle"></span>
                                         @endif
-                                        {{ $metricData['formatted_last_value'] }}
+                                        {{ $metricData['latest_daily_value'] }}
                                     </flux:text>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <flux:text class="text-xs text-zinc-600">Moy. hebdo:</flux:text>
+                                    <flux:text class="ms-1 font-medium">{{ $metricData['formatted_latest_weekly_average'] }}</flux:text>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
@@ -340,9 +344,9 @@
                             <div>
                                 <flux:badge size="sm" color="{{ $metricInfo->getColor() }}">
                                     <span class="{{ $metricInfo->getIconifyTailwind() }} size-4 me-1"></span>
-                                    {{ $metricData['formatted_last_value'] }}
+                                    {{ $metricData['latest_daily_value'] }}
                                 </flux:badge>
-                                @if ($metricData['is_last_value_today'])
+                                @if ($metricData['is_latest_daily_value_today'])
                                     <span class="icon-[material-symbols-light--check-small] size-4"></span>
                                 @endif
                             </div>
@@ -392,7 +396,7 @@
 
     <flux:separator class="my-2" variant="subtle" />
     <flux:text class="text-sm">La valeur dans chaque colonne indique la dernière valeur enregistrée pour cette métrique.</flux:text>
-
+    <flux:text class="text-sm">La "Moy. hebdo" est la moyenne des valeurs pour la dernière semaine calendaire complète ou en cours (du lundi au dimanche) pour cette métrique.</flux:text>
     <flux:text class="text-sm">La valeur dans les badges indique la tendance des changements d'une métrique spécifique dans une période donnée. Elle examine si la métrique augmente, diminue ou reste stable en comparant les valeurs moyennes du début et de la fin d'un ensemble de données filtrées et triées par date.</flux:text>
 
 </x-layouts.trainer>

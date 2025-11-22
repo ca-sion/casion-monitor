@@ -151,9 +151,6 @@ class MetricService
             if ($options['include_weekly_metrics']) {
                 $weeklyMetricsData = [];
                 foreach ($options['calculated_metrics'] as $calculatedMetric) {
-                    if ($calculatedMetric === CalculatedMetricType::READINESS_SCORE) {
-                        continue; // Le score de readiness est géré séparément, pas comme une métrique hebdomadaire ici.
-                    }
                     $weeklyMetricsData[$calculatedMetric->value] = $this->prepareWeeklyMetricDashboardDataFromCollection($athlete, $filteredAthleteCalculatedMetrics, $calculatedMetric, $options['period'], $endDate);
                 }
                 $athleteData['weekly_metrics_data'] = $weeklyMetricsData;
@@ -222,10 +219,12 @@ class MetricService
             'short_label'               => $metricType->getLabelShort(),
             'description'               => $metricType->getDescription(),
             'unit'                      => $metricType->getUnit(),
-            'last_value'                => null,
-            'formatted_last_value'      => 'n/a',
-            'last_value_date'           => null,
-            'is_last_value_today'       => false,
+            'latest_daily_value'        => null,
+            'formatted_latest_daily_value' => 'n/a',
+            'latest_daily_value_date'   => null,
+            'is_latest_daily_value_today' => false,
+            'latest_weekly_average'     => null,
+            'formatted_latest_weekly_average' => 'n/a',
             'average_7_days'            => null,
             'formatted_average_7_days'  => 'n/a',
             'average_30_days'           => null,
@@ -242,13 +241,27 @@ class MetricService
         $lastMetric = $metricsForPeriod->sortByDesc('date')->first();
         if ($lastMetric) {
             $metricValue = $lastMetric->{$valueColumn};
-            $metricData['last_value'] = $metricValue;
-            $metricData['formatted_last_value'] = $this->formatMetricDisplayValue($metricValue, $metricType);
-            $metricData['last_value_date'] = $lastMetric->date;
-            $metricData['is_last_value_today'] = $lastMetric->date->isSameDay($endDate);
+            $metricData['latest_daily_value'] = $metricValue;
+            $metricData['formatted_latest_daily_value'] = $this->formatMetricDisplayValue($metricValue, $metricType);
+            $metricData['latest_daily_value_date'] = $lastMetric->date;
+            $metricData['is_latest_daily_value_today'] = $lastMetric->date->isSameDay($endDate);
         }
 
         if ($metricData['is_numerical']) {
+            // Calculate latest weekly average for raw metrics
+            $weeklyData = $allMetricsForType
+                ->where('date', '>=', $endDate->copy()->startOfWeek(Carbon::MONDAY)) // Only current week for average
+                ->where('date', '<=', $endDate)
+                ->whereNotNull($valueColumn)
+                ->groupBy(fn ($metric) => $metric->date->startOfWeek(Carbon::MONDAY)->format('Y-m-d'))
+                ->map(fn (Collection $weekMetrics) => $weekMetrics->avg($valueColumn));
+
+            $latestWeeklyAverageDateKey = $weeklyData->keys()->sortDesc()->first();
+            $latestWeeklyAverage = $latestWeeklyAverageDateKey ? $weeklyData[$latestWeeklyAverageDateKey] : null;
+
+            $metricData['latest_weekly_average'] = $latestWeeklyAverage;
+            $metricData['formatted_latest_weekly_average'] = $this->formatMetricDisplayValue($latestWeeklyAverage, $metricType);
+
             $trends = $this->metricTrendsService->calculateMetricAveragesFromCollection($allMetricsForType, $metricType);
             $metricData['average_7_days'] = $trends['averages']['Derniers 7 jours'] ?? null;
             $metricData['average_30_days'] = $trends['averages']['Derniers 30 jours'] ?? null;
@@ -273,14 +286,27 @@ class MetricService
 
     protected function prepareWeeklyMetricDashboardDataFromCollection(Athlete $athlete, Collection $athleteCalculatedMetrics, CalculatedMetricType $metricType, string $period, Carbon $endDate): array
     {
+        // --- NEW LOGIC: Determine the latest daily calculated value ---
+        $latestDailyCalculatedMetric = $athleteCalculatedMetrics
+            ->where('type', $metricType->value)
+            ->where('date', '<=', $endDate->copy()->endOfDay()) // Consider values up to the end of the current end date
+            ->sortByDesc('date')
+            ->first();
+
+        $latestDailyValue = $latestDailyCalculatedMetric ? $latestDailyCalculatedMetric->value : null;
+        $latestDailyValueDate = $latestDailyCalculatedMetric ? $latestDailyCalculatedMetric->date : null;
+        // --- END NEW LOGIC ---
+
         $trendsData = $this->metricTrendsService->calculateCalculatedMetricAveragesFromCollection($athleteCalculatedMetrics->where('type', $metricType->value), $metricType);
         $weeklyData = $athleteCalculatedMetrics
             ->where('type', $metricType->value)
-            ->groupBy(fn ($metric) => $metric->date->startOfWeek()->format('Y-m-d'))
+            ->groupBy(fn ($metric) => $metric->date->startOfWeek(Carbon::MONDAY)->format('Y-m-d')) // Group by Monday for consistent weeks
             ->map(fn (Collection $weekMetrics) => $weekMetrics->avg('value'));
 
-        $lastWeekDate = $weeklyData->keys()->sortDesc()->first();
-        $lastValue = $lastWeekDate ? $weeklyData[$lastWeekDate] : null;
+        // The previous $lastWeekDate and $lastValue represented the average of the last week.
+        // Let's rename them for clarity.
+        $latestWeeklyAverageDateKey = $weeklyData->keys()->sortDesc()->first();
+        $latestWeeklyAverage = $latestWeeklyAverageDateKey ? $weeklyData[$latestWeeklyAverageDateKey] : null;
 
         $trend = $this->metricTrendsService->calculateGenericNumericTrend($athleteCalculatedMetrics->where('type', $metricType->value)->map(fn ($m) => (object) ['date' => $m->date, 'value' => $m->value]));
         $changePercentage = 'n/a';
@@ -290,18 +316,23 @@ class MetricService
         }
 
         return [
-            'label'                     => $metricType->getLabelShort(),
-            'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'n/a',
-            'last_value_date'           => $lastWeekDate ? Carbon::parse($lastWeekDate) : null,
-            'is_last_value_today'       => $lastWeekDate ? Carbon::parse($lastWeekDate)->isSameWeek($endDate) : false,
-            'formatted_average_7_days'  => is_numeric($trendsData['averages']['Derniers 7 jours']) ? number_format($trendsData['averages']['Derniers 7 jours'], 1) : 'n/a',
-            'formatted_average_30_days' => is_numeric($trendsData['averages']['Derniers 30 jours']) ? number_format($trendsData['averages']['Derniers 30 jours'], 1) : 'n/a',
-            'is_numerical'              => true,
-            'trend_icon'                => $trend['trend'] !== 'n/a' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
-            'trend_color'               => $trend['trend'] !== 'n/a' ? $this->determineTrendColor($trend['trend'], $metricType->getTrendOptimalDirection()) : 'zinc',
-            'trend_percentage'          => $changePercentage,
-            'chart_data'                => [
-                'labels' => $weeklyData->keys()->map(fn ($d) => Carbon::parse($d)->format('W Y'))->all(),
+            'label'                       => $metricType->getLabelShort(),
+            'latest_daily_value'          => $latestDailyValue,
+            'formatted_latest_daily_value'=> $this->formatMetricDisplayValue($latestDailyValue, $metricType),
+            'latest_daily_value_date'     => $latestDailyValueDate,
+            'is_latest_daily_value_today' => $latestDailyValueDate ? $latestDailyValueDate->isSameDay($endDate) : false,
+            'latest_weekly_average'       => $latestWeeklyAverage,
+            'formatted_latest_weekly_average'  => is_numeric($latestWeeklyAverage) ? number_format($latestWeeklyAverage, 1) : 'n/a',
+            'latest_weekly_average_date'  => $latestWeeklyAverageDateKey ? Carbon::parse($latestWeeklyAverageDateKey) : null,
+            'is_latest_weekly_average_current_week' => $latestWeeklyAverageDateKey ? Carbon::parse($latestWeeklyAverageDateKey)->isSameWeek($endDate) : false,
+            'formatted_average_7_days'    => is_numeric($trendsData['averages']['Derniers 7 jours']) ? number_format($trendsData['averages']['Derniers 7 jours'], 1) : 'n/a',
+            'formatted_average_30_days'   => is_numeric($trendsData['averages']['Derniers 30 jours']) ? number_format($trendsData['averages']['Derniers 30 jours'], 1) : 'n/a',
+            'is_numerical'                => true,
+            'trend_icon'                  => $trend['trend'] !== 'n/a' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
+            'trend_color'                 => $trend['trend'] !== 'n/a' ? $this->determineTrendColor($trend['trend'], $metricType->getTrendOptimalDirection()) : 'zinc',
+            'trend_percentage'            => $changePercentage,
+            'chart_data'                  => [
+                'labels' => $weeklyData->keys()->map(fn ($d) => Carbon::parse($d)->addDays(6)->format('W Y'))->all(), // Labeling with end-of-week for chart
                 'data'   => $weeklyData->values()->all(),
             ],
         ];
@@ -469,95 +500,31 @@ class MetricService
         $endDate = $endDate ?? Carbon::now();
         $metricsForPeriod = $this->retrieveAthleteRawMetrics($athlete, ['metric_type' => $metricType->value, 'period' => $period, 'endDate' => $endDate]);
 
-        $valueColumn = $metricType->getValueColumn();
-
-        $metricData = [
-            'label'                     => $metricType->getLabel(),
-            'short_label'               => $metricType->getLabelShort(),
-            'description'               => $metricType->getDescription(),
-            'unit'                      => $metricType->getUnit(),
-            'last_value'                => null,
-            'formatted_last_value'      => 'n/a',
-            'last_value_date'           => null,
-            'is_last_value_today'       => false,
-            'average_7_days'            => null,
-            'formatted_average_7_days'  => 'n/a',
-            'average_30_days'           => null,
-            'formatted_average_30_days' => 'n/a',
-            'trend_icon'                => 'ellipsis-horizontal',
-            'trend_color'               => 'zinc',
-            'trend_percentage'          => 'n/a',
-            'chart_data'                => [],
-            'is_numerical'              => ($valueColumn !== 'note'),
-        ];
-
-        $metricData['chart_data'] = $this->prepareSingleMetricChartData($metricsForPeriod, $metricType);
-
-        $lastMetric = $metricsForPeriod->sortByDesc('date')->first();
-        if ($lastMetric) {
-            $metricValue = $lastMetric->{$valueColumn};
-            $metricData['last_value'] = $metricValue;
-            $metricData['formatted_last_value'] = $this->formatMetricDisplayValue($metricValue, $metricType);
-            $metricData['last_value_date'] = $lastMetric->date;
-            $metricData['is_last_value_today'] = $lastMetric->date->isSameDay($endDate);
-        }
-
-        if ($metricData['is_numerical']) {
-            $trends = $this->metricTrendsService->calculateMetricAveragesFromCollection($metricsForPeriod, $metricType);
-
-            $metricData['average_7_days'] = $trends['averages']['Derniers 7 jours'] ?? null;
-            $metricData['average_30_days'] = $trends['averages']['Derniers 30 jours'] ?? null;
-
-            $metricData['formatted_average_7_days'] = $this->formatMetricDisplayValue($metricData['average_7_days'], $metricType);
-            $metricData['formatted_average_30_days'] = $this->formatMetricDisplayValue($metricData['average_30_days'], $metricType);
-
-            $evolutionTrendData = $this->metricTrendsService->calculateMetricEvolutionTrend($metricsForPeriod, $metricType);
-
-            if ($metricData['average_7_days'] !== null && $evolutionTrendData && isset($evolutionTrendData['trend'])) {
-                switch ($evolutionTrendData['trend']) {
-                    case 'increasing':
-                        $metricData['trend_icon'] = 'arrow-trending-up';
-                        $metricData['trend_color'] = 'lime';
-                        break;
-                    case 'decreasing':
-                        $metricData['trend_icon'] = 'arrow-trending-down';
-                        $metricData['trend_color'] = 'rose';
-                        break;
-                    case 'stable':
-                        $metricData['trend_icon'] = 'minus';
-                        $metricData['trend_color'] = 'zinc';
-                        break;
-                    default:
-                        // default values already set
-                        break;
-                }
-            }
-
-            if ($metricData['average_7_days'] !== null && $metricData['average_30_days'] !== null && $metricData['average_30_days'] !== 0) {
-                $change = (($metricData['average_7_days'] - $metricData['average_30_days']) / $metricData['average_30_days']) * 100;
-                $metricData['trend_percentage'] = ($change > 0 ? '+' : '').number_format($change, 1).'%';
-            } elseif ($metricData['average_7_days'] !== null && $metricType->getValueColumn() !== 'note') {
-                $metricData['trend_percentage'] = $this->formatMetricDisplayValue($metricData['average_7_days'], $metricType);
-            }
-        }
-
-        return $metricData;
+        // Directly call the now-aligned prepareSingleMetricDashboardDataFromCollection
+        return $this->prepareSingleMetricDashboardDataFromCollection($metricsForPeriod, $metricType, $period, $endDate);
     }
 
-    public function formatMetricDisplayValue(mixed $value, MetricType $metricType): string
+    public function formatMetricDisplayValue(mixed $value, MetricType|CalculatedMetricType $metricType): string
     {
         if ($value === null) {
             return 'n/a';
         }
-        if ($metricType->getValueColumn() === 'note') {
-            return (string) $value;
+
+        if ($metricType instanceof MetricType) {
+            if ($metricType->getValueColumn() === 'note') {
+                return (string) $value;
+            }
+
+            $formattedValue = number_format($value, $metricType->getPrecision());
+            $unit = $metricType->getUnit();
+            $scale = $metricType->getScale();
+
+            return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
+        } elseif ($metricType instanceof CalculatedMetricType) {
+            $formattedValue = number_format($value, $metricType->getPrecision());
+            return $formattedValue;
         }
-
-        $formattedValue = number_format($value, $metricType->getPrecision());
-        $unit = $metricType->getUnit();
-        $scale = $metricType->getScale();
-
-        return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
+        
     }
 
     public function retrieveAthleteTrainingPlanWeek(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek

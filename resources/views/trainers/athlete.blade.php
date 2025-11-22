@@ -195,7 +195,7 @@
                 <flux:heading class="mb-4 text-slate-600 dark:text-slate-400"
                     size="lg"
                     level="2">
-                    {{ $metricData['formatted_last_value'] }}
+                    {{ $metricData['formatted_latest_daily_value'] }}
                 </flux:heading>
                 <div class="mb-4">
                     @if (!empty($metricData['chart_data']['labels_and_data']) && count(array_filter($metricData['chart_data']['data'], fn($val) => $val !== null)) >= 2)

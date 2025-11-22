@@ -119,7 +119,7 @@
                     <flux:heading class="mb-4 text-slate-600 dark:text-slate-400"
                         size="lg"
                         level="2">
-                        {{ $metricData['formatted_last_value'] }}
+                        {{ $metricData['formatted_latest_daily_value'] }}
                         <x-filament::icon-button class="ms-1 inline"
                             icon="heroicon-o-information-circle"
                             tooltip="Dernière valeur enregistrée pour cette métrique."

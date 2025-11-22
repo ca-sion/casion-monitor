@@ -57,6 +57,18 @@ enum CalculatedMetricType: string implements HasLabel
         };
     }
 
+    /**
+     * Retourne le nombre de décimales pour l'affichage de la métrique.
+     */
+    public function getPrecision(): int
+    {
+        return match ($this) {
+            self::READINESS_SCORE => 0,
+            self::SBM             => 0,
+            default               => 1,
+        };
+    }
+
     public function getScale(): ?string
     {
         return match ($this) {
@@ -87,7 +99,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 'neutral',
             self::RATIO_CIH_NORMALIZED_CPH => 'neutral',
             self::READINESS_SCORE          => 'neutral',
-            self::ACWR                     => 'neutral',
+            self::ACWR                     => 'bad',
         };
     }
 
@@ -98,13 +110,13 @@ enum CalculatedMetricType: string implements HasLabel
     {
         return match ($this) {
             self::CIH                      => 'icon-[material-symbols-light--clock-arrow-down-outline]',
-            self::CIH_NORMALIZED           => 'icon-material-symbols-light--clock-arrow-down-outline]',
+            self::CIH_NORMALIZED           => 'icon-[material-symbols-light--clock-arrow-down-outline]',
             self::SBM                      => 'icon-[material-symbols-light--digital-wellbeing-outline]',
             self::CPH                      => 'icon-[material-symbols-light--calendar-clock-outline]',
             self::RATIO_CIH_CPH            => 'icon-[material-symbols-light--align-center]',
             self::RATIO_CIH_NORMALIZED_CPH => 'icon-[material-symbols-light--align-center]',
             self::READINESS_SCORE          => 'icon-[material-symbols-light--readiness-score-outline]',
-            self::ACWR                     => 'icon-[material-symbols-light--balance-outline]',
+            self::ACWR                     => 'icon-[material-symbols-light--align-center]',
         };
     }
 

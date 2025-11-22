@@ -51,9 +51,11 @@ class TrainerController extends Controller
 
         // Définir les types de métriques "calculées" à afficher
         $calculatedMetricTypes = [
-            // CalculatedMetricType::CIH_NORMALIZED,
             CalculatedMetricType::SBM,
-            CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH,
+            CalculatedMetricType::READINESS_SCORE,
+            CalculatedMetricType::ACWR,
+            // CalculatedMetricType::CIH_NORMALIZED,
+            // CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH,
         ];
 
         $periodOptions = [
