@@ -7,6 +7,7 @@ use App\Models\Metric;
 use App\Models\Athlete;
 use App\Enums\MetricType;
 use Illuminate\Support\Collection;
+use App\Enums\CalculatedMetricType;
 
 class MetricTrendsService
 {
@@ -78,7 +79,7 @@ class MetricTrendsService
     }
 
     /**
-     * Calcule la tendance d'évolution (accroissement/décroissement) pour une métrique sur une période.
+     * Calcule la tendance d\'évolution (accroissement/décroissement) pour une métrique sur une période.
      * Compare la valeur moyenne au début et à la fin de la période ou la première/dernière valeur.
      *
      * @param  Collection<Metric>  $metrics  Collection de métriques déjà filtrée par type.
@@ -121,7 +122,7 @@ class MetricTrendsService
         } elseif ($firstValue == 0 && $lastValue == 0) {
             $change = 0; // Aucun changement si les deux sont zéro.
         } else {
-            $change = (($lastValue - $firstValue) / $firstValue) * 100;
+            $change = (($lastValue - $firstValue) / abs($firstValue)) * 100;
         }
 
         $trend = 'stable';
@@ -139,10 +140,10 @@ class MetricTrendsService
     }
 
     /**
-     * Calcule la tendance d'évolution pour une collection de valeurs numériques et de dates.
+     * Calcule la tendance d\'évolution pour une collection de valeurs numériques et de dates.
      * Cette méthode est utilisée pour les métriques synthétiques comme le SBM qui ne sont pas directement des "MetricType".
      *
-     * @param  Collection<object|array>  $dataCollection  Collection d'objets/tableaux avec 'date' et 'value'.
+     * @param  Collection<object|array>  $dataCollection  Collection d\'objets/tableaux avec 'date' et 'value'.
      * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'n/a', 'change' => float|null, 'reason' => string|null]
      */
     public function calculateGenericNumericTrend(Collection $dataCollection): array
@@ -177,7 +178,7 @@ class MetricTrendsService
         } elseif ($firstValue == 0 && $lastValue == 0) {
             $change = 0;
         } else {
-            $change = (($lastValue - $firstValue) / $firstValue) * 100;
+            $change = (($lastValue - $firstValue) / abs($firstValue)) * 100;
         }
 
         $trend = 'stable';
@@ -194,33 +195,21 @@ class MetricTrendsService
     }
 
     /**
-     * Calcule le ratio de charge de travail aiguë:chronique (ACWR).
-     * Charge aiguë = Moyenne de la CIH sur les 7 derniers jours.
-     * Charge chronique = Moyenne de la CIH sur les 28 derniers jours (4 semaines).
-     *
-     * @return array ['ratio' => float, 'acute_load' => float, 'chronic_load' => float]
+     * Calcule le ratio de charge de travail aiguë:chronique (ACWR) à partir des métriques calculées.
      */
-    public function calculateAcwr(Athlete $athlete, Carbon $endDate): array
+    public function calculateAcwrFromCalculated(Collection $calculatedMetrics, Carbon $endDate): array
     {
-        // On a besoin de 4 semaines complètes + la semaine actuelle, donc ~35 jours de données.
-        $startDate = $endDate->copy()->subDays(34);
-
-        $cihMetrics = $athlete->metrics()
-            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get()
-            ->groupBy(fn ($m) => Carbon::parse($m->date)->startOfWeek()->toDateString())
-            ->map(fn ($weekMetrics) => $weekMetrics->sum('value'));
+        $cihMetrics = $calculatedMetrics
+            ->where('type', CalculatedMetricType::CIH)
+            ->where('date', '>=', $endDate->copy()->subDays(34))
+            ->groupBy(fn ($m) => $m->date->startOfWeek()->toDateString())
+            ->map(fn ($weekMetrics) => $weekMetrics->avg('value'));
 
         if ($cihMetrics->count() < 4) {
             return ['ratio' => 0, 'acute_load' => 0, 'chronic_load' => 0, 'reason' => 'Données insuffisantes.'];
         }
 
-        // La charge aiguë est la charge de la dernière semaine disponible.
         $acuteLoad = $cihMetrics->last();
-
-        // La charge chronique est la moyenne des 4 dernières semaines.
         $chronicLoad = $cihMetrics->slice(0, 4)->avg();
 
         if ($chronicLoad == 0) {
@@ -238,11 +227,10 @@ class MetricTrendsService
 
     /**
      * Compte le nombre de jours de "Damping" (amortissement psychologique).
-     * Damping = Humeur élevée malgré une VFC ou un SBM bas.
      */
     public function getDampingCount(Athlete $athlete, Carbon $startDate, Carbon $endDate): int
     {
-        $metrics = $athlete->metrics()
+        $rawMetrics = $athlete->metrics()
             ->whereIn('metric_type', [
                 MetricType::MORNING_HRV->value,
                 MetricType::MORNING_MOOD_WELLBEING->value,
@@ -250,16 +238,12 @@ class MetricTrendsService
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
 
-        $sbmMetrics = collect();
-        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-            $dailyMetrics = $metrics->where('date', $date->toDateString());
-            $sbm = app(MetricCalculationService::class)->calculateSbmForCollection($dailyMetrics);
-            if ($sbm !== null) {
-                $sbmMetrics->push((object) ['date' => $date->toDateString(), 'value' => $sbm]);
-            }
-        }
+        $sbmMetrics = $athlete->calculatedMetrics()
+            ->where('type', CalculatedMetricType::SBM)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get();
 
-        $hrvAvg = $metrics->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
+        $hrvAvg = $rawMetrics->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
         $sbmAvg = $sbmMetrics->avg('value');
 
         if ($hrvAvg == 0 || $sbmAvg == 0) {
@@ -267,12 +251,17 @@ class MetricTrendsService
         }
 
         $dampingDays = 0;
-        $groupedMetrics = $metrics->groupBy('date');
 
-        foreach ($groupedMetrics as $date => $dailyMetrics) {
-            $hrv = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_HRV->value)?->value;
-            $mood = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)?->value;
-            $sbm = $sbmMetrics->firstWhere('date', $date)?->value;
+        $sbmMetricsByDate = $sbmMetrics->keyBy(fn ($m) => $m->date->toDateString());
+        $rawMetricsByDate = $rawMetrics->groupBy(fn ($m) => $m->date->toDateString());
+
+        $commonDates = $sbmMetricsByDate->keys()->intersect($rawMetricsByDate->keys());
+
+        foreach ($commonDates as $date) {
+            $dailyRawMetrics = $rawMetricsByDate[$date];
+            $hrv = $dailyRawMetrics->firstWhere('metric_type', MetricType::MORNING_HRV->value)?->value;
+            $mood = $dailyRawMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)?->value;
+            $sbm = $sbmMetricsByDate[$date]->value;
 
             if ($mood === null || $mood < 8) {
                 continue;
@@ -302,14 +291,11 @@ class MetricTrendsService
         $metricsA = $athlete->metrics()->where('metric_type', $metricA)->where('date', '>=', Carbon::now()->subDays($days))->count();
         $metricsB = $athlete->metrics()->where('metric_type', $metricB)->where('date', '>=', Carbon::now()->subDays($days))->count();
 
-        // On a besoin d'au moins 5 points de données pour une corrélation minimale
         return min($metricsA, $metricsB) >= 5;
     }
 
     /**
      * Calcule la corrélation de Pearson entre deux types de métriques sur une période donnée.
-     *
-     * @return array ['correlation' => float|null, 'impact_size' => float|null, 'reason' => string|null]
      */
     public function calculateCorrelation(Athlete $athlete, MetricType $metricTypeA, MetricType $metricTypeB, int $days): array
     {
@@ -332,10 +318,6 @@ class MetricTrendsService
 
     /**
      * Calcule la corrélation de Pearson entre deux collections de données.
-     *
-     * @param  Collection  $collectionA  Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
-     * @param  Collection  $collectionB  Collection d'objets avec 'date' (YYYY-MM-DD) and 'value'.
-     * @return array ['correlation' => float|null, 'impact_size' => float|null, 'reason' => string|null]
      */
     public function calculateCorrelationFromCollections(Collection $collectionA, Collection $collectionB): array
     {

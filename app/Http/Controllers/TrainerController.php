@@ -8,9 +8,9 @@ use App\Enums\MetricType;
 use Illuminate\View\View;
 use App\Enums\FeedbackType;
 use Illuminate\Support\Carbon;
-use App\Enums\CalculatedMetric;
 use App\Services\MetricService;
 use Illuminate\Http\JsonResponse;
+use App\Enums\CalculatedMetricType;
 use Illuminate\Support\Facades\Auth;
 
 class TrainerController extends Controller
@@ -51,9 +51,9 @@ class TrainerController extends Controller
 
         // Définir les types de métriques "calculées" à afficher
         $calculatedMetricTypes = [
-            // CalculatedMetric::CIH_NORMALIZED,
-            CalculatedMetric::SBM,
-            CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
+            // CalculatedMetricType::CIH_NORMALIZED,
+            CalculatedMetricType::SBM,
+            CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH,
         ];
 
         $periodOptions = [

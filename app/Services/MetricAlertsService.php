@@ -4,10 +4,10 @@ namespace App\Services;
 
 use Carbon\Carbon;
 use App\Models\Athlete;
-use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
-use App\Models\TrainingPlanWeek;
+use App\Models\CalculatedMetric;
 use Illuminate\Support\Collection;
+use App\Enums\CalculatedMetricType;
 
 class MetricAlertsService
 {
@@ -88,12 +88,16 @@ class MetricAlertsService
         $allAlerts = [];
         $includeAlerts = $options['include_alerts'] ?? [];
 
+        $calculatedMetrics = CalculatedMetric::where('athlete_id', $athlete->id)
+            ->where('date', '>=', now()->subDays(90))
+            ->get();
+
         if (in_array('general', $includeAlerts)) {
             $allAlerts = array_merge($allAlerts, $this->getGeneralAlerts($athlete, $athleteMetrics));
         }
 
         if (in_array('charge', $includeAlerts)) {
-            $allAlerts = array_merge($allAlerts, $this->getChargeAlerts($athlete, $athleteMetrics, $athletePlanWeeks));
+            $allAlerts = array_merge($allAlerts, $this->getChargeAlerts($athlete, $athleteMetrics, $athletePlanWeeks, $calculatedMetrics));
         }
 
         if (in_array('readiness', $includeAlerts)) {
@@ -127,16 +131,14 @@ class MetricAlertsService
         return $alerts;
     }
 
-    protected function getChargeAlerts(Athlete $athlete, Collection $athleteMetrics, Collection $athletePlanWeeks): array
+    protected function getChargeAlerts(Athlete $athlete, Collection $athleteMetrics, Collection $athletePlanWeeks, Collection $calculatedMetrics): array
     {
         $alerts = [];
         $weekStartDate = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
-        $trainingPlanWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate);
-
-        $alerts = array_merge($alerts, $this->evaluateCihCphRatioAlerts($athlete, $weekStartDate, $trainingPlanWeek, $athleteMetrics));
-        $alerts = array_merge($alerts, $this->evaluateWeeklySbmAlerts($athlete, $weekStartDate, $athleteMetrics));
-        $alerts = array_merge($alerts, $this->analyzeLongTermTrendsForAlerts($athlete, $weekStartDate, $athleteMetrics));
+        $alerts = array_merge($alerts, $this->evaluateCihCphRatioAlerts($athlete, $weekStartDate, $calculatedMetrics));
+        $alerts = array_merge($alerts, $this->evaluateWeeklySbmAlerts($athlete, $weekStartDate, $calculatedMetrics));
+        $alerts = array_merge($alerts, $this->analyzeLongTermTrendsForAlerts($athlete, $athleteMetrics, $calculatedMetrics));
 
         return $alerts;
     }
@@ -196,26 +198,17 @@ class MetricAlertsService
         return $alerts;
     }
 
-    /**
-     * Analyse les métriques de charge (CIH/CPH) et génère des alertes.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $weekStartDate  La date de début de la semaine.
-     * @param  TrainingPlanWeek|null  $trainingPlanWeek  La semaine du plan d'entraînement.
-     * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
-     * @return array Un tableau d'alertes liées à la charge.
-     */
-    protected function evaluateCihCphRatioAlerts(Athlete $athlete, Carbon $weekStartDate, ?TrainingPlanWeek $trainingPlanWeek, ?Collection $allMetrics = null): array
+    protected function evaluateCihCphRatioAlerts(Athlete $athlete, Carbon $weekStartDate, Collection $calculatedMetrics): array
     {
         $alerts = [];
-        $metricsToAnalyze = $allMetrics ?? $athlete->metrics()->get();
-        $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsToAnalyze->whereBetween('date', [$weekStartDate, $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]));
-        $cph = $trainingPlanWeek ? $this->metricCalculationService->calculateCph($trainingPlanWeek) : 0.0;
+
+        $cihNormalized = $calculatedMetrics->where('date', $weekStartDate->toDateString())->firstWhere('type', CalculatedMetricType::CIH_NORMALIZED)?->value;
+        $cph = $calculatedMetrics->where('date', $weekStartDate->toDateString())->firstWhere('type', CalculatedMetricType::CPH)?->value;
 
         $chargeThresholds = self::ALERT_THRESHOLDS['CHARGE_LOAD'];
 
         if ($cihNormalized > 0 && $cph > 0) {
-            $ratio = $this->metricCalculationService->calculateRatio($cihNormalized, $cph);
+            $ratio = $cihNormalized / $cph;
 
             if ($ratio < $chargeThresholds['ratio_underload_threshold']) {
                 $this->addAlert($alerts, 'warning', 'Sous-charge potentielle : Charge interne ('.number_format($cihNormalized, 1).') significativement inférieure au plan ('.$cph.'). Ratio: '.number_format($ratio, 2).'.');
@@ -233,34 +226,22 @@ class MetricAlertsService
         return $alerts;
     }
 
-    /**
-     * Analyse les métriques SBM et génère des alertes.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $weekStartDate  La date de début de la semaine.
-     * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
-     * @return array Un tableau d'alertes liées au SBM.
-     */
-    protected function evaluateWeeklySbmAlerts(Athlete $athlete, Carbon $weekStartDate, ?Collection $allMetrics = null): array
+    protected function evaluateWeeklySbmAlerts(Athlete $athlete, Carbon $weekStartDate, Collection $calculatedMetrics): array
     {
         $alerts = [];
-        $sbmSum = 0;
-        $sbmCount = 0;
-        $period = CarbonPeriod::create($weekStartDate, '1 day', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
-        foreach ($period as $date) {
-            if (is_null($allMetrics)) {
-                $sbmValue = $this->metricCalculationService->calculateSbm($athlete, $date);
-            } else {
-                $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $date->format('Y-m-d'));
-                $sbmValue = $this->metricCalculationService->calculateSbmForCollection($dailyMetrics);
-            }
 
-            if ($sbmValue !== null) {
-                $sbmSum += $sbmValue;
-                $sbmCount++;
-            }
+        $weeklySbmMetrics = $calculatedMetrics
+            ->where('type', CalculatedMetricType::SBM)
+            ->where('date', '>=', $weekStartDate)
+            ->where('date', '<=', $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY));
+
+        if ($weeklySbmMetrics->isEmpty()) {
+            $this->addAlert($alerts, 'info', 'Pas de données SBM pour cette semaine.');
+
+            return $alerts;
         }
-        $averageSbm = $sbmCount > 0 ? $sbmSum / $sbmCount : null;
+
+        $averageSbm = $weeklySbmMetrics->avg('value');
 
         if ($averageSbm !== null) {
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
@@ -276,37 +257,16 @@ class MetricAlertsService
         return $alerts;
     }
 
-    /**
-     * Analyse les tendances SBM et VFC sur plusieurs semaines et génère des alertes.
-     *
-     * @param  Athlete  $athlete  L'athlète concerné.
-     * @param  Carbon  $currentWeekStartDate  La date de début de la semaine actuelle.
-     * @param  Collection|null  $allMetrics  Collection de toutes les métriques de l'athlète (optionnel, pour optimisation).
-     * @return array Un tableau d'alertes liées aux tendances SBM et VFC.
-     */
-    protected function analyzeLongTermTrendsForAlerts(Athlete $athlete, Carbon $currentWeekStartDate, ?Collection $allMetrics = null): array
+    protected function analyzeLongTermTrendsForAlerts(Athlete $athlete, Collection $allMetrics, Collection $calculatedMetrics): array
     {
         $alerts = [];
-
-        $period = 'last_30_days';
         $startDate = Carbon::now()->subDays(30)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 
-        $sbmDataCollection = new Collection;
-        $currentDate = $startDate->copy();
-        while ($currentDate->lessThanOrEqualTo($endDate)) {
-            if (is_null($allMetrics)) {
-                $sbmValue = $this->metricCalculationService->calculateSbm($athlete, $currentDate);
-            } else {
-                $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->format('Y-m-d') === $currentDate->format('Y-m-d'));
-                $sbmValue = $this->metricCalculationService->calculateSbmForCollection($dailyMetrics);
-            }
-
-            if ($sbmValue !== null && $sbmValue !== 0.0) {
-                $sbmDataCollection->push((object) ['date' => $currentDate->copy(), 'value' => $sbmValue]);
-            }
-            $currentDate->addDay();
-        }
+        $sbmDataCollection = $calculatedMetrics
+            ->where('type', CalculatedMetricType::SBM)
+            ->where('date', '>=', $startDate)
+            ->where('date', '<=', $endDate);
 
         if ($sbmDataCollection->count() > 5) {
             $sbmThresholds = self::ALERT_THRESHOLDS['SBM'];
@@ -316,7 +276,7 @@ class MetricAlertsService
             }
         }
 
-        $hrvMetrics = $allMetrics->filter(fn ($m) => $m->metric_type === MetricType::MORNING_HRV);
+        $hrvMetrics = $allMetrics->where('metric_type', MetricType::MORNING_HRV);
 
         if ($hrvMetrics->count() > 5) {
             $hrvTrend = $this->metricTrendsService->calculateMetricEvolutionTrend($hrvMetrics, MetricType::MORNING_HRV);

@@ -5,8 +5,9 @@ namespace App\Services;
 use Carbon\Carbon;
 use App\Models\Athlete;
 use App\Enums\MetricType;
-use App\Enums\CalculatedMetric;
+use App\Models\CalculatedMetric;
 use Illuminate\Support\Collection;
+use App\Enums\CalculatedMetricType;
 
 class MetricReadinessService
 {
@@ -63,25 +64,21 @@ class MetricReadinessService
     {
         $readinessScore = 100;
         $this->readinessDetails = [];
+        $today = now()->startOfDay();
 
-        // 1. Impact du SBM (Subjective Well-being Metrics)
-        $sbmMetrics = $allMetrics->whereIn('metric_type', [
-            MetricType::MORNING_SLEEP_QUALITY,
-            MetricType::MORNING_GENERAL_FATIGUE,
-            MetricType::MORNING_PAIN,
-            MetricType::MORNING_MOOD_WELLBEING,
-        ])
-            ->sortByDesc('date')
-            ->filter(fn ($m) => $m->date->isToday() || $m->date->isYesterday());
+        // 1. Impact du SBM (Subjective Well-being Metrics) - Read from calculated metrics
+        $dailySbm = CalculatedMetric::where('athlete_id', $athlete->id)
+            ->where('date', $today)
+            ->where('type', CalculatedMetricType::SBM)
+            ->value('value');
 
-        $dailySbm = $this->metricCalculationService->calculateSbmForCollection($sbmMetrics);
         $sbmPenalty = 0;
         if ($dailySbm !== null) {
             $sbmPenalty = (10 - $dailySbm) * self::ALERT_THRESHOLDS['READINESS_SCORE']['sbm_penalty_factor'];
         }
         $readinessScore -= $sbmPenalty;
         $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(CalculatedMetric::SBM, $sbmPenalty, $readinessScore, $dailySbm);
+        $this->addReadinessDetail(CalculatedMetricType::SBM, $sbmPenalty, $readinessScore, $dailySbm);
 
         // 2. Impact de la VFC (Variabilité de la Fréquence Cardiaque - HRV)
         $hrvMetrics = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->sortByDesc('date');
@@ -110,7 +107,7 @@ class MetricReadinessService
 
         // 3. Impact de la Douleur (MORNING_PAIN)
         $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
-            ->where('date', now()->startOfDay())
+            ->where('date', $today)
             ->first()?->value;
         $painPenalty = 0;
         if ($morningPain !== null && $morningPain > 0) {
@@ -122,7 +119,7 @@ class MetricReadinessService
 
         // 4. Impact des métriques pré-session (remplies juste avant la session)
         $preSessionEnergy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
-            ->where('date', now()->startOfDay())
+            ->where('date', $today)
             ->first()?->value;
         $preSessionEnergyPenalty = 0;
         if ($preSessionEnergy !== null) {
@@ -137,7 +134,7 @@ class MetricReadinessService
         $this->addReadinessDetail(MetricType::PRE_SESSION_ENERGY_LEVEL, $preSessionEnergyPenalty, $readinessScore, $preSessionEnergy);
 
         $preSessionLegFeel = $allMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL->value)
-            ->where('date', now()->startOfDay())
+            ->where('date', $today)
             ->first()?->value;
         $preSessionLegFeelPenalty = 0;
         if ($preSessionLegFeel !== null) {
@@ -151,28 +148,22 @@ class MetricReadinessService
         $readinessScore = max(0, min(100, (int) round($readinessScore)));
         $this->addReadinessDetail(MetricType::PRE_SESSION_LEG_FEEL, $preSessionLegFeelPenalty, $readinessScore, $preSessionLegFeel);
 
-        // 5. Impact du ratio de charge (CIH/CPH) - à évaluer sur la semaine en cours
-        $currentWeekStartDate = now()->startOfWeek(Carbon::MONDAY);
-        $trainingPlanWeeks = $athlete->currentTrainingPlan?->weeks ?? collect();
-        $currentTrainingPlanWeek = $trainingPlanWeeks->firstWhere('start_date', $currentWeekStartDate);
-        $metricsForCurrentWeek = $allMetrics->whereBetween('date', [$currentWeekStartDate, $currentWeekStartDate->copy()->endOfWeek(Carbon::SUNDAY)]);
-
-        $currentCih = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForCurrentWeek);
-        $currentCph = $currentTrainingPlanWeek ? $this->metricCalculationService->calculateCph($currentTrainingPlanWeek) : 0;
+        // 5. Impact du ratio de charge (CIH/CPH) - Read from calculated metrics
+        $chargeRatio = CalculatedMetric::where('athlete_id', $athlete->id)
+            ->where('date', $today)
+            ->where('type', CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH)
+            ->value('value');
 
         $chargeRatioPenalty = 0;
-        $ratio = 0;
         $overloadThreshold = self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_threshold'];
 
-        if ($currentCih > 0 && $currentCph > 0) {
-            $ratio = $currentCih / $currentCph;
-            if ($ratio > $overloadThreshold) {
-                $chargeRatioPenalty = self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_penalty_factor'] * ($ratio - $overloadThreshold);
-            }
+        if ($chargeRatio !== null && $chargeRatio > $overloadThreshold) {
+            $chargeRatioPenalty = self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_penalty_factor'] * ($chargeRatio - $overloadThreshold);
         }
+
         $readinessScore -= $chargeRatioPenalty;
         $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(CalculatedMetric::RATIO_CIH_CPH, $chargeRatioPenalty, $readinessScore, $ratio, ['ratio' => $ratio, 'overload_threshold' => $overloadThreshold, 'current_cih' => $currentCih, 'current_cph' => $currentCph]);
+        $this->addReadinessDetail(CalculatedMetricType::RATIO_CIH_CPH, $chargeRatioPenalty, $readinessScore, $chargeRatio, ['ratio' => $chargeRatio, 'overload_threshold' => $overloadThreshold]);
 
         return [
             'readiness_score'   => $readinessScore,
@@ -311,13 +302,13 @@ class MetricReadinessService
     /**
      * Ajoute un détail de calcul au tableau des détails de readiness.
      *
-     * @param  Enum  $metric  La métrique en Enum.
+     * @param  \App\Enums\MetricType|\App\Enums\CalculatedMetricType  $metric  La métrique en Enum.
      * @param  int|float  $penalty  La pénalité appliquée par ce facteur.
      * @param  int  $currentScore  Le score de readiness après application de cette pénalité.
-     * @param  int|float  $metricValue  Valeur de la métrique.
+     * @param  int|float|null  $metricValue  Valeur de la métrique.
      * @param  array  $data  Un tableau associatif de données brutes nécessaires pour générer la description.
      */
-    protected function addReadinessDetail(MetricType|CalculatedMetric $metric, int|float $penalty, int $currentScore, int|float|null $metricValue, array $data = []): void
+    protected function addReadinessDetail(MetricType|CalculatedMetricType $metric, int|float $penalty, int $currentScore, int|float|null $metricValue, array $data = []): void
     {
         $this->readinessDetails[] = [
             'metric'             => $metric,

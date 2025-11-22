@@ -4,12 +4,12 @@ namespace App\Services;
 
 use App\Models\Metric;
 use App\Models\Athlete;
-use Carbon\CarbonPeriod;
 use App\Enums\MetricType;
 use Illuminate\Support\Carbon;
-use App\Enums\CalculatedMetric;
+use App\Models\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
+use App\Enums\CalculatedMetricType;
 
 class MetricService
 {
@@ -38,7 +38,7 @@ class MetricService
         $defaultOptions = [
             'period'                       => 'last_60_days',
             'metric_types'                 => MetricType::cases(),
-            'calculated_metrics'           => CalculatedMetric::cases(),
+            'calculated_metrics'           => CalculatedMetricType::cases(),
             'include_dashboard_metrics'    => false,
             'include_weekly_metrics'       => false,
             'include_latest_daily_metrics' => false,
@@ -82,22 +82,28 @@ class MetricService
         // Déterminer la date de début maximale pour la collecte des métriques brutes, en fonction de la période et des options d'inclusion.
         $maxStartDate = $this->determineMetricCollectionStartDate($options);
 
-        // Pré-charger toutes les métriques brutes et les semaines de plan d'entraînement pour tous les athlètes.
-        // Les métriques menstruelles (J1) sont incluses si l'option est activée, avec une période de 2 ans.
-        $allMetricsQuery = Metric::whereIn('athlete_id', $athleteIds)
+        // Pré-charger toutes les métriques brutes, calculées et les semaines de plan d'entraînement pour tous les athlètes.
+        $allMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
             ->where('date', '>=', $maxStartDate)
             ->whereIn('metric_type', array_map(fn ($metricType) => $metricType->value, $metricTypes))
-            ->orderBy('date', 'asc');
+            ->orderBy('date', 'asc')
+            ->get()
+            ->groupBy('athlete_id');
 
         if ($options['include_menstrual_cycle']) {
-            $allMetricsQuery->orWhere(function ($query) use ($athleteIds) {
-                $query->whereIn('athlete_id', $athleteIds)
+            $allMetricsByAthlete = $allMetricsByAthlete->mergeRecursive(
+                Metric::whereIn('athlete_id', $athleteIds)
                     ->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
-                    ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD);
-            });
+                    ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD)
+                    ->get()
+                    ->groupBy('athlete_id')
+            );
         }
 
-        $allMetricsByAthlete = $allMetricsQuery->get()->groupBy('athlete_id');
+        $allCalculatedMetricsByAthlete = CalculatedMetric::whereIn('athlete_id', $athleteIds)
+            ->where('date', '>=', $maxStartDate)
+            ->get()
+            ->groupBy('athlete_id');
 
         $athletesTrainingPlansIds = $athletes->pluck('current_training_plan.id')->filter()->values();
         $allTrainingPlanWeeksByAthleteTrainingPlanId = TrainingPlanWeek::whereIn('training_plan_id', $athletesTrainingPlansIds)
@@ -105,21 +111,18 @@ class MetricService
             ->get()
             ->groupBy('training_plan_id');
 
-        // Pré-calculer toutes les métriques hebdomadaires en une seule passe
-        $bulkWeeklyMetricsData = $this->calculateWeeklyMetricsInBulk($athletes, $maxStartDate, $allMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $options['period']);
-
-        // 3. Itérer sur chaque athlète et effectuer les calculs conditionnels
-        return $athletes->map(function ($athlete) use ($allMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $options, $bulkWeeklyMetricsData) {
+        // Itérer sur chaque athlète et effectuer les calculs conditionnels
+        return $athletes->map(function ($athlete) use ($allMetricsByAthlete, $allCalculatedMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $options) {
             $athleteMetrics = $allMetricsByAthlete->get($athlete->id) ?? collect();
+            $athleteCalculatedMetrics = $allCalculatedMetricsByAthlete->get($athlete->id) ?? collect();
             $athleteTrainingPlansId = $athlete->currentTrainingPlan?->id;
             $athletePlanWeeks = $allTrainingPlanWeeksByAthleteTrainingPlanId->get($athleteTrainingPlansId) ?? collect();
-            $athleteWeeklyMetrics = $bulkWeeklyMetricsData->get($athlete->id) ?? collect();
 
             $athleteData = []; // Données à ajouter à l'athlète
 
-            // Filtrer les métriques par la période demandée par l'utilisateur pour les calculs
             $periodStartDate = $this->calculatePeriodStartDate($options['period']);
             $filteredAthleteMetrics = $athleteMetrics->where('date', '>=', $periodStartDate);
+            $filteredAthleteCalculatedMetrics = $athleteCalculatedMetrics->where('date', '>=', $periodStartDate);
 
             // Calculs conditionnels basés sur les options
             if ($options['include_dashboard_metrics']) {
@@ -139,10 +142,10 @@ class MetricService
             if ($options['include_weekly_metrics']) {
                 $weeklyMetricsData = [];
                 foreach ($options['calculated_metrics'] as $calculatedMetric) {
-                    if ($calculatedMetric === CalculatedMetric::READINESS_SCORE) {
+                    if ($calculatedMetric === CalculatedMetricType::READINESS_SCORE) {
                         continue; // Le score de readiness est géré séparément, pas comme une métrique hebdomadaire ici.
                     }
-                    $weeklyMetricsData[$calculatedMetric->value] = $this->prepareWeeklyMetricDashboardDataFromCollection($athlete, $athleteWeeklyMetrics, $calculatedMetric, $options['period']);
+                    $weeklyMetricsData[$calculatedMetric->value] = $this->prepareWeeklyMetricDashboardDataFromCollection($athlete, $filteredAthleteCalculatedMetrics, $calculatedMetric, $options['period']);
                 }
                 $athleteData['weekly_metrics_data'] = $weeklyMetricsData;
             }
@@ -152,7 +155,6 @@ class MetricService
             }
 
             if (! empty($options['include_alerts'])) {
-                $period = $options['period'] ?? 'last_60_days';
                 $athleteData['alerts'] = $this->metricAlertsService->getAlerts($athlete, $athleteMetrics, $athletePlanWeeks, $options);
             }
 
@@ -182,71 +184,6 @@ class MetricService
         });
     }
 
-    /**
-     * Prépare et calcule en masse les métriques hebdomadaires pour tous les athlètes.
-     *
-     * @param  Collection<Athlete>  $athletes
-     * @param  Collection<int, Collection<Metric>>  $allMetricsByAthlete
-     * @param  Collection<int, Collection<TrainingPlanWeek>>  $allTrainingPlanWeeksByAthleteTrainingPlanId
-     * @return Collection<int, Collection<string, array>> Collection imbriquée [athlete_id => [week_start_date => [metric_key => value]]]
-     */
-    protected function calculateWeeklyMetricsInBulk(Collection $athletes, Carbon $maxStartDate, Collection $allMetricsByAthlete, Collection $allTrainingPlanWeeksByAthleteTrainingPlanId, string $period): Collection
-    {
-        $bulkWeeklyData = collect();
-        $now = Carbon::now();
-        $startDate = $this->calculatePeriodStartDate($period)->startOfWeek(Carbon::MONDAY);
-        $endDate = $now->copy()->endOfWeek(Carbon::SUNDAY);
-
-        $weekPeriod = CarbonPeriod::create($startDate, '1 week', $endDate);
-
-        foreach ($athletes as $athlete) {
-            $athleteMetrics = $allMetricsByAthlete->get($athlete->id) ?? collect();
-            $athleteTrainingPlansId = $athlete->currentTrainingPlan?->id;
-            $athletePlanWeeks = $allTrainingPlanWeeksByAthleteTrainingPlanId->get($athleteTrainingPlansId) ?? collect();
-
-            $athleteWeeklyData = collect();
-
-            foreach ($weekPeriod as $weekStartDate) {
-                $weekEndDate = $weekStartDate->copy()->endOfWeek(Carbon::SUNDAY);
-                $metricsForWeek = $athleteMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
-
-                $cih = $this->metricCalculationService->calculateCihForCollection($metricsForWeek);
-
-                $sbmMetricsForWeek = $metricsForWeek->whereIn('metric_type', [
-                    MetricType::MORNING_SLEEP_QUALITY,
-                    MetricType::MORNING_GENERAL_FATIGUE,
-                    MetricType::MORNING_PAIN,
-                    MetricType::MORNING_MOOD_WELLBEING,
-                ]);
-
-                $dailySbmValues = $sbmMetricsForWeek->groupBy(fn ($m) => $m->date->format('Y-m-d'))
-                    ->map(fn ($dailyMetrics) => $this->metricCalculationService->calculateSbmForCollection($dailyMetrics))
-                    ->filter(fn ($value) => $value > 0); // Filtrer les valeurs non valides ou nulles
-
-                $sbm = $dailySbmValues->isNotEmpty() ? $dailySbmValues->avg() : null;
-
-                $planWeek = $athletePlanWeeks->firstWhere('start_date', $weekStartDate);
-                $cph = $planWeek ? $this->metricCalculationService->calculateCph($planWeek) : 0.0;
-
-                $cihNormalized = $this->metricCalculationService->calculateCihNormalizedForCollection($metricsForWeek);
-                $ratioCihCph = ($cih > 0 && $cph > 0) ? $this->metricCalculationService->calculateRatio($cih, $cph) : null;
-                $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->metricCalculationService->calculateRatio($cihNormalized, $cph) : null;
-
-                $athleteWeeklyData->put($weekStartDate->toDateString(), [
-                    CalculatedMetric::CIH->value                      => $cih,
-                    CalculatedMetric::SBM->value                      => $sbm,
-                    CalculatedMetric::CPH->value                      => $cph,
-                    CalculatedMetric::CIH_NORMALIZED->value           => $cihNormalized,
-                    CalculatedMetric::RATIO_CIH_CPH->value            => $ratioCihCph,
-                    CalculatedMetric::RATIO_CIH_NORMALIZED_CPH->value => $ratioCihNormalizedCph,
-                ]);
-            }
-            $bulkWeeklyData->put($athlete->id, $athleteWeeklyData);
-        }
-
-        return $bulkWeeklyData;
-    }
-
     protected function determineMetricCollectionStartDate(array $options): Carbon
     {
         $now = Carbon::now();
@@ -254,40 +191,22 @@ class MetricService
 
         // Si les tendances sont incluses, s'assurer d'avoir au moins 60 jours de données
         if ($options['include_dashboard_metrics'] || $options['include_weekly_metrics'] || ! empty($options['include_alerts'])) {
-            $startDate = $startDate->min($now->copy()->subDays(60)->startOfDay());
+            $startDate = $startDate->min($now->copy()->subDays(90)->startOfDay());
         }
 
         return $startDate;
     }
 
-    /**
-     * Get latest metrics grouped by date for a collection of metrics.
-     */
     protected function getAthleteLatestMetricsGroupedByDate(Collection $athleteMetrics, string $period): Collection
     {
         $startDate = $this->calculatePeriodStartDate($period);
         $endDate = now()->endOfDay();
 
-        // Étape 1: Filtrer les métriques pour éliminer les duplicata de type même heure/date
-        $filteredMetrics = $athleteMetrics->filter(function (Metric $metric) use ($startDate, $endDate) {
-            return $metric->date->between($startDate, $endDate);
-        });
+        $filteredMetrics = $athleteMetrics->filter(fn (Metric $metric) => $metric->date->between($startDate, $endDate));
 
-        // Étape 2: Trier par date les éléments de chaque groupe
-        $sortedMetrics = $filteredMetrics->sortByDesc('date');
-
-        // Étape 3: Grouper les métriques par jour
-        $groupedData = $sortedMetrics->groupBy(function (Metric $metric) {
-            return $metric->date->format('Y-m-d');
-        });
-
-        // Étape finale: Trier les entités pour avoir un ordre chronologique
-        return $groupedData->sortByDesc('date');
+        return $filteredMetrics->sortByDesc('date')->groupBy(fn (Metric $metric) => $metric->date->format('Y-m-d'));
     }
 
-    /**
-     * Prépare les données d'une métrique pour le tableau de bord à partir d'une collection pré-filtrée.
-     */
     protected function prepareSingleMetricDashboardDataFromCollection(Collection $metricsForPeriod, MetricType $metricType, string $period): array
     {
         $valueColumn = $metricType->getValueColumn();
@@ -332,9 +251,7 @@ class MetricService
             $evolutionTrendData = $this->metricTrendsService->calculateMetricEvolutionTrend($metricsForPeriod, $metricType);
             if ($metricData['average_7_days'] !== null && $evolutionTrendData['trend'] !== 'n/a') {
                 $optimalDirection = $metricType->getTrendOptimalDirection();
-
                 $metricData['trend_icon'] = $this->getTrendIcon($evolutionTrendData['trend']);
-
                 $metricData['trend_color'] = $this->determineTrendColor($evolutionTrendData['trend'], $optimalDirection);
             }
 
@@ -347,64 +264,49 @@ class MetricService
         return $metricData;
     }
 
-    /**
-     * Prépare les données hebdomadaires d'une métrique pour le tableau de bord à partir de collections pré-filtrées.
-     *
-     * @param  Collection<object>  $athleteWeeklyMetrics  Les données hebdomadaires pré-calculées pour l'athlète.
-     */
-    protected function prepareWeeklyMetricDashboardDataFromCollection(Athlete $athlete, Collection $athleteWeeklyMetrics, CalculatedMetric $metricKey, string $period): array
+    protected function prepareWeeklyMetricDashboardDataFromCollection(Athlete $athlete, Collection $athleteCalculatedMetrics, CalculatedMetricType $metricType, string $period): array
     {
         $now = Carbon::now();
-        $allWeeklyData = new Collection;
 
-        // Filtrer les données hebdomadaires pré-calculées pour la métrique spécifique
-        foreach ($athleteWeeklyMetrics as $weekStartDateStr => $weeklyData) {
-            $weekStartDate = Carbon::parse($weekStartDateStr);
-            $value = $weeklyData[$metricKey->value] ?? null;
-            if (is_numeric($value)) {
-                $allWeeklyData->push((object) ['date' => $weekStartDate->copy(), 'value' => $value]);
-            }
-        }
+        $weeklyData = $athleteCalculatedMetrics
+            ->where('type', $metricType->value)
+            ->groupBy(fn ($metric) => $metric->date->startOfWeek()->format('Y-m-d'))
+            ->map(fn (Collection $weekMetrics) => $weekMetrics->avg('value'));
 
-        // Calcule les statistiques pour le tableau de bord à partir des données hebdomadaires
-        $lastMetric = $allWeeklyData->sortByDesc('date')->first() ?? null;
-        $lastValue = $lastMetric?->value ?? null;
+        $lastWeekDate = $weeklyData->keys()->sortDesc()->first();
+        $lastValue = $lastWeekDate ? $weeklyData[$lastWeekDate] : null;
 
-        $dataFor7Days = $allWeeklyData->filter(fn ($item) => $item->date->greaterThanOrEqualTo($now->copy()->subDays(7)->startOfWeek(Carbon::MONDAY)));
-        $average7Days = $dataFor7Days->isNotEmpty() ? $dataFor7Days->avg('value') : null;
+        $dataFor7Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($now->copy()->subDays(7)));
+        $average7Days = $dataFor7Days->isNotEmpty() ? $dataFor7Days->avg() : null;
 
-        $dataFor30Days = $allWeeklyData->filter(fn ($item) => $item->date->greaterThanOrEqualTo($now->copy()->subDays(30)->startOfWeek(Carbon::MONDAY)));
-        $average30Days = $dataFor30Days->isNotEmpty() ? $dataFor30Days->avg('value') : null;
+        $dataFor30Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($now->copy()->subDays(30)));
+        $average30Days = $dataFor30Days->isNotEmpty() ? $dataFor30Days->avg() : null;
 
-        $trend = $this->metricTrendsService->calculateGenericNumericTrend($allWeeklyData);
+        $trend = $this->metricTrendsService->calculateGenericNumericTrend($athleteCalculatedMetrics->where('type', $metricType));
         $changePercentage = 'n/a';
         if (is_numeric($average7Days) && is_numeric($average30Days) && $average30Days != 0) {
             $change = (($average7Days - $average30Days) / $average30Days) * 100;
             $changePercentage = ($change > 0 ? '+' : '').number_format($change, 1).'%';
         }
 
-        // Prépare les données pour le retour
         return [
-            'label'                     => $metricKey->getLabelShort(),
+            'label'                     => $metricType->getLabelShort(),
             'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'n/a',
-            'last_value_date'           => $lastMetric?->date,
-            'is_last_value_today'       => $lastMetric?->date->isToday(),
+            'last_value_date'           => $lastWeekDate ? Carbon::parse($lastWeekDate) : null,
+            'is_last_value_today'       => $lastWeekDate ? Carbon::parse($lastWeekDate)->isSameWeek(now()) : false,
             'formatted_average_7_days'  => is_numeric($average7Days) ? number_format($average7Days, 1) : 'n/a',
             'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'n/a',
             'is_numerical'              => true,
             'trend_icon'                => $trend['trend'] !== 'n/a' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
-            'trend_color'               => $trend['trend'] !== 'n/a' ? $this->determineTrendColor($trend['trend'], $metricKey->getTrendOptimalDirection()) : 'zinc',
+            'trend_color'               => $trend['trend'] !== 'n/a' ? $this->determineTrendColor($trend['trend'], $metricType->getTrendOptimalDirection()) : 'zinc',
             'trend_percentage'          => $changePercentage,
             'chart_data'                => [
-                'labels' => $allWeeklyData->pluck('date')->map(fn ($d) => $d->format('W Y'))->all(),
-                'data'   => $allWeeklyData->pluck('value')->all(),
+                'labels' => $weeklyData->keys()->map(fn ($d) => Carbon::parse($d)->format('W Y'))->all(),
+                'data'   => $weeklyData->values()->all(),
             ],
         ];
     }
 
-    /**
-     * Obtient la date de début d'une période donnée.
-     */
     public function calculatePeriodStartDate(string $period): Carbon
     {
         $now = Carbon::now();
@@ -422,12 +324,6 @@ class MetricService
         };
     }
 
-    /**
-     * Récupère les données de métriques pour un athlète donné, avec des filtres.
-     *
-     * @param  array  $filters  (metric_type, period)
-     * @return Collection<Metric>
-     */
     public function retrieveAthleteRawMetrics(Athlete $athlete, array $filters = []): Collection
     {
         $query = $athlete->metrics()->orderBy('date');
@@ -445,12 +341,6 @@ class MetricService
         return $query->get();
     }
 
-    /**
-     * Applique le filtre de période à la requête.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $period  (e.g., 'last_7_days', 'last_30_days', 'last_6_months', 'last_year', 'all_time', 'custom:start_date,end_date')
-     */
     protected function applyMetricPeriodFilterToQuery($query, string $period): void
     {
         $now = Carbon::now();
@@ -492,13 +382,6 @@ class MetricService
         }
     }
 
-    /**
-     * Prépare les données d'une seule métrique pour l'affichage sur un graphique.
-     *
-     * @param  Collection<Metric>  $metrics
-     * @param  MetricType  $metricType  L'énumération MetricType pour obtenir les détails du champ de valeur.
-     * @return array ['labels' => [], 'data' => [], 'unit' => string|null, 'label' => string]
-     */
     public function prepareSingleMetricChartData(Collection $metrics, MetricType $metricType): array
     {
         $labels = [];
@@ -533,13 +416,6 @@ class MetricService
         ];
     }
 
-    /**
-     * Prépare les données de plusieurs métriques pour l'affichage sur un graphique.
-     *
-     * @param  Collection<Metric>  $metrics  La collection complète de métriques (peut contenir plusieurs types).
-     * @param  array<MetricType>  $metricTypes  Les énumérations MetricType à inclure dans le graphique.
-     * @return array ['labels' => [], 'datasets' => []]
-     */
     public function prepareMultipleMetricsChartData(Collection $metrics, array $metricTypes): array
     {
         $allLabels = $metrics->pluck('date')->unique()->map(fn ($date) => $date->format('Y-m-d'))->sort()->values()->toArray();
@@ -579,12 +455,6 @@ class MetricService
         ];
     }
 
-    /**
-     * Récupère les métriques les plus récentes groupées par date pour un athlète.
-     *
-     * @param  int  $limit  Le nombre maximum de métriques brutes à récupérer.
-     * @return Collection<string, Collection<Metric>> Une collection de métriques groupées par date (format Y-m-d), triées de la plus récente à la plus ancienne.
-     */
     public function getRecentMetricsGroupedByDate(Athlete $athlete, int $limit = 50): Collection
     {
         $metrics = $athlete->metrics()
@@ -597,9 +467,6 @@ class MetricService
             ->sortByDesc(fn ($metrics, $date) => $date);
     }
 
-    /**
-     * Prépare toutes les données agrégées pour le tableau de bord d'une métrique spécifique.
-     */
     public function getAthleteMetricDashboardSummary(Athlete $athlete, MetricType $metricType, string $period): array
     {
         $metricsForPeriod = $this->retrieveAthleteRawMetrics($athlete, ['metric_type' => $metricType->value, 'period' => $period]);
@@ -679,9 +546,6 @@ class MetricService
         return $metricData;
     }
 
-    /**
-     * Formate une valeur de métrique en fonction de son type et de sa précision.
-     */
     public function formatMetricDisplayValue(mixed $value, MetricType $metricType): string
     {
         if ($value === null) {
@@ -698,9 +562,6 @@ class MetricService
         return $formattedValue.($unit ? ' '.$unit : '').($scale ? '/'.$scale : '');
     }
 
-    /**
-     * Récupère la TrainingPlanWeek pour un athlète et une date de début de semaine donnés.
-     */
     public function retrieveAthleteTrainingPlanWeek(Athlete $athlete, Carbon $weekStartDate): ?TrainingPlanWeek
     {
         $assignedPlan = $athlete->currentTrainingPlan;
@@ -714,9 +575,6 @@ class MetricService
             ->first();
     }
 
-    /**
-     * Détermine la couleur de la tendance en fonction de la direction de la tendance et de la direction optimale.
-     */
     protected function determineTrendColor(string $trend, string $optimalDirection): string
     {
         return match ($trend) {
@@ -726,9 +584,6 @@ class MetricService
         };
     }
 
-    /**
-     * Détermine l'icône de tendance en fonction de la direction de la tendance.
-     */
     protected function getTrendIcon(string $trend): string
     {
         return match ($trend) {
@@ -738,15 +593,6 @@ class MetricService
         };
     }
 
-    /**
-     * Prépare les données des métriques quotidiennes pour l'affichage dans un tableau.
-     *
-     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<\App\Models\Metric>>  $latestDailyMetrics  Métriques groupées par date.
-     * @param  array<\App\Enums\MetricType>  $displayTableMetricTypes  Types de métriques à afficher.
-     * @param  \App\Models\Athlete  $athlete  L'athlète concerné.
-     * @param  bool  $isTrainerContext  Indique si l'appel provient du contexte entraîneur.
-     * @return \Illuminate\Support\Collection<int, array>
-     */
     public function prepareDailyMetricsForTableView(Collection $latestDailyMetrics, array $displayTableMetricTypes, Athlete $athlete, bool $isTrainerContext = false): Collection
     {
         return $latestDailyMetrics->map(function ($metricDates, $date) use ($displayTableMetricTypes, $athlete, $isTrainerContext) {

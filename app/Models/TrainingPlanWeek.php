@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\CalculatedMetric;
+use App\Enums\CalculatedMetricType;
 use Illuminate\Database\Eloquent\Model;
 use App\Services\MetricCalculationService;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -56,7 +56,7 @@ class TrainingPlanWeek extends Model
     protected function cphNormalizedOverTen(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->cph * 10 / CalculatedMetric::CPH->getScale(),
+            get: fn () => $this->cph * 10 / CalculatedMetricType::CPH->getScale(),
         );
     }
 }

@@ -4,7 +4,7 @@ namespace App\Enums;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum CalculatedMetric: string implements HasLabel
+enum CalculatedMetricType: string implements HasLabel
 {
     case CIH = 'cih';
     case CIH_NORMALIZED = 'cih_normalized';

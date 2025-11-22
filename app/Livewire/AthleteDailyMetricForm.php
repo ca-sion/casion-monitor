@@ -12,10 +12,10 @@ use Filament\Actions\Action;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Url;
 use Illuminate\Support\Carbon;
-use App\Enums\CalculatedMetric;
 use App\Services\MetricService;
 use Livewire\Attributes\Layout;
 use App\Models\TrainingPlanWeek;
+use App\Enums\CalculatedMetricType;
 use Illuminate\Contracts\View\View;
 use Filament\Support\Icons\Heroicon;
 use App\Services\GamificationService;
@@ -25,6 +25,7 @@ use App\Services\MetricReadinessService;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
+use App\Services\MetricCalculationService;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Forms\Components\ToggleButtons;
@@ -305,8 +306,8 @@ class AthleteDailyMetricForm extends Component implements HasActions, HasSchemas
                             ->belowLabel([
                                 Icon::make(Heroicon::OutlinedInformationCircle)
                                     ->color('gray')
-                                    ->tooltip(CalculatedMetric::CPH->getDescription()),
-                                CalculatedMetric::CPH->getLabelShort().':',
+                                    ->tooltip(CalculatedMetricType::CPH->getDescription()),
+                                CalculatedMetricType::CPH->getLabelShort().':',
                                 $this->athleteCurrentTrainingPlanWeek?->cphNormalizedOverTen ?? 'n/a',
                             ])
                             ->inline()
@@ -378,11 +379,15 @@ class AthleteDailyMetricForm extends Component implements HasActions, HasSchemas
         $this->athlete->last_activity = now();
         $this->athlete->save();
 
+        // Calculate and Store Calculated Metrics Synchronously
+        resolve(MetricCalculationService::class)->processAndStoreDailyCalculatedMetrics($this->athlete, $this->date);
+
         // Calculate Readiness Score
         if ($this->date->isToday()) {
             $readinessService = resolve(MetricReadinessService::class);
             $allMetrics = Metric::where('athlete_id', $this->athlete->id)
                 ->where('date', '<=', $this->date->copy()->endOfDay())
+                ->where('date', '>=', now()->subDays(7)->startOfDay())
                 ->get();
             $this->readinessStatus = $readinessService->getAthleteReadinessStatus($this->athlete, $allMetrics);
             $this->js(

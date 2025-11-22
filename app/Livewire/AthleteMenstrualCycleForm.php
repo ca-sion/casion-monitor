@@ -6,7 +6,6 @@ use App\Models\Metric;
 use App\Models\Athlete;
 use Livewire\Component;
 use App\Enums\MetricType;
-use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
@@ -14,14 +13,15 @@ use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Repeater;
 use Filament\Notifications\Notification;
 use Filament\Forms\Components\DatePicker;
-use Filament\Schemas\Contracts\HasSchemas;
-use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Actions\Contracts\HasActions;
+use Filament\Schemas\Contracts\HasSchemas;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Schemas\Concerns\InteractsWithSchemas;
 
-class AthleteMenstrualCycleForm extends Component implements HasSchemas, HasActions
+class AthleteMenstrualCycleForm extends Component implements HasActions, HasSchemas
 {
-    use InteractsWithSchemas;
     use InteractsWithActions;
+    use InteractsWithSchemas;
 
     public ?array $data = [];
 

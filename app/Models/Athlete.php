@@ -98,6 +98,14 @@ class Athlete extends Model implements AuthenticatableContract, AuthorizableCont
     }
 
     /**
+     * Get the calculated metrics for the athlete.
+     */
+    public function calculatedMetrics(): HasMany
+    {
+        return $this->hasMany(CalculatedMetric::class);
+    }
+
+    /**
      * The trainers that belong to the athlete.
      */
     public function trainers(): BelongsToMany

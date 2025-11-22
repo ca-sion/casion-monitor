@@ -6,10 +6,10 @@ use App\Enums\MetricType;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use App\Enums\CalculatedMetric;
 use App\Services\MetricService;
 use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
+use App\Enums\CalculatedMetricType;
 use Illuminate\Support\Facades\Auth;
 
 class AthleteController extends Controller
@@ -64,8 +64,8 @@ class AthleteController extends Controller
 
         // Définir les types de métriques "calculées" à afficher
         $calculatedMetricTypes = [
-            CalculatedMetric::SBM,
-            CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
+            CalculatedMetricType::SBM,
+            CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH,
         ];
 
         // Préparer les options pour l'appel unique à getAthletesData
@@ -301,8 +301,8 @@ class AthleteController extends Controller
 
         // Définir les types de métriques "calculées" à afficher
         $calculatedMetricTypes = [
-            CalculatedMetric::SBM,
-            CalculatedMetric::RATIO_CIH_NORMALIZED_CPH,
+            CalculatedMetricType::SBM,
+            CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH,
         ];
 
         // Préparer les options pour l'appel unique à getAthletesData

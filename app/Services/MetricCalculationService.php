@@ -6,11 +6,81 @@ use Carbon\Carbon;
 use App\Models\Metric;
 use App\Models\Athlete;
 use App\Enums\MetricType;
+use App\Models\CalculatedMetric;
 use App\Models\TrainingPlanWeek;
 use Illuminate\Support\Collection;
+use App\Enums\CalculatedMetricType;
 
 class MetricCalculationService
 {
+    /**
+     * Orchestrates the calculation and storage of all daily calculated metrics for a given athlete and date.
+     */
+    public function processAndStoreDailyCalculatedMetrics(Athlete $athlete, Carbon $date): void
+    {
+        // 1. Fetch all necessary raw metrics for the day and the week.
+        $startOfWeek = $date->copy()->startOfWeek(Carbon::MONDAY);
+        $endOfWeek = $date->copy()->endOfWeek(Carbon::SUNDAY);
+        
+        // Fetch all metrics for the readiness calculation period
+        $allMetricsForReadiness = $athlete->metrics()
+            ->where('date', '<=', $date->copy()->endOfDay())
+            ->where('date', '>=', now()->subDays(7)->startOfDay())
+            ->get();
+
+        $metricsForWeek = $allMetricsForReadiness->whereBetween('date', [$startOfWeek, $endOfWeek]);
+        $dailyMetrics = $metricsForWeek->where('date', $date->toDateString());
+
+        // 2. Calculate all the values.
+        $sbm = $this->calculateSbmForCollection($dailyMetrics);
+        $cih = $this->calculateCihForCollection($metricsForWeek);
+        $cihNormalized = $this->calculateCihNormalizedForCollection($metricsForWeek);
+
+        $planWeek = $athlete->currentTrainingPlanWeek;
+        $cph = $planWeek ? $this->calculateCph($planWeek) : null;
+
+        $ratioCihCph = ($cih > 0 && $cph > 0) ? $this->calculateRatio($cih, $cph) : null;
+        $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->calculateRatio($cihNormalized, $cph) : null;
+
+        // 3. Store base calculated metrics first, as Readiness might depend on them.
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::SBM, $sbm);
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CIH, $cih);
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CIH_NORMALIZED, $cihNormalized);
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CPH, $cph);
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::RATIO_CIH_CPH, $ratioCihCph);
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH, $ratioCihNormalizedCph);
+
+        // 4. Calculate and store Readiness Score
+        $readinessService = resolve(MetricReadinessService::class);
+        $readinessResult = $readinessService->calculateOverallReadinessScore($athlete, $allMetricsForReadiness);
+        $readinessScore = $readinessResult['readiness_score'] ?? null;
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::READINESS_SCORE, $readinessScore);
+    }
+
+    /**
+     * Helper to store a single calculated metric.
+     */
+    private function storeCalculatedMetric(Athlete $athlete, Carbon $date, CalculatedMetricType $type, ?float $value): void
+    {
+        if ($value === null) {
+            // If value is null, we might want to delete the existing record for that day.
+            CalculatedMetric::where('athlete_id', $athlete->id)
+                ->where('date', $date)
+                ->where('type', $type)
+                ->delete();
+            return;
+        }
+
+        CalculatedMetric::updateOrCreate(
+            [
+                'athlete_id' => $athlete->id,
+                'date'       => $date,
+                'type'       => $type,
+            ],
+            ['value' => $value]
+        );
+    }
+
     /**
      * Calcule le Score de Bien-être Matinal (SBM) pour un seul jour à partir d'une collection de métriques.
      */
@@ -51,7 +121,7 @@ class MetricCalculationService
 
         $sbm = number_format($smb, 1);
 
-        return (float) $smb;
+        return (float) $sbm;
     }
 
     /**
@@ -144,7 +214,7 @@ class MetricCalculationService
 
         $sbm = number_format($smb, 1);
 
-        return (float) $smb;
+        return (float) $sbm;
     }
 
     /**
