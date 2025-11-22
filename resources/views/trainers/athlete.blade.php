@@ -345,6 +345,32 @@
 
     <flux:separator class="my-8" variant="subtle" />
 
+    <flux:heading level="2" size="xl">Rapports d'analyse</flux:heading>
+
+    @foreach ($reports as $reportType => $report)
+        <div class="mb-8 mt-4">
+            <flux:heading class="mb-4" level="3" size="lg">
+                {{ match($reportType) {
+                    'daily' => 'Quotidien',
+                    'weekly' => 'Hebdomadaire',
+                    'monthly' => 'Mensuel',
+                    'biannual' => 'Semestriel',
+                    default => 'Inconnu',
+                } }}
+            </flux:heading>
+
+            <div class="my-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                @foreach ($report['sections'] as $section)
+                    @if ($section)
+                        <x-report-card :section="$section" />
+                    @endif
+                @endforeach
+            </div>
+        </div>
+    @endforeach
+
+    <flux:separator class="my-8" variant="subtle" />
+
     {{-- Section Blessures de l'athlète --}}
     <flux:card class="my-6 rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-800">
         <flux:heading class="mb-4 text-center"

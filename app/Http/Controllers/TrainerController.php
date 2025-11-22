@@ -9,6 +9,7 @@ use Illuminate\View\View;
 use App\Enums\FeedbackType;
 use Illuminate\Support\Carbon;
 use App\Services\MetricService;
+use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use App\Enums\CalculatedMetricType;
 use Illuminate\Support\Facades\Auth;
@@ -204,6 +205,17 @@ class TrainerController extends Controller
             'all_time'      => 'Depuis le début',
         ];
 
+        // Generate reports (daily, weekly, monthly, biannual)
+        $endDate = Carbon::today();
+        $reportService = resolve(ReportService::class);
+
+        $reports = [
+            'daily'    => $reportService->generateReport($athlete, 'daily', $endDate),
+            'weekly'   => $reportService->generateReport($athlete, 'weekly', $endDate),
+            'monthly'  => $reportService->generateReport($athlete, 'monthly', $endDate),
+            'biannual' => $reportService->generateReport($athlete, 'biannual', $endDate),
+        ];
+
         return view('trainers.athlete', [
             'trainer'                          => $trainer,
             'athlete'                          => $athlete,
@@ -218,6 +230,7 @@ class TrainerController extends Controller
             'period_label'                     => $period,
             'period_options'                   => $periodOptions,
             'available_metric_types_for_chart' => $availableMetricTypesForChart,
+            'reports'                          => $reports,
         ]);
     }
 
