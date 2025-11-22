@@ -120,11 +120,16 @@ class AthleteController extends Controller
 
         $todayDailyMetrics = $processedDailyMetricsForTable->get(now()->toDateString());
 
-        // Reports
+        // Generate reports (daily, weekly, monthly, biannual)
         $endDate = Carbon::today();
-        $reportWeeklyData = resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate);
+        $reportService = resolve(ReportService::class);
 
-        $reportData = $reportWeeklyData;
+        $reports = [
+            'daily'    => $reportService->generateReport($athlete, 'daily', $endDate),
+            'weekly'   => $reportService->generateReport($athlete, 'weekly', $endDate),
+            'monthly'  => $reportService->generateReport($athlete, 'monthly', $endDate),
+            'biannual' => $reportService->generateReport($athlete, 'biannual', $endDate),
+        ];
 
         $periodOptions = [
             'last_7_days'   => '7 derniers jours',
@@ -151,7 +156,7 @@ class AthleteController extends Controller
             'healthEvents'                  => $athlete->healthEvents()->limit(12)->orderBy('date', 'desc')->get(),
             'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
-            'report'                        => $reportData,
+            'reports'                        => $reports,
         ];
 
         if ($request->expectsJson()) {

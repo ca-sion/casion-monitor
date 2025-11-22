@@ -269,15 +269,29 @@
 
     <flux:separator class="my-8" variant="subtle" />
 
-    <flux:heading class="text-base">Rapports</flux:heading>
+    <flux:heading level="2" size="md">Rapports d'analyse</flux:heading>
 
-    <div class="my-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        @foreach ($report['sections'] as $section)
-            @if ($section)
-                <x-report-card :section="$section" />
-            @endif
-        @endforeach
-    </div>
+    @foreach ($reports as $reportType => $report)
+        <div class="mb-8">
+            <flux:heading class="mb-4" level="3" size="lg">
+                {{ match($reportType) {
+                    'daily' => 'Quotidien',
+                    'weekly' => 'Hebdomadaire',
+                    'monthly' => 'Mensuel',
+                    'biannual' => 'Semestriel',
+                    default => 'Inconnu',
+                } }}
+            </flux:heading>
+
+            <div class="my-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                @foreach ($report['sections'] as $section)
+                    @if ($section)
+                        <x-report-card :section="$section" />
+                    @endif
+                @endforeach
+            </div>
+        </div>
+    @endforeach
 
     <div>
         <x-filament::button tag="a" href="{{ route('athletes.reports.show', ['hash' => $athlete->hash]) }}" size="sm" class="mt-2 mx-auto block text-center">Voir le rapport complet</x-filament::button>
