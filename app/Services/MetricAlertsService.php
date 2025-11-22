@@ -161,7 +161,7 @@ class MetricAlertsService
         }
 
         $this->checkSleepQualityAlerts($athlete, $metrics, $alerts);
-        $this->checkSleepQualityAlerts($athlete, $metrics, $alerts);
+        $this->checkFatigueAlerts($athlete, $metrics, $alerts);
         $this->checkPainAlerts($athlete, $metrics, $alerts);
 
         // Gérer les cas où aucune alerte spécifique n'a été détectée.
