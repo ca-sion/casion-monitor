@@ -29,12 +29,12 @@ class MetricAlertsService
 
     private const ALERT_THRESHOLDS = [
         MetricType::MORNING_BODY_WEIGHT_KG->value => [
-            'z_score_high'           => 2.0,
-            'z_score_low'            => -2.0,
+            'z_score_high' => 2.0,
+            'z_score_low'  => -2.0,
         ],
         MetricType::MORNING_HRV->value => [
-            'z_score_high'           => 2.0,
-            'z_score_low'            => -1.5,
+            'z_score_high' => 2.0,
+            'z_score_low'  => -1.5,
         ],
         MetricType::MORNING_SLEEP_QUALITY->value => [
             'persistent_low_7d_max'  => 4,
@@ -53,37 +53,37 @@ class MetricAlertsService
         MetricType::MORNING_PAIN->value => [
             'persistent_high_7d_min' => 5,
             'declared_high_min'      => 4,
-            'z_score_high'            => 1.5,
-            'z_score_low'             => -2.0,
+            'z_score_high'           => 1.5,
+            'z_score_low'            => -2.0,
         ],
         MetricType::MORNING_MOOD_WELLBEING->value => [
-            'z_score_high'            => 2.0,
-            'z_score_low'             => -1.5,
+            'z_score_high' => 2.0,
+            'z_score_low'  => -1.5,
         ],
         MetricType::PRE_SESSION_ENERGY_LEVEL->value => [
-            'z_score_high'            => 2.0,
-            'z_score_low'             => -1.5,
+            'z_score_high' => 2.0,
+            'z_score_low'  => -1.5,
         ],
         MetricType::PRE_SESSION_LEG_FEEL->value => [
-            'z_score_high'            => 2.0,
-            'z_score_low'             => -1.5,
+            'z_score_high' => 2.0,
+            'z_score_low'  => -1.5,
         ],
         MetricType::POST_SESSION_SESSION_LOAD->value => [
-            'z_score_high'           => 1.5,
-            'z_score_low'            => -2.0,
+            'z_score_high' => 1.5,
+            'z_score_low'  => -2.0,
         ],
         MetricType::POST_SESSION_PERFORMANCE_FEEL->value => [
-            'z_score_high'           => 2.0,
-            'z_score_low'            => -1.5,
+            'z_score_high' => 2.0,
+            'z_score_low'  => -1.5,
         ],
         MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value => [
-            'z_score_high'           => 1.5,
-            'z_score_low'            => -2.0,
+            'z_score_high' => 1.5,
+            'z_score_low'  => -2.0,
         ],
         MetricType::POST_SESSION_PAIN->value => [
             'declared_high_min' => 4,
-            'z_score_high'           => 1.5,
-            'z_score_low'            => -2.0,
+            'z_score_high'      => 1.5,
+            'z_score_low'       => -2.0,
         ],
         CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH->value => [
             'ratio_underload_threshold' => 0.8,
@@ -406,7 +406,6 @@ class MetricAlertsService
      * @param  Collection<int, \App\Models\Metric>  $metrics  Collection de toutes les métriques de l'athlète.
      * @param  MetricType  $metricType  Le type de métrique à analyser.
      * @param  array  $alerts  Tableau des alertes à modifier par référence.
-     * @return void
      */
     protected function checkZScoreAlerts(Athlete $athlete, Collection $metrics, MetricType $metricType, array &$alerts): void
     {
