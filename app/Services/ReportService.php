@@ -253,7 +253,7 @@ class ReportService
 
     protected function getInterDayCorrelation(Athlete $athlete, Collection $allMetrics, Collection $calculatedMetrics, Carbon $endDate): array
     {
-        $currentSbm = $calculatedMetrics->where('date', $endDate->toDateString())->firstWhere('type', CalculatedMetricType::SBM)?->value;
+        $currentSbm = $calculatedMetrics->where('date', $endDate)->firstWhere('type', CalculatedMetricType::SBM)?->value;
 
         $sbmHistory = $calculatedMetrics
             ->where('type', CalculatedMetricType::SBM)
@@ -284,10 +284,10 @@ class ReportService
                 'label' => 'Corrélation Charge/SBM',
             ];
             if ($correlation < -0.6) {
-                $data['points'][] = ['status' => 'warning', 'text' => "Le lien est clair : vos grosses séances d\'entraînement ont un impact direct et important sur votre récupération du lendemain."];
-                $data['recommendation'] = "C\'est une information précieuse. Pensez à compenser activement (nutrition, sommeil, repos) après les entraînements intenses pour aider votre corps à récupérer.";
+                $data['points'][] = ['status' => 'warning', 'text' => "Le lien est clair : vos grosses séances d'entraînement ont un impact direct et important sur votre récupération du lendemain."];
+                $data['recommendation'] = "C'est une information précieuse. Pensez à compenser activement (nutrition, sommeil, repos) après les entraînements intenses pour aider votre corps à récupérer.";
             } else {
-                $data['points'][] = ['status' => 'optimal', 'text' => "L\'impact de la charge d\'hier est modéré. Votre récupération semble aussi dépendre d\'autres facteurs importants comme la qualité de votre sommeil, votre nutrition ou votre niveau de stress."];
+                $data['points'][] = ['status' => 'optimal', 'text' => "L'impact de la charge d'hier est modéré. Votre récupération semble aussi dépendre d'autres facteurs importants comme la qualité de votre sommeil, votre nutrition ou votre niveau de stress."];
             }
         } else {
             $sbmDates = $sbmHistoryShifted->pluck('date')->unique();
@@ -351,7 +351,7 @@ class ReportService
 
     protected function getLoadAdherenceAnalysis(Athlete $athlete, Collection $calculatedMetrics, Carbon $endDate): array
     {
-        $ratioCihCph = $calculatedMetrics->where('date', $endDate->toDateString())->firstWhere('type', CalculatedMetricType::RATIO_CIH_CPH)?->value;
+        $ratioCihCph = $calculatedMetrics->where('date', $endDate)->firstWhere('type', CalculatedMetricType::RATIO_CIH_CPH)?->value;
 
         $data = [
             'title'       => 'Adhésion charge planifiée (CPH)',
@@ -397,8 +397,7 @@ class ReportService
 
     protected function getAcwrAnalysis(Athlete $athlete, Collection $calculatedMetrics, Carbon $endDate): array
     {
-        $acwrData = $this->trendsService->calculateAcwrFromCalculated($calculatedMetrics, $endDate);
-        $acwr = $acwrData['ratio'] ?? 0;
+        $acwr = $calculatedMetrics->where('date', $endDate)->firstWhere('type', CalculatedMetricType::ACWR)?->value;
 
         $data = [
             'title'       => 'Dépistage du risque de surcharge (ACWR)',

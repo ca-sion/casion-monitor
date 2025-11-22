@@ -23,12 +23,15 @@ class ReportController extends Controller
         $reportDailyData = resolve(ReportService::class)->generateReport($athlete, 'daily', $endDate);
         $reportWeeklyData = resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate);
         $reportMonthlyData = resolve(ReportService::class)->generateReport($athlete, 'monthly', $endDate);
+        $reportBiannualData = resolve(ReportService::class)->generateReport($athlete, 'biannual', $endDate);
 
         $reportData = $reportDailyData;
         $reportData['sections'] += $reportWeeklyData['sections'];
         $reportData['sections'] += $reportMonthlyData['sections'];
+        $reportData['sections'] += $reportBiannualData['sections'];
         $reportData['glossary'] += $reportWeeklyData['glossary'];
         $reportData['glossary'] += $reportMonthlyData['glossary'];
+        $reportData['glossary'] += $reportBiannualData['glossary'];
 
         // 3. Passer les données à la vue
         return view('reports.show', [

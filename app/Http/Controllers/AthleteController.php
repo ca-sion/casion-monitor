@@ -38,11 +38,11 @@ class AthleteController extends Controller
             MetricType::MORNING_SLEEP_QUALITY,
             MetricType::MORNING_MOOD_WELLBEING,
             MetricType::MORNING_PAIN,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            MetricType::PRE_SESSION_ENERGY_LEVEL,
-            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
@@ -275,11 +275,11 @@ class AthleteController extends Controller
             MetricType::MORNING_SLEEP_QUALITY,
             MetricType::MORNING_MOOD_WELLBEING,
             MetricType::MORNING_PAIN,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            MetricType::PRE_SESSION_ENERGY_LEVEL,
-            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 
@@ -291,11 +291,11 @@ class AthleteController extends Controller
             MetricType::MORNING_MOOD_WELLBEING,
             MetricType::MORNING_PAIN,
             MetricType::MORNING_PAIN_LOCATION,
+            MetricType::PRE_SESSION_ENERGY_LEVEL,
+            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            MetricType::PRE_SESSION_ENERGY_LEVEL,
-            MetricType::PRE_SESSION_LEG_FEEL,
             MetricType::MORNING_BODY_WEIGHT_KG,
         ];
 

@@ -195,37 +195,6 @@ class MetricTrendsService
     }
 
     /**
-     * Calcule le ratio de charge de travail aiguë:chronique (ACWR) à partir des métriques calculées.
-     */
-    public function calculateAcwrFromCalculated(Collection $calculatedMetrics, Carbon $endDate): array
-    {
-        $cihMetrics = $calculatedMetrics
-            ->where('type', CalculatedMetricType::CIH)
-            ->where('date', '>=', $endDate->copy()->subDays(34))
-            ->groupBy(fn ($m) => $m->date->startOfWeek()->toDateString())
-            ->map(fn ($weekMetrics) => $weekMetrics->avg('value'));
-
-        if ($cihMetrics->count() < 4) {
-            return ['ratio' => 0, 'acute_load' => 0, 'chronic_load' => 0, 'reason' => 'Données insuffisantes.'];
-        }
-
-        $acuteLoad = $cihMetrics->last();
-        $chronicLoad = $cihMetrics->slice(0, 4)->avg();
-
-        if ($chronicLoad == 0) {
-            return ['ratio' => 0, 'acute_load' => $acuteLoad, 'chronic_load' => 0];
-        }
-
-        $acwr = $acuteLoad / $chronicLoad;
-
-        return [
-            'ratio'        => round($acwr, 2),
-            'acute_load'   => $acuteLoad,
-            'chronic_load' => round($chronicLoad, 2),
-        ];
-    }
-
-    /**
      * Compte le nombre de jours de "Damping" (amortissement psychologique).
      */
     public function getDampingCount(Athlete $athlete, Carbon $startDate, Carbon $endDate): int

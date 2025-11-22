@@ -18,17 +18,17 @@ class MetricCalculationService
      */
     public function processAndStoreDailyCalculatedMetrics(Athlete $athlete, Carbon $date): void
     {
-        // 1. Fetch all necessary raw metrics for the day and the week.
+        // 1. Fetch all necessary raw metrics for the calculations.
         $startOfWeek = $date->copy()->startOfWeek(Carbon::MONDAY);
         $endOfWeek = $date->copy()->endOfWeek(Carbon::SUNDAY);
 
-        // Fetch all metrics for the readiness calculation period
-        $allMetricsForReadiness = $athlete->metrics()
+        // Fetch metrics for the last 28 days for all calculations (including ACWR and readiness)
+        $metricsForCalculations = $athlete->metrics()
             ->where('date', '<=', $date->copy()->endOfDay())
-            ->where('date', '>=', $date->copy()->subDays(7)->startOfDay())
+            ->where('date', '>=', $date->copy()->subDays(28)->startOfDay())
             ->get();
 
-        $metricsForWeek = $allMetricsForReadiness->whereBetween('date', [$startOfWeek, $endOfWeek]);
+        $metricsForWeek = $metricsForCalculations->whereBetween('date', [$startOfWeek, $endOfWeek]);
         $dailyMetrics = $metricsForWeek->where('date', $date);
 
         // 2. Calculate all the values.
@@ -42,7 +42,7 @@ class MetricCalculationService
         $ratioCihCph = ($cih > 0 && $cph > 0) ? $this->calculateRatio($cih, $cph) : null;
         $ratioCihNormalizedCph = ($cihNormalized > 0 && $cph > 0) ? $this->calculateRatio($cihNormalized, $cph) : null;
 
-        // 3. Store base calculated metrics first, as Readiness might depend on them.
+        // 3. Store base calculated metrics first.
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::SBM, $sbm);
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CIH, $cih);
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CIH_NORMALIZED, $cihNormalized);
@@ -50,9 +50,14 @@ class MetricCalculationService
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::RATIO_CIH_CPH, $ratioCihCph);
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH, $ratioCihNormalizedCph);
 
-        // 4. Calculate and store Readiness Score
+        // 4. Calculate and store ACWR
+        $acwr = $this->calculateAcwr($metricsForCalculations, $date);
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::ACWR, $acwr);
+
+        // 5. Calculate and store Readiness Score
         $readinessService = resolve(MetricReadinessService::class);
-        $readinessResult = $readinessService->calculateOverallReadinessScore($athlete, $allMetricsForReadiness);
+        // We use $metricsForCalculations which now contains 28 days of data, which is better for readiness.
+        $readinessResult = $readinessService->calculateOverallReadinessScore($athlete, $metricsForCalculations);
         $readinessScore = $readinessResult['readiness_score'] ?? null;
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::READINESS_SCORE, $readinessScore);
     }
@@ -78,7 +83,7 @@ class MetricCalculationService
                 'date'       => $date,
                 'type'       => $type,
             ],
-            ['value' => $value]
+            ['value' => round($value, 2)]
         );
     }
 
@@ -252,6 +257,52 @@ class MetricCalculationService
     }
 
     /**
+     * Calcule le ratio Aiguë:Chronique (ACWR).
+     * Charge aiguë: 7 derniers jours.
+     * Charge chronique: moyenne des charges aiguës des 4 dernières semaines (moyenne glissante).
+     */
+    public function calculateAcwr(Collection $allMetrics, Carbon $currentDate): ?float
+    {
+        // 1. Acute Load (last 7 days)
+        $acuteStartDate = $currentDate->copy()->subDays(6)->startOfDay();
+        $acuteEndDate = $currentDate->copy()->endOfDay();
+        $acuteMetrics = $allMetrics->whereBetween('date', [$acuteStartDate, $acuteEndDate]);
+        $acuteLoad = $this->calculateCihForCollection($acuteMetrics);
+
+        // 2. Chronic Load (average of 4 previous weekly loads)
+        $weeklyLoads = [];
+        for ($i = 1; $i <= 4; $i++) {
+            $weekEndDate = $currentDate->copy()->subDays(7 * $i)->endOfDay();
+            $weekStartDate = $weekEndDate->copy()->subDays(6)->startOfDay();
+
+            $metricsForWeek = $allMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
+
+            // We only count weeks that have some activity.
+            if ($metricsForWeek->isNotEmpty()) {
+                $weeklyLoads[] = $this->calculateCihForCollection($metricsForWeek);
+            }
+        }
+
+        if (empty($weeklyLoads)) {
+            return null; // Chronic load can't be calculated.
+        }
+
+        $chronicLoad = array_sum($weeklyLoads) / count($weeklyLoads);
+
+        // 3. ACWR Ratio
+        if ($chronicLoad == 0) {
+            // If chronic load is 0, ACWR is infinite or undefined.
+            // If acute is also 0, it's 0/0. If acute is >0, it's a huge spike.
+            // Returning a high number could be an option, but null seems safer to indicate it's a special case.
+            return null;
+        }
+
+        $acwr = $acuteLoad / $chronicLoad;
+
+        return $acwr;
+    }
+
+    /**
      * Orchestre le calcul et retourne le dernier ratio CIH/CPH pour la semaine se terminant à $endDate.
      */
     public function getLastRatioCihCph(Athlete $athlete, Carbon $endDate): float
@@ -279,3 +330,4 @@ class MetricCalculationService
         return $this->calculateRatio($cih, $cph);
     }
 }
+

@@ -13,6 +13,7 @@ enum CalculatedMetricType: string implements HasLabel
     case RATIO_CIH_CPH = 'ratio_cih_cph';
     case RATIO_CIH_NORMALIZED_CPH = 'ratio_cih_normalized_cph';
     case READINESS_SCORE = 'readiness_score';
+    case ACWR = 'acwr';
 
     public function getLabel(): string
     {
@@ -24,6 +25,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 'Ratio CIH/CPH',
             self::RATIO_CIH_NORMALIZED_CPH => 'Ratio CIH normalisée/CPH',
             self::READINESS_SCORE          => 'Readiness',
+            self::ACWR                     => 'Ratio Aiguë:Chronique (ACWR)',
         };
     }
 
@@ -37,6 +39,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 'CIH/CPH',
             self::RATIO_CIH_NORMALIZED_CPH => 'CIH-N/CPH',
             self::READINESS_SCORE          => 'Read.',
+            self::ACWR                     => 'ACWR',
         };
     }
 
@@ -50,6 +53,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 'Ratio entre la Charge interne hebdomadaire (CIH) et la Charge planifiée hebdomadaire (CPH).',
             self::RATIO_CIH_NORMALIZED_CPH => 'Ratio entre la Charge interne hebdomadaire normalisée (CIH-N) et la Charge planifiée hebdomadaire (CPH).',
             self::READINESS_SCORE          => 'Indique à quel point le corps est prêt pour l\'entraînement et la performance chaque jour.',
+            self::ACWR                     => 'Ratio entre la charge d\'entraînement aiguë (7 derniers jours) et chronique (moyenne des 4 dernières semaines). Un indicateur clé du risque de blessure.',
         };
     }
 
@@ -63,6 +67,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 1,
             self::RATIO_CIH_NORMALIZED_CPH => 1,
             self::READINESS_SCORE          => 100,
+            self::ACWR                     => 3,
         };
     }
 
@@ -82,6 +87,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 'neutral',
             self::RATIO_CIH_NORMALIZED_CPH => 'neutral',
             self::READINESS_SCORE          => 'neutral',
+            self::ACWR                     => 'neutral',
         };
     }
 
@@ -98,6 +104,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 'icon-[material-symbols-light--align-center]',
             self::RATIO_CIH_NORMALIZED_CPH => 'icon-[material-symbols-light--align-center]',
             self::READINESS_SCORE          => 'icon-[material-symbols-light--readiness-score-outline]',
+            self::ACWR                     => 'icon-[material-symbols-light--balance-outline]',
         };
     }
 
@@ -114,6 +121,7 @@ enum CalculatedMetricType: string implements HasLabel
             self::RATIO_CIH_CPH            => 'zinc',
             self::RATIO_CIH_NORMALIZED_CPH => 'zinc',
             self::READINESS_SCORE          => 'zinc',
+            self::ACWR                     => 'zinc',
         };
     }
 }

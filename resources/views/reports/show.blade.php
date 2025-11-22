@@ -3,7 +3,6 @@
         <div>
             <h1 class="text-3xl font-bold text-gray-800">Rapport</h1>
             <p class="text-gray-500">Date : {{ \Carbon\Carbon::parse($report['end_date'])->locale('fr_CH')->isoFormat('LL') }}</p>
-            <x-filament::button tag="a" href="{{ route('athletes.reports.biannual', ['hash' => $athlete->hash]) }}" size="sm" class="mt-2" outlined="true">Voir le rapport semestriel</x-filament::button>
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
