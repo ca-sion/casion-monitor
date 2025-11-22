@@ -25,11 +25,11 @@ class MetricCalculationService
         // Fetch all metrics for the readiness calculation period
         $allMetricsForReadiness = $athlete->metrics()
             ->where('date', '<=', $date->copy()->endOfDay())
-            ->where('date', '>=', now()->subDays(7)->startOfDay())
+            ->where('date', '>=', $date->copy()->subDays(7)->startOfDay())
             ->get();
 
         $metricsForWeek = $allMetricsForReadiness->whereBetween('date', [$startOfWeek, $endOfWeek]);
-        $dailyMetrics = $metricsForWeek->where('date', $date->toDateString());
+        $dailyMetrics = $metricsForWeek->where('date', $date);
 
         // 2. Calculate all the values.
         $sbm = $this->calculateSbmForCollection($dailyMetrics);
