@@ -330,4 +330,3 @@ class MetricCalculationService
         return $this->calculateRatio($cih, $cph);
     }
 }
-

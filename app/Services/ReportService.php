@@ -196,7 +196,7 @@ class ReportService
         }
 
         $alerts = $this->alertsService->checkAllAlerts($athlete, $dailyMetrics);
-        $alerts = collect($alerts)->filter(fn($alert) => in_array(data_get($alert, 'type'), ['warning', 'danger']))->all();
+        $alerts = collect($alerts)->filter(fn ($alert) => in_array(data_get($alert, 'type'), ['warning', 'danger']))->all();
         $inconsistencies = [];
 
         $sessionLoad = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)?->value;

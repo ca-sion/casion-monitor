@@ -273,6 +273,7 @@ class MetricService
 
     protected function prepareWeeklyMetricDashboardDataFromCollection(Athlete $athlete, Collection $athleteCalculatedMetrics, CalculatedMetricType $metricType, string $period, Carbon $endDate): array
     {
+        $trendsData = $this->metricTrendsService->calculateCalculatedMetricAveragesFromCollection($athleteCalculatedMetrics->where('type', $metricType->value), $metricType);
         $weeklyData = $athleteCalculatedMetrics
             ->where('type', $metricType->value)
             ->groupBy(fn ($metric) => $metric->date->startOfWeek()->format('Y-m-d'))
@@ -281,16 +282,10 @@ class MetricService
         $lastWeekDate = $weeklyData->keys()->sortDesc()->first();
         $lastValue = $lastWeekDate ? $weeklyData[$lastWeekDate] : null;
 
-        $dataFor7Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($endDate->copy()->subDays(7)));
-        $average7Days = $dataFor7Days->isNotEmpty() ? $dataFor7Days->avg() : null;
-
-        $dataFor30Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($endDate->copy()->subDays(30)));
-        $average30Days = $dataFor30Days->isNotEmpty() ? $dataFor30Days->avg() : null;
-
-        $trend = $this->metricTrendsService->calculateGenericNumericTrend($athleteCalculatedMetrics->where('type', $metricType));
+        $trend = $this->metricTrendsService->calculateGenericNumericTrend($athleteCalculatedMetrics->where('type', $metricType->value)->map(fn ($m) => (object) ['date' => $m->date, 'value' => $m->value]));
         $changePercentage = 'n/a';
-        if (is_numeric($average7Days) && is_numeric($average30Days) && $average30Days != 0) {
-            $change = (($average7Days - $average30Days) / $average30Days) * 100;
+        if (is_numeric($trendsData['averages']['Derniers 7 jours']) && is_numeric($trendsData['averages']['Derniers 30 jours']) && $trendsData['averages']['Derniers 30 jours'] != 0) {
+            $change = (($trendsData['averages']['Derniers 7 jours'] - $trendsData['averages']['Derniers 30 jours']) / $trendsData['averages']['Derniers 30 jours']) * 100;
             $changePercentage = ($change > 0 ? '+' : '').number_format($change, 1).'%';
         }
 
@@ -299,8 +294,8 @@ class MetricService
             'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'n/a',
             'last_value_date'           => $lastWeekDate ? Carbon::parse($lastWeekDate) : null,
             'is_last_value_today'       => $lastWeekDate ? Carbon::parse($lastWeekDate)->isSameWeek($endDate) : false,
-            'formatted_average_7_days'  => is_numeric($average7Days) ? number_format($average7Days, 1) : 'n/a',
-            'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'n/a',
+            'formatted_average_7_days'  => is_numeric($trendsData['averages']['Derniers 7 jours']) ? number_format($trendsData['averages']['Derniers 7 jours'], 1) : 'n/a',
+            'formatted_average_30_days' => is_numeric($trendsData['averages']['Derniers 30 jours']) ? number_format($trendsData['averages']['Derniers 30 jours'], 1) : 'n/a',
             'is_numerical'              => true,
             'trend_icon'                => $trend['trend'] !== 'n/a' ? $this->getTrendIcon($trend['trend']) : 'ellipsis-horizontal',
             'trend_color'               => $trend['trend'] !== 'n/a' ? $this->determineTrendColor($trend['trend'], $metricType->getTrendOptimalDirection()) : 'zinc',

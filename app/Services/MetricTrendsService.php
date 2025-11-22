@@ -35,6 +35,20 @@ class MetricTrendsService
     }
 
     /**
+     * Calcule la moyenne des métriques calculées sur différentes périodes pour un athlète.
+     */
+    public function calculateAthleteCalculatedMetricAverages(Athlete $athlete, CalculatedMetricType $calculatedMetricType): array
+    {
+        $query = $athlete->calculatedMetrics()
+            ->where('type', $calculatedMetricType->value)
+            ->orderBy('date', 'asc');
+
+        $metrics = $query->get();
+
+        return $this->calculateCalculatedMetricAveragesFromCollection($metrics, $calculatedMetricType);
+    }
+
+    /**
      * Calcule les tendances des métriques sur différentes périodes à partir d'une collection déjà filtrée.
      *
      * @param  Collection<Metric>  $metrics  La collection de métriques à analyser.
@@ -79,19 +93,53 @@ class MetricTrendsService
     }
 
     /**
+     * Calcule les tendances des métriques calculées sur différentes périodes à partir d'une collection déjà filtrée.
+     *
+     * @param  Collection<CalculatedMetric>  $calculatedMetrics  La collection de métriques calculées à analyser.
+     */
+    public function calculateCalculatedMetricAveragesFromCollection(Collection $calculatedMetrics, CalculatedMetricType $calculatedMetricType): array
+    {
+        $trends = [];
+        $periods = [
+            'Derniers 7 jours'  => 7,
+            'Derniers 14 jours' => 14,
+            'Derniers 30 jours' => 30,
+            'Derniers 90 jours' => 90,
+            'Derniers 6 mois'   => 180,
+            'Derniers 1 an'     => 365,
+        ];
+        $now = Carbon::now();
+
+        foreach ($periods as $label => $days) {
+            $startDate = $now->copy()->subDays($days)->startOfDay();
+            $average = $calculatedMetrics->filter(fn ($m) => $m->date && $m->date->greaterThanOrEqualTo($startDate) && is_numeric($m->value))->avg('value');
+            $trends[$label] = $average;
+        }
+
+        $allTimeAverage = $calculatedMetrics->filter(fn ($m) => is_numeric($m->value))->avg('value');
+        $trends['Total'] = $allTimeAverage;
+
+        return [
+            'metric_label' => $calculatedMetricType->getLabel(),
+            'unit'         => $calculatedMetricType->getScale(), // Use getScale() for unit/scale if applicable
+            'averages'     => $trends,
+        ];
+    }
+
+    /**
      * Calcule la tendance d\'évolution (accroissement/décroissement) pour une métrique sur une période.
      * Compare la valeur moyenne au début et à la fin de la période ou la première/dernière valeur.
      *
-     * @param  Collection<Metric>  $metrics  Collection de métriques déjà filtrée par type.
+     * @param  Collection<Metric|\App\Models\CalculatedMetric>  $metrics  Collection de métriques déjà filtrée par type.
      * @return array ['trend' => 'increasing'|'decreasing'|'stable'|'n/a', 'change' => float|null, 'reason' => string|null]
      */
-    public function calculateMetricEvolutionTrend(Collection $metrics, MetricType $metricType): array
+    public function calculateMetricEvolutionTrend(Collection $metrics, MetricType|CalculatedMetricType $metricType): array
     {
-        if ($metricType->getValueColumn() === 'note') {
+        if ($metricType instanceof MetricType && $metricType->getValueColumn() === 'note') {
             return ['trend' => 'n/a', 'change' => null, 'reason' => 'La métrique n\'est pas numérique.'];
         }
 
-        $valueColumn = $metricType->getValueColumn();
+        $valueColumn = $metricType instanceof MetricType ? $metricType->getValueColumn() : 'value';
         $numericMetrics = $metrics->filter(fn ($m) => is_numeric($m->{$valueColumn}))->sortBy('date');
 
         if ($numericMetrics->count() < 2) {
@@ -255,32 +303,67 @@ class MetricTrendsService
     /**
      * Vérifie si on a assez de données pour une corrélation.
      */
-    public function hasEnoughDataForCorrelation(Athlete $athlete, string $metricA, string $metricB, int $days): bool
+    public function hasEnoughDataForCorrelation(Athlete $athlete, MetricType|CalculatedMetricType $metricTypeA, MetricType|CalculatedMetricType $metricTypeB, int $days): bool
     {
-        $metricsA = $athlete->metrics()->where('metric_type', $metricA)->where('date', '>=', Carbon::now()->subDays($days))->count();
-        $metricsB = $athlete->metrics()->where('metric_type', $metricB)->where('date', '>=', Carbon::now()->subDays($days))->count();
+        $startDate = Carbon::now()->subDays($days);
 
-        return min($metricsA, $metricsB) >= 5;
+        $countA = 0;
+        if ($metricTypeA instanceof MetricType) {
+            $countA = $athlete->metrics()->where('metric_type', $metricTypeA->value)->where('date', '>=', $startDate)->count();
+        } elseif ($metricTypeA instanceof CalculatedMetricType) {
+            $countA = $athlete->calculatedMetrics()->where('type', $metricTypeA->value)->where('date', '>=', $startDate)->count();
+        }
+
+        $countB = 0;
+        if ($metricTypeB instanceof MetricType) {
+            $countB = $athlete->metrics()->where('metric_type', $metricTypeB->value)->where('date', '>=', $startDate)->count();
+        } elseif ($metricTypeB instanceof CalculatedMetricType) {
+            $countB = $athlete->calculatedMetrics()->where('type', $metricTypeB->value)->where('date', '>=', $startDate)->count();
+        }
+
+        return min($countA, $countB) >= 5;
     }
 
     /**
      * Calcule la corrélation de Pearson entre deux types de métriques sur une période donnée.
      */
-    public function calculateCorrelation(Athlete $athlete, MetricType $metricTypeA, MetricType $metricTypeB, int $days): array
+    public function calculateCorrelation(Athlete $athlete, MetricType|CalculatedMetricType $metricTypeA, MetricType|CalculatedMetricType $metricTypeB, int $days): array
     {
         $startDate = Carbon::now()->subDays($days);
 
-        $collectionA = $athlete->metrics()
-            ->where('metric_type', $metricTypeA->value)
-            ->where('date', '>=', $startDate)
-            ->orderBy('date')
-            ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
+        $collectionA = null;
+        if ($metricTypeA instanceof MetricType) {
+            $collectionA = $athlete->metrics()
+                ->where('metric_type', $metricTypeA->value)
+                ->where('date', '>=', $startDate)
+                ->orderBy('date')
+                ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->{$metricTypeA->getValueColumn()}]);
+        } elseif ($metricTypeA instanceof CalculatedMetricType) {
+            $collectionA = $athlete->calculatedMetrics()
+                ->where('type', $metricTypeA->value)
+                ->where('date', '>=', $startDate)
+                ->orderBy('date')
+                ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
+        }
 
-        $collectionB = $athlete->metrics()
-            ->where('metric_type', $metricTypeB->value)
-            ->where('date', '>=', $startDate)
-            ->orderBy('date')
-            ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
+        $collectionB = null;
+        if ($metricTypeB instanceof MetricType) {
+            $collectionB = $athlete->metrics()
+                ->where('metric_type', $metricTypeB->value)
+                ->where('date', '>=', $startDate)
+                ->orderBy('date')
+                ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->{$metricTypeB->getValueColumn()}]);
+        } elseif ($metricTypeB instanceof CalculatedMetricType) {
+            $collectionB = $athlete->calculatedMetrics()
+                ->where('type', $metricTypeB->value)
+                ->where('date', '>=', $startDate)
+                ->orderBy('date')
+                ->get()->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
+        }
+
+        if ($collectionA === null || $collectionB === null) {
+            return ['correlation' => null, 'impact_size' => null, 'reason' => 'Type de métrique non supporté.'];
+        }
 
         return $this->calculateCorrelationFromCollections($collectionA, $collectionB);
     }
