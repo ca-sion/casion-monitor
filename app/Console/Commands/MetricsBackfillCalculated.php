@@ -58,7 +58,7 @@ class MetricsBackfillCalculated extends Command
 
         $progressBar->finish();
         $this->newLine();
-        $this->info("Calculated metrics backfilled successfully for ".$athletes->count().' athlete(s) over the last '.$daysToBackfill.' days.');
+        $this->info('Calculated metrics backfilled successfully for '.$athletes->count().' athlete(s) over the last '.$daysToBackfill.' days.');
 
         return self::SUCCESS;
     }

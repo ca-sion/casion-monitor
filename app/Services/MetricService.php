@@ -36,6 +36,7 @@ class MetricService
     {
         // Options par défaut
         $defaultOptions = [
+            'endDate'                      => null,
             'period'                       => 'last_60_days',
             'metric_types'                 => MetricType::cases(),
             'calculated_metrics'           => CalculatedMetricType::cases(),
@@ -49,6 +50,7 @@ class MetricService
             'chart_period'                 => null,
         ];
         $options = array_merge($defaultOptions, $options);
+        $endDate = $options['endDate'] ? Carbon::parse($options['endDate']) : Carbon::now();
 
         // Assurer que chart_period est défini si chart_metric_type l'est
         if ($options['chart_metric_type'] && ! $options['chart_period']) {
@@ -64,40 +66,47 @@ class MetricService
         $metricTypes = $options['metric_types'];
 
         if ($options['include_readiness_status']) {
-            $existingMetricValues = array_map(fn ($metricType) => $metricType->value, $metricTypes);
-            $essentialMetricValues = array_map(fn ($metricType) => $metricType->value, $this->metricReadinessService::ESSENTIAL_DAILY_READINESS_METRICS);
-
-            $combinedMetricValues = array_unique(array_merge($existingMetricValues, $essentialMetricValues));
-            $metricTypes = array_map(fn ($value) => MetricType::from($value), $combinedMetricValues);
+            $metricTypes = collect($metricTypes)
+                ->merge($this->metricReadinessService::ESSENTIAL_DAILY_READINESS_METRICS)
+                ->unique()
+                ->values()
+                ->all();
         }
 
         if (in_array('general', $options['include_alerts'])) {
-            $existingMetricValues = array_map(fn ($metricType) => $metricType->value, $metricTypes);
-            $painMetricValues = array_map(fn ($metricType) => $metricType->value, $this->metricAlertsService::PAIN_METRICS);
-
-            $combinedMetricValues = array_unique(array_merge($existingMetricValues, $painMetricValues));
-            $metricTypes = array_map(fn ($value) => MetricType::from($value), $combinedMetricValues);
+            $metricTypes = collect($metricTypes)
+                ->merge($this->metricAlertsService::PAIN_METRICS)
+                ->unique()
+                ->values()
+                ->all();
         }
 
         // Déterminer la date de début maximale pour la collecte des métriques brutes, en fonction de la période et des options d'inclusion.
-        $maxStartDate = $this->determineMetricCollectionStartDate($options);
+        $maxStartDate = $this->determineMetricCollectionStartDate($options, $endDate);
 
         // Pré-charger toutes les métriques brutes, calculées et les semaines de plan d'entraînement pour tous les athlètes.
         $allMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
             ->where('date', '>=', $maxStartDate)
-            ->whereIn('metric_type', array_map(fn ($metricType) => $metricType->value, $metricTypes))
+            ->whereIn('metric_type', collect($metricTypes)->pluck('value')->all())
             ->orderBy('date', 'asc')
             ->get()
             ->groupBy('athlete_id');
 
         if ($options['include_menstrual_cycle']) {
-            $allMetricsByAthlete = $allMetricsByAthlete->mergeRecursive(
-                Metric::whereIn('athlete_id', $athleteIds)
-                    ->where('date', '>=', now()->copy()->subYears(2)->startOfDay())
-                    ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD)
-                    ->get()
-                    ->groupBy('athlete_id')
-            );
+            $menstrualMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
+                ->where('date', '>=', $endDate->copy()->subYears(2)->startOfDay())
+                ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD)
+                ->get()
+                ->groupBy('athlete_id');
+
+            $allAthleteIds = $allMetricsByAthlete->keys()->union($menstrualMetricsByAthlete->keys());
+
+            $allMetricsByAthlete = $allAthleteIds->mapWithKeys(function ($athleteId) use ($allMetricsByAthlete, $menstrualMetricsByAthlete) {
+                $regularMetrics = $allMetricsByAthlete->get($athleteId, collect());
+                $menstrualMetrics = $menstrualMetricsByAthlete->get($athleteId, collect());
+
+                return [$athleteId => $regularMetrics->merge($menstrualMetrics)->sortBy('date')];
+            });
         }
 
         $allCalculatedMetricsByAthlete = CalculatedMetric::whereIn('athlete_id', $athleteIds)
@@ -112,7 +121,7 @@ class MetricService
             ->groupBy('training_plan_id');
 
         // Itérer sur chaque athlète et effectuer les calculs conditionnels
-        return $athletes->map(function ($athlete) use ($allMetricsByAthlete, $allCalculatedMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $options) {
+        return $athletes->map(function ($athlete) use ($allMetricsByAthlete, $allCalculatedMetricsByAthlete, $allTrainingPlanWeeksByAthleteTrainingPlanId, $options, $endDate) {
             $athleteMetrics = $allMetricsByAthlete->get($athlete->id) ?? collect();
             $athleteCalculatedMetrics = $allCalculatedMetricsByAthlete->get($athlete->id) ?? collect();
             $athleteTrainingPlansId = $athlete->currentTrainingPlan?->id;
@@ -120,7 +129,7 @@ class MetricService
 
             $athleteData = []; // Données à ajouter à l'athlète
 
-            $periodStartDate = $this->calculatePeriodStartDate($options['period']);
+            $periodStartDate = $this->calculatePeriodStartDate($options['period'], $endDate);
             $filteredAthleteMetrics = $athleteMetrics->where('date', '>=', $periodStartDate);
             $filteredAthleteCalculatedMetrics = $athleteCalculatedMetrics->where('date', '>=', $periodStartDate);
 
@@ -133,8 +142,8 @@ class MetricService
                 ];
                 $metricsDataForDashboard = [];
                 foreach ($dashboardMetricTypes as $metricType) {
-                    $metricsForType = $filteredAthleteMetrics->where('metric_type', $metricType->value);
-                    $metricsDataForDashboard[$metricType->value] = $this->prepareSingleMetricDashboardDataFromCollection($metricsForType, $metricType, $options['period']);
+                    $metricsForType = $athleteMetrics->where('metric_type', $metricType->value);
+                    $metricsDataForDashboard[$metricType->value] = $this->prepareSingleMetricDashboardDataFromCollection($metricsForType, $metricType, $options['period'], $endDate);
                 }
                 $athleteData['dashboard_metrics_data'] = $metricsDataForDashboard;
             }
@@ -145,17 +154,17 @@ class MetricService
                     if ($calculatedMetric === CalculatedMetricType::READINESS_SCORE) {
                         continue; // Le score de readiness est géré séparément, pas comme une métrique hebdomadaire ici.
                     }
-                    $weeklyMetricsData[$calculatedMetric->value] = $this->prepareWeeklyMetricDashboardDataFromCollection($athlete, $filteredAthleteCalculatedMetrics, $calculatedMetric, $options['period']);
+                    $weeklyMetricsData[$calculatedMetric->value] = $this->prepareWeeklyMetricDashboardDataFromCollection($athlete, $filteredAthleteCalculatedMetrics, $calculatedMetric, $options['period'], $endDate);
                 }
                 $athleteData['weekly_metrics_data'] = $weeklyMetricsData;
             }
 
             if ($options['include_latest_daily_metrics']) {
-                $athleteData['latest_daily_metrics'] = $this->getAthleteLatestMetricsGroupedByDate($athleteMetrics, $options['period']);
+                $athleteData['latest_daily_metrics'] = $this->getAthleteLatestMetricsGroupedByDate($filteredAthleteMetrics);
             }
 
             if (! empty($options['include_alerts'])) {
-                $athleteData['alerts'] = $this->metricAlertsService->getAlerts($athlete, $athleteMetrics, $athletePlanWeeks, $options);
+                $athleteData['alerts'] = $this->metricAlertsService->getAlerts($athlete, $filteredAthleteMetrics, $athletePlanWeeks, $options);
             }
 
             if ($options['include_menstrual_cycle'] && $athlete->gender->value === 'w') {
@@ -175,7 +184,7 @@ class MetricService
                 $chartMetricType = MetricType::tryFrom($options['chart_metric_type']);
                 if ($chartMetricType) {
                     $metricsForChart = $athleteMetrics->where('metric_type', $chartMetricType->value)
-                        ->where('date', '>=', $this->calculatePeriodStartDate($options['chart_period']));
+                        ->where('date', '>=', $this->calculatePeriodStartDate($options['chart_period'], $endDate));
                     $athleteData['chart_data'] = $this->prepareSingleMetricChartData($metricsForChart, $chartMetricType);
                 }
             }
@@ -184,32 +193,30 @@ class MetricService
         });
     }
 
-    protected function determineMetricCollectionStartDate(array $options): Carbon
+    protected function determineMetricCollectionStartDate(array $options, Carbon $endDate): Carbon
     {
-        $now = Carbon::now();
-        $startDate = $this->calculatePeriodStartDate($options['period']);
+        $startDate = $this->calculatePeriodStartDate($options['period'], $endDate);
 
         // Si les tendances sont incluses, s'assurer d'avoir au moins 60 jours de données
         if ($options['include_dashboard_metrics'] || $options['include_weekly_metrics'] || ! empty($options['include_alerts'])) {
-            $startDate = $startDate->min($now->copy()->subDays(90)->startOfDay());
+            $startDate = $startDate->min($endDate->copy()->subDays(90)->startOfDay());
         }
 
         return $startDate;
     }
 
-    protected function getAthleteLatestMetricsGroupedByDate(Collection $athleteMetrics, string $period): Collection
+    protected function getAthleteLatestMetricsGroupedByDate(Collection $filteredMetrics): Collection
     {
-        $startDate = $this->calculatePeriodStartDate($period);
-        $endDate = now()->endOfDay();
-
-        $filteredMetrics = $athleteMetrics->filter(fn (Metric $metric) => $metric->date->between($startDate, $endDate));
-
         return $filteredMetrics->sortByDesc('date')->groupBy(fn (Metric $metric) => $metric->date->format('Y-m-d'));
     }
 
-    protected function prepareSingleMetricDashboardDataFromCollection(Collection $metricsForPeriod, MetricType $metricType, string $period): array
+    protected function prepareSingleMetricDashboardDataFromCollection(Collection $allMetricsForType, MetricType $metricType, string $period, Carbon $endDate): array
     {
         $valueColumn = $metricType->getValueColumn();
+
+        $periodStartDate = $this->calculatePeriodStartDate($period, $endDate);
+        $metricsForPeriod = $allMetricsForType->where('date', '>=', $periodStartDate);
+
         $metricData = [
             'label'                     => $metricType->getLabel(),
             'short_label'               => $metricType->getLabelShort(),
@@ -238,17 +245,17 @@ class MetricService
             $metricData['last_value'] = $metricValue;
             $metricData['formatted_last_value'] = $this->formatMetricDisplayValue($metricValue, $metricType);
             $metricData['last_value_date'] = $lastMetric->date;
-            $metricData['is_last_value_today'] = $lastMetric->date->isToday();
+            $metricData['is_last_value_today'] = $lastMetric->date->isSameDay($endDate);
         }
 
         if ($metricData['is_numerical']) {
-            $trends = $this->metricTrendsService->calculateMetricAveragesFromCollection($metricsForPeriod, $metricType);
+            $trends = $this->metricTrendsService->calculateMetricAveragesFromCollection($allMetricsForType, $metricType);
             $metricData['average_7_days'] = $trends['averages']['Derniers 7 jours'] ?? null;
             $metricData['average_30_days'] = $trends['averages']['Derniers 30 jours'] ?? null;
             $metricData['formatted_average_7_days'] = $this->formatMetricDisplayValue($metricData['average_7_days'], $metricType);
             $metricData['formatted_average_30_days'] = $this->formatMetricDisplayValue($metricData['average_30_days'], $metricType);
 
-            $evolutionTrendData = $this->metricTrendsService->calculateMetricEvolutionTrend($metricsForPeriod, $metricType);
+            $evolutionTrendData = $this->metricTrendsService->calculateMetricEvolutionTrend($allMetricsForType, $metricType);
             if ($metricData['average_7_days'] !== null && $evolutionTrendData['trend'] !== 'n/a') {
                 $optimalDirection = $metricType->getTrendOptimalDirection();
                 $metricData['trend_icon'] = $this->getTrendIcon($evolutionTrendData['trend']);
@@ -264,10 +271,8 @@ class MetricService
         return $metricData;
     }
 
-    protected function prepareWeeklyMetricDashboardDataFromCollection(Athlete $athlete, Collection $athleteCalculatedMetrics, CalculatedMetricType $metricType, string $period): array
+    protected function prepareWeeklyMetricDashboardDataFromCollection(Athlete $athlete, Collection $athleteCalculatedMetrics, CalculatedMetricType $metricType, string $period, Carbon $endDate): array
     {
-        $now = Carbon::now();
-
         $weeklyData = $athleteCalculatedMetrics
             ->where('type', $metricType->value)
             ->groupBy(fn ($metric) => $metric->date->startOfWeek()->format('Y-m-d'))
@@ -276,10 +281,10 @@ class MetricService
         $lastWeekDate = $weeklyData->keys()->sortDesc()->first();
         $lastValue = $lastWeekDate ? $weeklyData[$lastWeekDate] : null;
 
-        $dataFor7Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($now->copy()->subDays(7)));
+        $dataFor7Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($endDate->copy()->subDays(7)));
         $average7Days = $dataFor7Days->isNotEmpty() ? $dataFor7Days->avg() : null;
 
-        $dataFor30Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($now->copy()->subDays(30)));
+        $dataFor30Days = $weeklyData->filter(fn ($value, $dateStr) => Carbon::parse($dateStr)->greaterThanOrEqualTo($endDate->copy()->subDays(30)));
         $average30Days = $dataFor30Days->isNotEmpty() ? $dataFor30Days->avg() : null;
 
         $trend = $this->metricTrendsService->calculateGenericNumericTrend($athleteCalculatedMetrics->where('type', $metricType));
@@ -293,7 +298,7 @@ class MetricService
             'label'                     => $metricType->getLabelShort(),
             'formatted_last_value'      => is_numeric($lastValue) ? number_format($lastValue, 1) : 'n/a',
             'last_value_date'           => $lastWeekDate ? Carbon::parse($lastWeekDate) : null,
-            'is_last_value_today'       => $lastWeekDate ? Carbon::parse($lastWeekDate)->isSameWeek(now()) : false,
+            'is_last_value_today'       => $lastWeekDate ? Carbon::parse($lastWeekDate)->isSameWeek($endDate) : false,
             'formatted_average_7_days'  => is_numeric($average7Days) ? number_format($average7Days, 1) : 'n/a',
             'formatted_average_30_days' => is_numeric($average30Days) ? number_format($average30Days, 1) : 'n/a',
             'is_numerical'              => true,
@@ -307,26 +312,25 @@ class MetricService
         ];
     }
 
-    public function calculatePeriodStartDate(string $period): Carbon
+    public function calculatePeriodStartDate(string $period, Carbon $endDate): Carbon
     {
-        $now = Carbon::now();
-
         return match ($period) {
-            'last_7_days'   => $now->copy()->subDays(7)->startOfDay(),
-            'last_14_days'  => $now->copy()->subDays(14)->startOfDay(),
-            'last_30_days'  => $now->copy()->subDays(30)->startOfDay(),
-            'last_60_days'  => $now->copy()->subDays(60)->startOfDay(),
-            'last_90_days'  => $now->copy()->subDays(90)->startOfDay(),
-            'last_6_months' => $now->copy()->subMonths(6)->startOfDay(),
-            'last_year'     => $now->copy()->subYear()->startOfDay(),
+            'last_7_days'   => $endDate->copy()->subDays(7)->startOfDay(),
+            'last_14_days'  => $endDate->copy()->subDays(14)->startOfDay(),
+            'last_30_days'  => $endDate->copy()->subDays(30)->startOfDay(),
+            'last_60_days'  => $endDate->copy()->subDays(60)->startOfDay(),
+            'last_90_days'  => $endDate->copy()->subDays(90)->startOfDay(),
+            'last_6_months' => $endDate->copy()->subMonths(6)->startOfDay(),
+            'last_year'     => $endDate->copy()->subYear()->startOfDay(),
             'all_time'      => Carbon::createFromTimestamp(0),
-            default         => $now->copy()->subDays(60)->startOfDay(),
+            default         => $endDate->copy()->subDays(60)->startOfDay(),
         };
     }
 
     public function retrieveAthleteRawMetrics(Athlete $athlete, array $filters = []): Collection
     {
         $query = $athlete->metrics()->orderBy('date');
+        $endDate = isset($filters['endDate']) ? Carbon::parse($filters['endDate']) : Carbon::now();
 
         if (isset($filters['metric_type']) && $filters['metric_type'] !== 'all') {
             if (MetricType::tryFrom($filters['metric_type'])) {
@@ -335,37 +339,35 @@ class MetricService
         }
 
         if (isset($filters['period'])) {
-            $this->applyMetricPeriodFilterToQuery($query, $filters['period']);
+            $this->applyMetricPeriodFilterToQuery($query, $filters['period'], $endDate);
         }
 
         return $query->get();
     }
 
-    protected function applyMetricPeriodFilterToQuery($query, string $period): void
+    protected function applyMetricPeriodFilterToQuery($query, string $period, Carbon $endDate): void
     {
-        $now = Carbon::now();
-
         switch ($period) {
             case 'last_7_days':
-                $query->where('date', '>=', $now->copy()->subDays(7)->startOfDay());
+                $query->where('date', '>=', $endDate->copy()->subDays(7)->startOfDay());
                 break;
             case 'last_14_days':
-                $query->where('date', '>=', $now->copy()->subDays(14)->startOfDay());
+                $query->where('date', '>=', $endDate->copy()->subDays(14)->startOfDay());
                 break;
             case 'last_30_days':
-                $query->where('date', '>=', $now->copy()->subDays(30)->startOfDay());
+                $query->where('date', '>=', $endDate->copy()->subDays(30)->startOfDay());
                 break;
             case 'last_60_days':
-                $query->where('date', '>=', $now->copy()->subDays(60)->startOfDay());
+                $query->where('date', '>=', $endDate->copy()->subDays(60)->startOfDay());
                 break;
             case 'last_90_days':
-                $query->where('date', '>=', $now->copy()->subDays(90)->startOfDay());
+                $query->where('date', '>=', $endDate->copy()->subDays(90)->startOfDay());
                 break;
             case 'last_6_months':
-                $query->where('date', '>=', $now->copy()->subMonths(6)->startOfDay());
+                $query->where('date', '>=', $endDate->copy()->subMonths(6)->startOfDay());
                 break;
             case 'last_year':
-                $query->where('date', '>=', $now->copy()->subYear()->startOfDay());
+                $query->where('date', '>=', $endDate->copy()->subYear()->startOfDay());
                 break;
             case 'all_time':
                 break;
@@ -467,9 +469,10 @@ class MetricService
             ->sortByDesc(fn ($metrics, $date) => $date);
     }
 
-    public function getAthleteMetricDashboardSummary(Athlete $athlete, MetricType $metricType, string $period): array
+    public function getAthleteMetricDashboardSummary(Athlete $athlete, MetricType $metricType, string $period, ?Carbon $endDate = null): array
     {
-        $metricsForPeriod = $this->retrieveAthleteRawMetrics($athlete, ['metric_type' => $metricType->value, 'period' => $period]);
+        $endDate = $endDate ?? Carbon::now();
+        $metricsForPeriod = $this->retrieveAthleteRawMetrics($athlete, ['metric_type' => $metricType->value, 'period' => $period, 'endDate' => $endDate]);
 
         $valueColumn = $metricType->getValueColumn();
 
@@ -501,7 +504,7 @@ class MetricService
             $metricData['last_value'] = $metricValue;
             $metricData['formatted_last_value'] = $this->formatMetricDisplayValue($metricValue, $metricType);
             $metricData['last_value_date'] = $lastMetric->date;
-            $metricData['is_last_value_today'] = $lastMetric->date->isToday();
+            $metricData['is_last_value_today'] = $lastMetric->date->isSameDay($endDate);
         }
 
         if ($metricData['is_numerical']) {

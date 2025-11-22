@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\CalculatedMetric;
 use Carbon\Carbon;
 use App\Models\Athlete;
 use App\Enums\MetricType;
-use App\Enums\CalculatedMetricType;
 use Illuminate\Support\Collection;
+use App\Enums\CalculatedMetricType;
 
 /**
  * ReportService : Orchestre la génération de rapports analytiques et narratifs.
@@ -45,16 +44,16 @@ class ReportService
      */
     public function generateReport(Athlete $athlete, string $periodType, Carbon $endDate): array
     {
-        $period = $this->getPeriodDates($periodType, $endDate);
-        $startDate = $period['startDate'];
+        // Fetch a wide range of data to ensure all calculations have enough history.
+        $fetchStartDate = $endDate->copy()->subDays(182)->startOfDay();
 
         $requiredMetrics = $athlete->metrics()
-            ->whereBetween('date', [$startDate, $endDate])
+            ->whereBetween('date', [$fetchStartDate, $endDate])
             ->orderBy('date', 'desc')
             ->get();
-            
+
         $calculatedMetrics = $athlete->calculatedMetrics()
-            ->whereBetween('date', [$startDate, $endDate])
+            ->whereBetween('date', [$fetchStartDate, $endDate])
             ->get();
 
         $report = [
@@ -100,24 +99,24 @@ class ReportService
     // DAILY ANALYSIS
     protected function generateDailyAnalysis(Athlete $athlete, Collection $allMetrics, Collection $calculatedMetrics, Carbon $endDate): array
     {
-        $dailyMetrics = $allMetrics->where('date', $endDate->toDateString());
+        $dailyMetrics = $allMetrics->where('date', $endDate);
 
         return [
-            'readiness_status'           => $this->getReadinessStatus($athlete, $dailyMetrics, $allMetrics, $calculatedMetrics),
-            'alerts_and_inconsistencies' => $this->getInconsistencyAlerts($athlete, $dailyMetrics),
+            'readiness_status'           => $this->getReadinessStatus($athlete, $dailyMetrics, $allMetrics, $calculatedMetrics, $endDate),
+            'alerts_and_inconsistencies' => $this->getInconsistencyAlerts($athlete, $dailyMetrics, $allMetrics),
             'j_minus_1_correlation'      => $this->getInterDayCorrelation($athlete, $allMetrics, $calculatedMetrics, $endDate),
             'recommendation'             => $this->getDailyRecommendation($athlete, $dailyMetrics),
         ];
     }
 
-    protected function getReadinessStatus(Athlete $athlete, Collection $dailyMetrics, Collection $allMetrics, Collection $calculatedMetrics): array
+    protected function getReadinessStatus(Athlete $athlete, Collection $dailyMetrics, Collection $allMetrics, Collection $calculatedMetrics, Carbon $endDate): array
     {
         $readinessStatusData = $this->readinessService->getAthleteReadinessStatus($athlete, $allMetrics);
-        
+
         $sbmHistory = $calculatedMetrics
             ->where('type', CalculatedMetricType::SBM)
-            ->where('date', '>=', now()->subDays(7));
-            
+            ->where('date', '>=', $endDate->copy()->subDays(7));
+
         $sbmTrend = $this->trendsService->calculateGenericNumericTrend($sbmHistory);
 
         $level = $readinessStatusData['level'] ?? 'neutral';
@@ -175,28 +174,29 @@ class ReportService
         return $data;
     }
 
-    protected function getInconsistencyAlerts(Athlete $athlete, Collection $dailyMetrics): array
+    protected function getInconsistencyAlerts(Athlete $athlete, Collection $dailyMetrics, Collection $allMetrics): array
     {
         $minimalRelevantMetricTypes = [
-            MetricType::MORNING_MOOD_WELLBEING->value,
-            MetricType::POST_SESSION_SESSION_LOAD->value,
+            MetricType::MORNING_MOOD_WELLBEING,
+            // MetricType::POST_SESSION_SESSION_LOAD,
         ];
 
         $hasMinimalRelevantMetrics = $dailyMetrics->whereIn('metric_type', $minimalRelevantMetricTypes)->isNotEmpty();
 
         if (! $hasMinimalRelevantMetrics) {
             return [
-                'title'       => 'Alertes et Incohérences',
-                'explanation' => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent. Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
-                'status'      => 'neutral',
-                'main_metric' => null,
-                'summary'     => 'Données insuffisantes pour l\'analyse des incohérences.',
-                'points'      => [['status' => 'neutral', 'text' => 'Veuillez renseigner au moins une métrique matinale et/ou de session pour activer cette analyse.']],
+                'title'          => 'Alertes et Incohérences',
+                'explanation'    => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent. Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
+                'status'         => 'neutral',
+                'main_metric'    => null,
+                'summary'        => 'Données insuffisantes pour l\'analyse des incohérences.',
+                'points'         => [['status' => 'neutral', 'text' => 'Veuillez renseigner au moins une métrique matinale et/ou de session pour activer cette analyse.']],
                 'recommendation' => 'Renseignez vos métriques post-séance (charge, fatigue, performance) et matinales (Humeur, Fatigue) pour une analyse complète.',
             ];
         }
 
         $alerts = $this->alertsService->checkAllAlerts($athlete, $dailyMetrics);
+        $alerts = collect($alerts)->filter(fn($alert) => in_array(data_get($alert, 'type'), ['warning', 'danger']))->all();
         $inconsistencies = [];
 
         $sessionLoad = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)?->value;
@@ -216,7 +216,7 @@ class ReportService
 
         $hrvDampingAlerted = false;
         if ($hrv !== null && $mood !== null) {
-            $hrvAvg = $athlete->metrics()->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
+            $hrvAvg = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
             if ($hrvAvg > 0 && $hrv < $hrvAvg * 0.90 && $mood > 8) {
                 $inconsistencies[] = ['status' => 'high_risk', 'text' => "Votre corps montre des signes de fatigue (VFC basse : {$hrv}ms) mais votre moral est excellent ({$mood}/10). C\'est un risque de Damping (Amortissement psychologique), où votre motivation masque un état de fatigue réel. Récupération recommandée."];
                 $hrvDampingAlerted = true;
@@ -258,7 +258,7 @@ class ReportService
         $sbmHistory = $calculatedMetrics
             ->where('type', CalculatedMetricType::SBM)
             ->where('date', '>=', $endDate->copy()->subDays(13));
-            
+
         $loadHistory = $allMetrics
             ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
             ->where('date', '>=', $endDate->copy()->subDays(14))
@@ -272,7 +272,7 @@ class ReportService
             'explanation'    => 'Cette analyse examine le lien entre l\'intensité de votre entraînement d\'hier et votre niveau de récupération aujourd\'hui. En clair : est-ce que vos grosses séances ont un impact direct sur votre forme du lendemain ? Comprendre ce lien vous aide à mieux planifier votre récupération (sommeil, nutrition) après un effort important.',
             'status'         => 'neutral',
             'main_metric'    => null,
-            'summary'        => "Votre SBM d\'aujourd\'hui est de ".number_format($currentSbm, 1).'.',
+            'summary'        => "Votre SBM d'aujourd'hui est de ".number_format($currentSbm, 1).'.',
             'points'         => [],
             'recommendation' => null,
         ];
@@ -360,7 +360,7 @@ class ReportService
                 'value'  => $ratioCihCph > 0 ? number_format($ratioCihCph, 2) : 'n/a',
                 'label'  => 'Ratio CIH/CPH',
                 'type'   => 'gauge',
-                'max'    => 2.0, 
+                'max'    => 2.0,
                 'ranges' => [
                     'warning'   => [0, 0.69],
                     'optimal'   => [0.7, 1.3],
@@ -690,28 +690,29 @@ class ReportService
         if ($currentPhase === 'Inconnue') {
             $data['summary'] .= ' (Données manquantes)';
             $data['recommendation'] = $phaseRec['justification'];
+
             return $data;
         }
 
         $data['status'] = 'neutral';
 
         if ($fatigueImpact['impact'] === 'higher') {
-            $data['points'][] = ['status' => 'warning', 'text'   => "Fatigue en Lutéale : Impact notable. Votre fatigue est en moyenne {$fatigueImpact['difference']} points plus élevée en phase Lutéale qu'en phase Folliculaire. C'est le signal pour potentiellement lever le pied et se concentrer sur la récupération."];
+            $data['points'][] = ['status' => 'warning', 'text' => "Fatigue en Lutéale : Impact notable. Votre fatigue est en moyenne {$fatigueImpact['difference']} points plus élevée en phase Lutéale qu'en phase Folliculaire. C'est le signal pour potentiellement lever le pied et se concentrer sur la récupération."];
         } elseif ($fatigueImpact['impact'] === 'stable') {
-            $data['points'][] = ['status' => 'optimal', 'text'   => "Stabilité de la Fatigue : Aucune différence significative n'est détectée. Les règles n'ont pas d'influence majeure sur votre récupération perçue."];
+            $data['points'][] = ['status' => 'optimal', 'text' => "Stabilité de la Fatigue : Aucune différence significative n'est détectée. Les règles n'ont pas d'influence majeure sur votre récupération perçue."];
         }
 
         if ($perfImpact['impact'] === 'lower') {
-            $data['points'][] = ['status' => 'warning', 'text'   => "Performance en Lutéale : Efficacité en baisse. Votre ressenti de performance est en moyenne {$perfImpact['difference']} points plus faible. Utilisez cette phase pour le travail technique ou les séances de faible intensité (endurance)."];
+            $data['points'][] = ['status' => 'warning', 'text' => "Performance en Lutéale : Efficacité en baisse. Votre ressenti de performance est en moyenne {$perfImpact['difference']} points plus faible. Utilisez cette phase pour le travail technique ou les séances de faible intensité (endurance)."];
         }
 
         if ($longTermTrend['trend'] === 'worsening') {
             $data['status'] = 'high_risk';
-            $data['points'][] = ['status' => 'high_risk', 'text'   => "Tendance sur 6 mois : AGGRAVATION. L'écart de fatigue Lutéale/Folliculaire a augmenté de {$longTermTrend['change']} points. C'est un signe de désadaptation à la charge sur le long terme. Une pause active (micro-cycle de récupération) est fortement recommandée."];
+            $data['points'][] = ['status' => 'high_risk', 'text' => "Tendance sur 6 mois : AGGRAVATION. L'écart de fatigue Lutéale/Folliculaire a augmenté de {$longTermTrend['change']} points. C'est un signe de désadaptation à la charge sur le long terme. Une pause active (micro-cycle de récupération) est fortement recommandée."];
         } elseif ($longTermTrend['trend'] === 'improving') {
-            $data['points'][] = ['status' => 'optimal', 'text'   => "Tendance sur 6 mois : AMÉLIORATION. L'impact de votre cycle sur votre fatigue a diminué, preuve que votre stratégie d'adaptation fonctionne. Continuez ainsi !"];
+            $data['points'][] = ['status' => 'optimal', 'text' => "Tendance sur 6 mois : AMÉLIORATION. L'impact de votre cycle sur votre fatigue a diminué, preuve que votre stratégie d'adaptation fonctionne. Continuez ainsi !"];
         } else {
-            $data['points'][] = ['status' => 'neutral', 'text'   => "Tendance sur 6 mois : Stable. L'impact de votre cycle est constant. Continuez à ajuster vos séances phase par phase."];
+            $data['points'][] = ['status' => 'neutral', 'text' => "Tendance sur 6 mois : Stable. L'impact de votre cycle est constant. Continuez à ajuster vos séances phase par phase."];
         }
 
         $data['recommendation'] = "Recommandation pour cette phase ({$currentPhase}) : {$phaseRec['action']}. {$phaseRec['justification']}";
@@ -733,7 +734,7 @@ class ReportService
         return [
             'long_term_adaptation'    => $this->getAdaptationAnalysis($athlete, $allMetrics, $calculatedMetrics, $startDate, $endDate),
             'efficiency_gap_analysis' => $this->getEfficiencyGapAnalysis($athlete, $allMetrics, $startDate, $endDate),
-            'injury_pattern'          => $this->getInjuryPatternAnalysis($athlete, $calculatedMetrics, $endDate),
+            'injury_pattern'          => $this->getInjuryPatternAnalysis($athlete, $allMetrics, $calculatedMetrics, $endDate),
             'pacing_strategy'         => $this->getChargePacingAnalysis($athlete, $calculatedMetrics, $endDate),
         ];
     }
@@ -827,16 +828,15 @@ class ReportService
         return $data;
     }
 
-    protected function getInjuryPatternAnalysis(Athlete $athlete, Collection $calculatedMetrics, Carbon $endDate): array
+    protected function getInjuryPatternAnalysis(Athlete $athlete, Collection $allMetrics, Collection $calculatedMetrics, Carbon $endDate): array
     {
         $cihHistory = $calculatedMetrics
             ->where('type', CalculatedMetricType::CIH)
             ->where('date', '>=', $endDate->copy()->subDays(89));
-        
-        $painHistory = $athlete->metrics()
+
+        $painHistory = $allMetrics
             ->where('metric_type', MetricType::MORNING_PAIN->value)
             ->where('date', '>=', $endDate->copy()->subDays(90))
-            ->get()
             ->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
 
         $chargePainCorrelation = $this->trendsService->calculateCorrelationFromCollections($cihHistory, $painHistory);

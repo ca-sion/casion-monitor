@@ -58,9 +58,6 @@
                 </a>
     </flux:heading>
 
-    @php
-        $todayDailyMetrics = $daily_metrics_grouped_by_date->get(now()->toDateString());
-    @endphp
     @if ($todayDailyMetrics)
         <div class="mb-4 mt-2 flex flex-wrap gap-1">
             @foreach ($todayDailyMetrics['metrics'] as $metricType => $metricValue)

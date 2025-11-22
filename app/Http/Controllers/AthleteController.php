@@ -73,24 +73,22 @@ class AthleteController extends Controller
             'period'                       => $period,
             'metric_types'                 => $dashboardMetricTypes,
             'calculated_metrics'           => $calculatedMetricTypes,
-            'include_dashboard_metrics'    => true,
+            'include_dashboard_metrics'    => false,
             'include_latest_daily_metrics' => true,
             'include_alerts'               => ['general', 'charge', 'readiness', 'menstrual'],
             'include_menstrual_cycle'      => true,
             'include_readiness_status'     => true,
-            'include_weekly_metrics'       => true, // Pour les métriques hebdomadaires (volume, intensité)
+            'include_weekly_metrics'       => false,
         ];
 
         // Appel unique pour avoir toutes les données de l'athlète
         $athleteData = $this->metricService->getAthletesData(collect([$athlete]), $options)->first();
 
         // Extraire les données de l'athlète enrichi
-        $metricsDataForDashboard = $athleteData->dashboard_metrics_data ?? [];
         $alerts = $athleteData->alerts ?? [];
         $menstrualCycleInfo = $athleteData->menstrual_cycle_info ?? null;
         $readinessStatus = $athleteData->readiness_status ?? null;
         $latestDailyMetrics = $athleteData->latest_daily_metrics ?? collect();
-        $weeklyMetricsData = collect($athleteData->weekly_metrics_data ?? []);
         $gamificationData = $athlete->metadata['gamification'] ?? null;
 
         // Récupérer le volume et l'intensité planifiés pour la semaine en cours
@@ -120,6 +118,8 @@ class AthleteController extends Controller
             false
         );
 
+        $todayDailyMetrics = $processedDailyMetricsForTable->get(now()->toDateString());
+
         // Reports
         $endDate = Carbon::today();
         $reportWeeklyData = resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate);
@@ -138,13 +138,13 @@ class AthleteController extends Controller
 
         $data = [
             'athlete'                       => $athlete,
-            'dashboard_metrics_data'        => $metricsDataForDashboard,
             'alerts'                        => $alerts,
             'menstrualCycleInfo'            => $menstrualCycleInfo,
             'readinessStatus'               => $readinessStatus,
             'gamificationData'              => $gamificationData,
             'period_label'                  => $period,
             'period_options'                => $periodOptions,
+            'todayDailyMetrics'             => $todayDailyMetrics,
             'daily_metrics_grouped_by_date' => $processedDailyMetricsForTable,
             'weekly_planned_volume'         => $weeklyPlannedVolume,
             'weekly_planned_intensity'      => $weeklyPlannedIntensity,

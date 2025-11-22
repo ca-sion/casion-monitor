@@ -21,7 +21,7 @@ class MetricCalculationService
         // 1. Fetch all necessary raw metrics for the day and the week.
         $startOfWeek = $date->copy()->startOfWeek(Carbon::MONDAY);
         $endOfWeek = $date->copy()->endOfWeek(Carbon::SUNDAY);
-        
+
         // Fetch all metrics for the readiness calculation period
         $allMetricsForReadiness = $athlete->metrics()
             ->where('date', '<=', $date->copy()->endOfDay())
@@ -68,6 +68,7 @@ class MetricCalculationService
                 ->where('date', $date)
                 ->where('type', $type)
                 ->delete();
+
             return;
         }
 
