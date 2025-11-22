@@ -14,9 +14,6 @@ git pull origin main
 echo 'Command: composer'
 composer install --verbose --prefer-dist --no-progress --no-interaction --no-dev --optimize-autoloader
 
-# Run optimize command
-php artisan optimize
-
 # Run generate key
 # echo 'Command: key'
 # php artisan key:generate
@@ -39,24 +36,12 @@ php artisan migrate --force
 # echo 'Command: migrate'
 # php artisan migrate:fresh --seed --force
 
-# Clear caches
-echo 'Command: cache'
-php artisan cache:clear
+
+# Run optimize command
+php artisan optimize
 
 # Laravel clear expired password reset tokens
 # php artisan auth:clear-resets
-
-# Laravel clear and cache routes
-php artisan route:cache
-
-# Laravel clear and cache config
-php artisan config:cache
-
-# Laravel clear and cache views
-php artisan view:cache
-
-# Laravel clear and cache events
-# php artisan event:cache
 
 # Install node modules
 # npm install
