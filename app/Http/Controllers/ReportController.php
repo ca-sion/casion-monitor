@@ -40,7 +40,7 @@ class ReportController extends Controller
         ]);
     }
 
-    public function showMonthlyReport()
+    public function ai()
     {
 
         $athlete = Auth::guard('athlete')->user();
@@ -48,37 +48,41 @@ class ReportController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
-        // 1. Définir la date du rapport
+        // 1. Définir les dates
+        $startDate = Carbon::today()->subMonths(2);
         $endDate = Carbon::today();
 
-        // 2. Générer le rapport structuré
-        $reportData = resolve(ReportService::class)->generateReport($athlete, 'monthly', $endDate);
+        // 2. Générer les CSV
+        $csvMetrics = $athlete->metrics
+            ->where('date', '>=', $startDate)
+            ->sortBy('date')
+            ->map(fn($metric) => $metric->date->toDateString().','.$metric->metric_type->value.','.$metric->value)
+            ->prepend('date;type;value')
+            ->implode('
+');
+        $csvCalculatedMetrics = $athlete->calculatedMetrics
+            ->where('date', '>=', $startDate)
+            ->sortBy('date')
+            ->map(fn($metric) => $metric->date->toDateString().','.$metric->type->value.','.$metric->value)
+            ->prepend('date;type;value')
+            ->implode('
+');
+        $csvFeedbacks = $athlete->feedbacks
+            ->where('date', '>=', $startDate)
+            ->sortBy('date')
+            ->map(fn($metric) => $metric->date->toDateString().','.$metric->author_type.','.$metric->content)
+            ->prepend('date;author_type;content')
+            ->implode('
+');
 
         // 3. Passer les données à la vue
-        return view('reports.monthly', [
+        return view('reports.ai', [
             'athlete' => $athlete,
-            'report'  => $reportData,
-        ]);
-    }
-
-    public function showBiannualReport()
-    {
-
-        $athlete = Auth::guard('athlete')->user();
-        if (! $athlete) {
-            abort(403, 'Accès non autorisé');
-        }
-
-        // 1. Définir la date du rapport
-        $endDate = Carbon::today();
-
-        // 2. Générer le rapport structuré
-        $reportData = resolve(ReportService::class)->generateReport($athlete, 'biannual', $endDate);
-
-        // 3. Passer les données à la vue
-        return view('reports.biannual', [
-            'athlete' => $athlete,
-            'report'  => $reportData,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'csvMetrics'  => $csvMetrics,
+            'csvCalculatedMetrics' => $csvCalculatedMetrics,
+            'csvFeedbacks' => $csvFeedbacks,
         ]);
     }
 }

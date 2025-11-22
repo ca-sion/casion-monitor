@@ -44,10 +44,10 @@ class MetricCalculationService
 
         // 3. Store base calculated metrics first.
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::SBM, $sbm);
-        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CIH, $cih);
+        // $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CIH, $cih);
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CIH_NORMALIZED, $cihNormalized);
-        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CPH, $cph);
-        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::RATIO_CIH_CPH, $ratioCihCph);
+        // $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::CPH, $cph);
+        // $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::RATIO_CIH_CPH, $ratioCihCph);
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH, $ratioCihNormalizedCph);
 
         // 4. Calculate and store ACWR

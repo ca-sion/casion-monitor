@@ -57,7 +57,7 @@ Route::middleware([AthleteHashProtect::class])->group(function () {
     Route::get('/a/{hash}/health-events/{healthEvent}/edit', AthleteHealthEventForm::class)->name('athletes.health-events.edit');
     Route::get('/a/{hash}/injuries/{injury}/health-events/create', AthleteHealthEventForm::class)->name('athletes.injuries.health-events.create');
     Route::get('/a/{hash}/reports', [ReportController::class, 'showReport'])->name('athletes.reports.show');
-    Route::get('/a/{hash}/reports/monthly', [ReportController::class, 'showMonthlyReport'])->name('athletes.reports.monthly');
+    Route::get('/a/{hash}/reports/ai', [ReportController::class, 'ai'])->name('athletes.reports.ai');
 });
 
 Route::get('/run/reminders', function () {
