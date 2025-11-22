@@ -75,7 +75,7 @@ class AthleteController extends Controller
             'calculated_metrics'           => $calculatedMetricTypes,
             'include_dashboard_metrics'    => false,
             'include_latest_daily_metrics' => true,
-            'include_alerts'               => ['general', 'charge', 'readiness', 'menstrual'],
+            'include_alerts'               => ['general', 'charge', 'menstrual'],
             'include_menstrual_cycle'      => true,
             'include_readiness_status'     => true,
             'include_weekly_metrics'       => false,
