@@ -156,7 +156,7 @@ class AthleteController extends Controller
             'healthEvents'                  => $athlete->healthEvents()->limit(12)->orderBy('date', 'desc')->get(),
             'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
-            'reports'                        => $reports,
+            'reports'                       => $reports,
         ];
 
         if ($request->expectsJson()) {

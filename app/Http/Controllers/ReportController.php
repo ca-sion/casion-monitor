@@ -56,33 +56,33 @@ class ReportController extends Controller
         $csvMetrics = $athlete->metrics
             ->where('date', '>=', $startDate)
             ->sortBy('date')
-            ->map(fn($metric) => $metric->date->toDateString().','.$metric->metric_type->value.','.$metric->value)
+            ->map(fn ($metric) => $metric->date->toDateString().','.$metric->metric_type->value.','.$metric->value)
             ->prepend('date;type;value')
             ->implode('
 ');
         $csvCalculatedMetrics = $athlete->calculatedMetrics
             ->where('date', '>=', $startDate)
             ->sortBy('date')
-            ->map(fn($metric) => $metric->date->toDateString().','.$metric->type->value.','.$metric->value)
+            ->map(fn ($metric) => $metric->date->toDateString().','.$metric->type->value.','.$metric->value)
             ->prepend('date;type;value')
             ->implode('
 ');
         $csvFeedbacks = $athlete->feedbacks
             ->where('date', '>=', $startDate)
             ->sortBy('date')
-            ->map(fn($metric) => $metric->date->toDateString().','.$metric->author_type.','.$metric->content)
+            ->map(fn ($metric) => $metric->date->toDateString().','.$metric->author_type.','.$metric->content)
             ->prepend('date;author_type;content')
             ->implode('
 ');
 
         // 3. Passer les données à la vue
         return view('reports.ai', [
-            'athlete' => $athlete,
-            'startDate' => $startDate,
-            'endDate' => $endDate,
-            'csvMetrics'  => $csvMetrics,
+            'athlete'              => $athlete,
+            'startDate'            => $startDate,
+            'endDate'              => $endDate,
+            'csvMetrics'           => $csvMetrics,
             'csvCalculatedMetrics' => $csvCalculatedMetrics,
-            'csvFeedbacks' => $csvFeedbacks,
+            'csvFeedbacks'         => $csvFeedbacks,
         ]);
     }
 }
