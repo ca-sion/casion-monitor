@@ -67,7 +67,7 @@ class MetricCalculationService
      */
     private function storeCalculatedMetric(Athlete $athlete, Carbon $date, CalculatedMetricType $type, ?float $value): void
     {
-        if ($value === null) {
+        if ($value === null || $value == 0 || ($type == CalculatedMetricType::READINESS_SCORE && $value == 100)) {
             // If value is null, we might want to delete the existing record for that day.
             CalculatedMetric::where('athlete_id', $athlete->id)
                 ->where('date', $date)
