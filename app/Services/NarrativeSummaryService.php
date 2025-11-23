@@ -184,7 +184,7 @@ class NarrativeSummaryService
         }
 
         if (! $significantTrendFound) {
-            $trendsSummary = "Le système n'a pas détecté de corrélation forte (> |0.6|) sur le dernier mois, ce qui rend l'analyse des leviers moins directe.";
+            $trendsSummary = "Le système n'a pas détecté de corrélation forte (> 0.6) sur le dernier mois, ce qui rend l'analyse des leviers moins directe.";
         }
 
         // ALERTS CRITIQUES (DAMPING / INCOHERENCE / DANGER)
@@ -195,7 +195,7 @@ class NarrativeSummaryService
         } elseif ($isDamping) {
             $alertSummary = "Un 🛑 **damping** (amortissement psychologique) est détecté : votre moral est bon, mais votre corps est épuisé. Votre perception est déconnectée de la réalité biologique. **Agissez sur la charge sans attendre l'effondrement moral**.";
         } elseif ($isIncoherence) {
-            $alertSummary = 'Une ⚠️ **incohérence des données** est notée (Forte surcharge sans alerte danger). Attendez-vous à une chute brutale de la Readiness sous peu.';
+            $alertSummary = 'Une ⚠️ **incohérence des données** est notée (forte surcharge sans alerte danger). Attendez-vous à une chute brutale de la Readiness sous peu.';
         }
 
         // ANALYSE MENSTRUELLE
@@ -236,7 +236,7 @@ class NarrativeSummaryService
             $p2 .= "Concernant le cycle, $menstrualSummary ";
         }
 
-        $p2 .= "Pour la suite, **{$finalStatus}**. {$finalAdvice}.";
+        $p2 .= "Pour la suite, **{$finalStatus}**. {$finalAdvice} ◆";
 
         $narrative .= $p2."\n\n";
 
