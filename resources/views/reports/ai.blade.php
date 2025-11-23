@@ -6,6 +6,7 @@
         </div>
 
         <div x-data="{
+            currentMode: 'single-prompt', // 'step-by-step' or 'single-prompt'
             currentStep: 1,
             copyToClipboardAndAdvance(elementId, nextStep) {
                 const textarea = document.getElementById(elementId);
@@ -19,10 +20,34 @@
                 document.execCommand('copy');
                 alert(`Copié ! Maintenant, collez dans votre IA et attendez ${nextStep <= 4 ? 'son invitation pour le prochain jeu de données.' : 'le rapport complet.'}`);
                 this.currentStep = nextStep;
+            },
+            copySinglePrompt() {
+                const textarea = document.getElementById('singlePromptContent');
+                if (!textarea) {
+                    console.error('Textarea element not found for ID: singlePromptContent');
+                    alert('Erreur: Impossible de trouver le contenu à copier. Veuillez réessayer.');
+                    return;
+                }
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // For mobile devices
+                document.execCommand('copy');
+                alert('Prompt unique copié ! Téléchargez le fichier CSV et collez les deux dans votre IA.');
             }
         }">
-            <div class="space-y-4">
-                <h2 class="text-2xl font-bold text-gray-700">Guide pour l'IA</h2>
+            <div class="mb-6 flex space-x-4 space-y-2 flex-col sm:flex-row" >
+                <flux:button x-bind:variant="currentMode === 'single-prompt' ? 'primary' : 'outline'"
+                    x-on:click="currentMode = 'single-prompt'">
+                    Prompt unique + CSV
+                </flux:button>
+                <flux:button x-bind:variant="currentMode === 'step-by-step' ? 'primary' : 'outline'"
+                    x-on:click="currentMode = 'step-by-step'; currentStep = 1">
+                    Pas à pas
+                </flux:button>
+            </div>
+
+            {{-- Step-by-step Mode --}}
+            <div x-show="currentMode === 'step-by-step'" class="space-y-4">
+                <h2 class="text-2xl font-bold text-gray-700">Guide pour l'IA (Mode pas à pas)</h2>
 
                 {{-- Step 1: Instructions and Definitions --}}
                 <div x-show="currentStep === 1" class="p-4 border rounded-lg shadow-sm bg-white">
@@ -140,11 +165,14 @@ Partie 4 : Problèmes spécifiques, Contexte qualitatif et Recommandations
 * Recommandations Actionnables : 3 Recommandations spécifiques et chiffrées pour ajuster le programme, directement liées aux conclusions (ex: "Réduire la CIH Planifiée de 10% pour les deux prochaines semaines" ou "Changer l'entraînement du mercredi car la VFC est systématiquement basse").
 
 Les données CSV 1, CSV 2 et CSV 3 vont être donnés dans les prompt suivants successivement par l'utilisateur. Attendre que l'utilisateur donne les données avant de faire le rapport.</textarea>
-                    <flux:button variant="primary" class="mt-4"
-                        x-on:click="copyToClipboardAndAdvance('promptPart1', 2)">
-                        Copier les instructions initiales (Étape 1)
-                    </flux:button>
-                    <a href="https://gemini.google.com/" target="_blank" class="text-blue-500 hover:underline ml-4">Ouvrir Gemini</a>
+                    <div class="mt-4 flex space-x-4 space-y-2 flex-col sm:flex-row">
+                        <flux:button variant="primary" x-on:click="copyToClipboardAndAdvance('promptPart1', 2)">
+                            Copier les instructions initiales (Étape 1)
+                        </flux:button>
+                        <flux:button tag="a" href="https://gemini.google.com/" target="_blank" variant="primary" color="blue">
+                            Ouvrir Gemini
+                        </flux:button>
+                    </div>
                 </div>
 
                 {{-- Step 2: Metrics CSV 1 --}}
@@ -208,6 +236,154 @@ Le rapport peut être effectuée selon les instructions.</textarea>
                     <h3 class="text-xl font-semibold mb-2 text-green-800">Processus terminé !</h3>
                     <p class="text-green-700">Vous avez copié toutes les parties nécessaires. Collez la dernière partie dans votre IA et attendez le rapport.</p>
                     <a href="https://gemini.google.com/" target="_blank" class="text-blue-500 hover:underline mt-4 inline-block">Ouvrir Gemini</a>
+                </div>
+            </div>
+
+            {{-- Single Prompt Mode --}}
+            <div x-show="currentMode === 'single-prompt'" x-cloak class="space-y-4">
+                <h2 class="text-2xl font-bold text-gray-700">Guide pour l'IA (Mode prompt unique)</h2>
+                <div class="p-4 border rounded-lg shadow-sm bg-white">
+                    <h3 class="text-xl font-semibold mb-2">Instructions pour l'IA et téléchargement des données</h3>
+                    <p class="text-gray-600 mb-4">
+                        Copiez le prompt ci-dessous. Ensuite, téléchargez le fichier CSV combiné via le bouton, puis collez
+                        le prompt ET le contenu du fichier CSV dans votre IA.
+                    </p>
+                    <textarea id="singlePromptContent" rows="10"
+                        class="w-full p-3 border rounded-md bg-gray-50 font-mono text-sm resize-y">Rôle et Objectif :
+
+"Vous êtes un analyste de données de performance sportive de haut niveau, spécialisé dans la gestion de la charge et de la récupération. Votre objectif est d'analyser le jeu de données CSV ci-dessous (fourni après ce prompt) pour fournir un rapport d'expertise complet et actionable à l'entraîneur et à l'athlète professionnel."
+
+## Contexte des données et définitions
+
+* Période couverte : Du {{ \Carbon\Carbon::parse($startDate)->locale('fr_CH')->isoFormat('L') }} au {{ \Carbon\Carbon::parse($endDate)->locale('fr_CH')->isoFormat('L') }}.
+* Athlète : {{ $athlete->name }}.
+
+Le fichier CSV unique que je vous fournirai contient trois types de données combinées, identifiées par la colonne 'category':
+- 'metric': Données brutes des métriques journalières (ex: poids, VFC, qualité de sommeil, fatigue, douleur, humeur, énergie, ressenti des jambes, charge de session, performance, fatigue subjective).
+- 'calculated_metric': Métriques calculées basées sur les données brutes (ex: Score de Bien-être Matinal, Charge Interne Hebdomadaire, Ratio ACWR).
+- 'feedback': Retours qualitatifs de l'athlète ou de l'entraîneur.
+
+Les colonnes dans le CSV combiné sont :
+| Colonne | Description | Applicabilité |
+| :--- | :--- | :--- |
+| `date` | Date de la donnée (YYYY-MM-DD). | Tous |
+| `category` | Type de donnée : 'metric', 'calculated_metric', 'feedback'. | Tous |
+| `type` | Pour 'metric' et 'calculated_metric': Nom de la métrique (ex: MORNING_BODY_WEIGHT_KG, SBM). | Métriques & Calculées |
+| `value` | Pour 'metric' et 'calculated_metric': Valeur numérique de la métrique. | Métriques & Calculées |
+| `author_type` | Pour 'feedback': Type d'auteur (ex: 'Athlete', 'Trainer'). | Feedbacks |
+| `content` | Pour 'feedback': Contenu textuel du feedback. | Feedbacks |
+
+Définition détaillée des métriques brutes ('metric'):
+
+| Nom CSV (`type` colonne) | Nom Complet | Description/Unité/Échelle | Tendance Optimale |
+| :--- | :--- | :--- | :--- |
+| MORNING_BODY_WEIGHT_KG | Poids corporel le matin | Poids en kg. | Neutre |
+| MORNING_HRV | Variabilité de la FC | VFC en ms. | Bonne (Hausse = meilleure récup) |
+| MORNING_SLEEP_QUALITY | Qualité du sommeil | Score sur 1-10 (très mauvaise ➝ excellente). | Bonne |
+| MORNING_SLEEP_DURATION | Durée du sommeil | Durée totale en heures (h). | Bonne |
+| MORNING_GENERAL_FATIGUE | Fatigue générale | Score sur 1-10 (pas fatigué ➝ épuisé). | Mauvaise (Hausse = problème) |
+| MORNING_PAIN | Douleurs musculaires/articulaires | Score sur 1-10 (aucune ➝ très fortes). | Mauvaise |
+| MORNING_PAIN_LOCATION | Localisation des douleurs | Texte libre (si douleur > 3). | Neutre |
+| MORNING_MOOD_WELLBEING | Humeur/bien-être | Score sur 1-10 (très mauvaise ➝ excellente). | Bonne |
+| MORNING_FIRST_DAY_PERIOD | Premier jour des règles | Binaire (indicateur). | Neutre |
+| PRE_SESSION_ENERGY_LEVEL | Niveau d'énergie | Score sur 1-10 (très bas ➝ très haut). | Bonne |
+| PRE_SESSION_LEG_FEEL | Ressenti des jambes | Score sur 1-10 (très lourdes ➝ très légères). | Bonne |
+| POST_SESSION_SESSION_LOAD | Ressenti de la charge | Score sur 1-10 (basse ➝ maximale). | Mauvaise (Hausse doit être contrôlée) |
+| POST_SESSION_PERFORMANCE_FEEL | Évaluation de la performance | Score sur 1-10 (mauvais ➝ excellent). | Bonne |
+| POST_SESSION_SUBJECTIVE_FATIGUE | Évaluation de la fatigue | Score sur 1-10 (aucune ➝ extrême). | Mauvaise |
+| POST_SESSION_PAIN | Douleurs après séance | Score sur 1-10 (aucune ➝ très fortes). | Mauvaise |
+
+Définition détaillée des métriques calculées (`calculated_metric`):
+
+### 1. Score de Bien-être Matinal (SBM)
+* Définition : Indicateur synthétique de la récupération et du bien-être général.
+* Calcul (Journalier) : SBM = (SQ + (10 - GF) + (10 - P) + MW / (4 * 10)) * 10
+    * Où : SQ (`MORNING_SLEEP_QUALITY`), GF (`MORNING_GENERAL_FATIGUE`), P (`MORNING_PAIN`), MW (`MORNING_MOOD_WELLBEING`).
+    * Note : Les scores sont normalisés sur 10.
+* Tendance Optimale : Haute (Indicateur de bonne récupération).
+
+### 2. Charge Interne Hebdomadaire (CIH)
+* Définition : Charge d'entraînement interne (subjective) totale pour la semaine.
+* Calcul (Hebdomadaire) : Somme de la métrique `POST_SESSION_SESSION_LOAD` (RPE) pour toutes les sessions de la semaine.
+* Tendance Optimale : Doit être dans la plage planifiée (Contrôlée).
+
+#### 3. Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED)
+* Définition : Charge moyenne des sessions (utile pour comparer l'intensité moyenne des sessions d'une semaine à l'autre).
+* Calcul (Hebdomadaire) : CIH_NORMALIZED = SOMME(POST_SESSION_SESSION_LOAD) / Nombre de jours avec session
+* Tendance Optimale : Contrôlée, doit correspondre à l'intensité planifiée.
+
+#### 4. Charge Planifiée Hebdomadaire (CPH)
+* Définition : Charge planifiée des sessions par semaine (volume et intensité).
+
+### 5. Ratio CIH / CPH normalisé (Charge Interne vs. Charge Planifiée)
+* Hypothèse : Assumer que le CSV inclut la colonne `CPH_PLANIFIEE` (Charge Planifiée Hebdomadaire) pour chaque semaine.
+* Calcul (Hebdomadaire) : Ratio = CIH / CPH_PLANIFIEE
+* Analyse :
+    * Ratio > 1.1 (ou seuil défini) : L'athlète subit une charge significativement plus élevée que prévu (risque de surcharge/fatigue).
+    * Ratio < 0.9 (ou seuil défini) : L'athlète subit une charge significativement plus faible que prévu (risque de sous-entraînement).
+
+### 6. Ratio ACWR (Acute:Chronic Workload Ratio)
+* Définition : Évaluation du risque de blessure lié à une augmentation trop rapide de la charge.
+* Calcul : CIH des 7 derniers jours / Moyenne CIH des 28 derniers jours (Charge Chronique).
+* Seuils d'Analyse :
+    * Optimal : 0.8 < ACWR < 1.3
+    * Warning (Risque accru) : 1.3 < ACWR < 1.5
+    * High Risk (Danger) : ACWR > 1.5
+
+## Instructions pour l'analyse :
+
+L'analyse doit OBLIGATOIREMENT être menée en utilisant les métriques dérivées (SBM, CIH, ACWR).
+
+1. Évaluation de la Charge et du Risque (ACWR) : Calculer et rapporter l'évolution de l'ACWR pour chaque semaine. Mettre en évidence les périodes de High Risk (ACWR $\ge 1.5$) et les corréler avec les pics de douleurs (MORNING_PAIN/POST_SESSION_PAIN).
+2. Score de Bien-être Matinal (SBM) : Identifier les jours où le SBM est en dessous de 5 et analyser si la cause est un Damping psychologique (VFC basse ET MORNING_MOOD_WELLBEING > 8) ou autre cause. Si Damping est détecté, considérer le jour comme High Risk (Charge interne non reflétée par le moral). Noter les périodes et les dates.
+3. Adhésion et Efficacité (CIH/CPH) : Identifier les semaines de Sur-adhésion (> 1.1) et les corréler avec les baisses de Performance ressentie (POST_SESSION_PERFORMANCE_FEEL) et les indicateurs de fatigue (MORNING_GENERAL_FATIGUE). Noter les périodes et les dates.
+4. Corrélation Clé J-1 vs J : Calculer la corrélation entre la Charge de Session (POST_SESSION_SESSION_LOAD) et le SBM du lendemain. Identifier si l'athlète est sensible à la charge élevée la veille. Noter les périodes et les dates.
+5. Analyse des Hotspots de Douleur : Identifier la zone corporelle la plus fréquemment signalée dans MORNING_PAIN_LOCATION et chercher une corrélation avec une charge sessionnelle élevée. Noter les zone, les périodes et les dates.
+6. Analyse du Cycle Menstruel (Si pertinent) : Si des données sont présentes dans MORNING_FIRST_DAY_PERIOD, comparer les moyennes de la Fatigue et de la Performance pendant la phase folliculaire et lutéale. Noter les constats, les périodes et les dates.
+7. Synthèse Qualitative Contextuelle :
+    * Analyser les périodes identifiées comme problématiques (SBM bas, ACWR High Risk, Performance ressentie basse, etc.) et chercher des causes qualitatives dans le CSV de Feedback ('feedback' category). Noter les constats, les périodes et les dates.
+    * Identifier les thèmes récurrents dans les feedbacks qui peuvent expliquer les variations des métriques. (Exemples : stress personnel, problème technique, conflit, motivation élevée, fatigue liée au voyage).
+    * Utiliser des extraits de feedback dans le rapport pour justifier les tendances ou les anomalies détectées par les chiffres.
+
+## Format du Rapport (Structure Demandée) :
+
+Partie 1 : Résumé & Statut global
+
+* Le Statut global doit être clairement formulé (ex: "Phase de surcharge, Dette de récupération chronique").
+* Résumé en termes simples et compréhensibles du rapport de minimum trois paragraphes.
+* Les 3 principales conclusions (tendances et problèmes) qui doivent inclure la cause probable (chiffres + contexte).
+
+Partie 2 : Analyse de la charge, des blessures, de la récupération et du bien-être
+
+* Évaluation des semaines de Sur- ou Sous-entraînement.
+* Risque de blessure (ACWR) : Semaines avec risque de blessure, et corrélation avec les douleurs.
+* Dette de récupération : Quantification de la fatigue chronique.
+* Jours de Damping
+* Jours de récupération Insuffisante (SBM bas).
+* Hotspots des douleur : Zone, fréquence et lien potentiel avec la charge.
+* Lister les périodes et les jours concernés et les constats des points plus hauts.
+* Crée un tableau hebdomadaire qui résume ces points. Utilise des emojis pour indiquer le niveau de risque.
+
+Partie 4 : Problèmes spécifiques, Contexte qualitatif et Recommandations
+
+* Synthèse Qualitative : Mettre en évidence les 2 ou 3 facteurs non liés à l'entraînement (tirés des feedbacks) qui ont le plus impacté positivement ou négativement les métriques de récupération/performance (ex: "Stress externe élevé mentionné par l'athlète A les 3 premières semaines").
+* Tableau des 5 jours/périodes les plus critiques : Liste des 5 événements majeurs (surcharge, SBM effondré, Damping, etc.) avec la raison expliquée par les chiffres et le contexte qualitatif.
+* A contrario, tableau des 5 jours/périodes les plus performants ou agréables.
+* Recommandations Actionnables : 3 Recommandations spécifiques et chiffrées pour ajuster le programme, directement liées aux conclusions (ex: "Réduire la CIH Planifiée de 10% pour les deux prochaines semaines" ou "Changer l'entraînement du mercredi car la VFC est systématiquement basse").
+
+--- Démarrage de l'analyse ---
+Je vais maintenant vous fournir le fichier CSV combiné. Une fois que vous l'avez traité, veuillez générer le rapport en suivant les instructions ci-dessus.</textarea>
+                    <div class="mt-4 flex space-x-4 space-y-2 flex-col sm:flex-row">
+                        <flux:button variant="primary" x-on:click="copySinglePrompt()">
+                            1. Copier le prompt unique
+                        </flux:button>
+                        <flux:button tag="a" href="{{ $downloadUrl }}" variant="primary" download="ai_report.csv">
+                            2. Télécharger toutes les données (CSV Combiné)
+                        </flux:button>
+                        <flux:button tag="a" href="https://gemini.google.com/" target="_blank" variant="primary" color="blue">
+                            3. Ouvrir Gemini
+                        </flux:button>
+                    </div>
                 </div>
             </div>
         </div>
