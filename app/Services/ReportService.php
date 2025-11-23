@@ -516,8 +516,8 @@ class ReportService
             return $data;
         }
 
-        $dayAvgPerformance = $recentMetrics->where('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)->groupBy(fn ($m) => $m->date->englishDayOfWeek)->map(fn ($g) => $g->avg('value'));
-        $dayAvgLegFeel = $recentMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL)->groupBy(fn ($m) => $m->date->englishDayOfWeek)->map(fn ($g) => $g->avg('value'));
+        $dayAvgPerformance = $recentMetrics->where('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)->groupBy(fn ($m) => $m->date->locale('fr_CH')->dayName)->map(fn ($g) => $g->avg('value'));
+        $dayAvgLegFeel = $recentMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL)->groupBy(fn ($m) => $m->date->locale('fr_CH')->dayName)->map(fn ($g) => $g->avg('value'));
 
         $bestPerfDay = $dayAvgPerformance->sortDesc()->keys()->first();
         $worstLegFeelDay = $dayAvgLegFeel->sort()->keys()->first();
