@@ -355,6 +355,7 @@
                     'weekly' => 'Hebdomadaire',
                     'monthly' => 'Mensuel',
                     'biannual' => 'Semestriel',
+                    'narrative' => 'Résumé',
                     default => 'Inconnu',
                 } }}
             </flux:heading>
