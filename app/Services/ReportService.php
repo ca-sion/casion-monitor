@@ -640,7 +640,7 @@ class ReportService
             return $data;
         }
 
-        $hotspots = $monthlyMetrics->whereIn('metric_type', [MetricType::MORNING_PAIN_LOCATION, MetricType::POST_SESSION_PAIN])
+        $hotspots = $monthlyMetrics->where('metric_type', MetricType::MORNING_PAIN_LOCATION)
             ->whereIn('date', $painMetrics->pluck('date'))
             ->groupBy(MetricType::MORNING_PAIN_LOCATION->getValueColumn())
             ->map(fn ($g) => $g->count())
