@@ -268,8 +268,8 @@ class ReportService
         $correlationData = $this->trendsService->calculateCorrelationFromCollections($loadHistory, $sbmHistoryShifted);
 
         $data = [
-            'title'          => 'Corrélation J-1 vs J : l\'impact de l\'effort',
-            'explanation'    => 'Cette analyse examine le lien entre l\'intensité de votre entraînement d\'hier et votre niveau de récupération aujourd\'hui. En clair : est-ce que vos grosses séances ont un impact direct sur votre forme du lendemain ? Comprendre ce lien vous aide à mieux planifier votre récupération (sommeil, nutrition) après un effort important.',
+            'title'          => 'Impact de l\'entraînement',
+            'explanation'    => 'Cette analyse examine le lien entre l\'intensité de votre entraînement d\'hier et votre niveau de récupération aujourd\'hui (Corrélation J-1 vs J ou Lagged Correlation). En clair : est-ce que vos grosses séances ont un impact direct sur votre forme du lendemain ? Comprendre ce lien vous aide à mieux planifier votre récupération (sommeil, nutrition) après un effort important.',
             'status'         => 'neutral',
             'main_metric'    => null,
             'summary'        => "Votre SBM d'aujourd'hui est de ".number_format($currentSbm, 1).'.',
@@ -500,7 +500,7 @@ class ReportService
         $recentMetrics = $allMetrics->where('date', '>=', $endDate->copy()->subWeeks(4));
 
         $data = [
-            'title'          => 'Patterns et jours clés (4 Semaines)',
+            'title'          => 'Patterns et jours clés',
             'explanation'    => 'Cette analyse vous aide à identifier vos "jours forts" et "jours faibles" au cours de la semaine, en se basant sur vos performances et ressentis des 4 dernières semaines. L\'objectif est de mieux comprendre quand vous êtes le plus performant ou le plus fatigué, pour adapter votre programme d\'entraînement et optimiser vos séances.',
             'status'         => 'neutral',
             'main_metric'    => null,
@@ -587,7 +587,7 @@ class ReportService
         $avgDuration = $allMetrics->where('metric_type', MetricType::MORNING_SLEEP_DURATION)->where('date', '>=', $endDate->copy()->subDays(29))->avg('value');
 
         $data = [
-            'title'       => 'Analyse de l\'impact du sommeil (30j)',
+            'title'       => 'Analyse de l\'impact du sommeil',
             'explanation' => 'Cette analyse étudie le lien entre la durée de votre sommeil et votre niveau de fatigue général sur le dernier mois. Elle vous aide à comprendre si dormir plus longtemps réduit directement votre fatigue et à quel point le sommeil est crucial pour votre récupération et vos performances.',
             'main_metric' => [
                 'value' => number_format($avgDuration, 1),
@@ -625,7 +625,7 @@ class ReportService
         $painMetrics = $monthlyMetrics->where('metric_type', MetricType::MORNING_PAIN->value)->filter(fn ($m) => $m->value > 4);
 
         $data = [
-            'title'          => 'Analyse des hotspots de douleur (30j)',
+            'title'          => 'Analyse des hotspots de douleur',
             'explanation'    => 'Cette analyse identifie les zones de votre corps où la douleur est la plus fréquente ou la plus intense sur le dernier mois. C\'est un "hotspot" de douleur. Repérer ces zones permet de comprendre si un problème persiste et d\'agir avant qu\'il ne se transforme en blessure plus sérieuse.',
             'main_metric'    => null,
             'points'         => [],
@@ -746,7 +746,7 @@ class ReportService
         $hrvTrend = $this->trendsService->calculateMetricEvolutionTrend($hrvHistory, MetricType::MORNING_HRV);
 
         $data = [
-            'title'          => 'Adaptation à long terme (6 mois)',
+            'title'          => 'Adaptation à long terme',
             'explanation'    => 'Cette analyse évalue comment votre corps s\'adapte à votre programme d\'entraînement sur une longue période (6 mois). En regardant l\'évolution de votre forme générale (SBM) et de votre système nerveux (VFC), nous pouvons voir si vous devenez plus fort et plus résilient, ou si la fatigue s\'accumule. C\'est essentiel pour ajuster votre entraînement sur le long terme.',
             'main_metric'    => null,
             'points'         => [],
@@ -791,8 +791,8 @@ class ReportService
         $avgGap = $performanceGapMetrics->avg();
 
         $data = [
-            'title'       => 'Analyse de l\'efficacité (6 mois)',
-            'explanation' => 'L\'analyse de l\'efficacité mesure votre "retour sur investissement" pour chaque effort. En comparant votre performance perçue à la charge ressentie, nous voyons si vous obtenez de bons résultats avec un effort modéré (bonne efficacité) ou si vous devez forcer beaucoup pour peu de résultats (faible efficacité). Cela peut indiquer une fatigue sous-jacente ou un besoin d\'ajuster votre technique.',
+            'title'       => 'Analyse de l\'efficacité',
+            'explanation' => 'L\'analyse de l\'efficacité mesure votre "retour sur investissement" pour chaque effort (6 mois). En comparant votre performance perçue à la charge ressentie, nous voyons si vous obtenez de bons résultats avec un effort modéré (bonne efficacité) ou si vous devez forcer beaucoup pour peu de résultats (faible efficacité). Cela peut indiquer une fatigue sous-jacente ou un besoin d\'ajuster votre technique.',
             'main_metric' => [
                 'value'  => number_format($avgGap, 1),
                 'label'  => 'Perf - Charge',
@@ -841,7 +841,7 @@ class ReportService
         $chargePainCorrelation = $this->trendsService->calculateCorrelationFromCollections($cihHistory, $painHistory);
 
         $data = [
-            'title'          => 'Analyse des modèles de blessures (3 mois)',
+            'title'          => 'Analyse des modèles de blessures',
             'explanation'    => 'Cette analyse cherche à comprendre si vos douleurs sont liées à votre volume d\'entraînement sur les 3 derniers mois. En comparant votre charge hebdomadaire (CIH) et vos niveaux de douleur, nous pouvons déterminer si la gestion de la charge est la clé pour éviter les douleurs, ou si leur origine est ailleurs (par exemple, un problème de technique ou d\'équipement).',
             'main_metric'    => null,
             'points'         => [],
@@ -900,7 +900,7 @@ class ReportService
         }
 
         $data = [
-            'title'       => 'Stratégie de Pacing (6 mois)',
+            'title'       => 'Stratégie de Pacing',
             'explanation' => 'Le "Pacing" analyse la régularité de votre charge d\'entraînement de semaine en semaine sur les 6 derniers mois. Une progression linéaire et contrôlée (faible variation) est idéale. Une variation trop importante, avec des semaines très dures suivies de semaines très faciles, peut augmenter le risque de blessure à cause des "chocs" de charge. L\'objectif est de trouver un rythme stable et efficace.',
             'main_metric' => [
                 'value'  => number_format($cv * 100, 1).'%',
