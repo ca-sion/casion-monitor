@@ -25,7 +25,7 @@ class MetricCalculationService
         // Fetch metrics for the last 28 days for all calculations (including ACWR and readiness)
         $metricsForCalculations = $athlete->metrics()
             ->where('date', '<=', $date->copy()->endOfDay())
-            ->where('date', '>=', $date->copy()->subDays(28)->startOfDay())
+            ->where('date', '>=', $date->copy()->subDays(34)->startOfDay())
             ->get();
 
         $metricsForWeek = $metricsForCalculations->whereBetween('date', [$startOfWeek, $endOfWeek]);
@@ -272,9 +272,16 @@ class MetricCalculationService
         // 2. Chronic Load (average of 4 previous weekly loads)
         $weeklyLoads = [];
         for ($i = 1; $i <= 4; $i++) {
-            $weekEndDate = $currentDate->copy()->subDays(7 * $i)->endOfDay();
-            $weekStartDate = $weekEndDate->copy()->subDays(6)->startOfDay();
-
+            // Week 1 (i=1): days J-7 to J-13
+            // Week 4 (i=4): days J-28 to J-34 (Requires 34 days of data in $allMetrics)
+            
+            $startDayOffset = 7 * $i; // 7, 14, 21, 28
+            $endDayOffset = (7 * $i) + 6; // 13, 20, 27, 34
+            
+            // Defines the 7-day window. Dates are inclusive.
+            $weekStartDate = $currentDate->copy()->subDays($endDayOffset)->startOfDay();
+            $weekEndDate = $currentDate->copy()->subDays($startDayOffset)->endOfDay();
+            
             $metricsForWeek = $allMetrics->whereBetween('date', [$weekStartDate, $weekEndDate]);
 
             // We only count weeks that have some activity.
