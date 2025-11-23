@@ -34,55 +34,55 @@ class MetricAlertsService
         ],
         MetricType::MORNING_HRV->value => [
             'z_score_high' => 2.0,
-            'z_score_low'  => -1.5,
+            'z_score_low'  => -1.8,
         ],
         MetricType::MORNING_SLEEP_QUALITY->value => [
             'persistent_low_7d_max'  => 4,
             'persistent_low_30d_max' => 5,
             'z_score_high'           => 2.0,
-            'z_score_low'            => -1.5,
+            'z_score_low'            => -1.8,
         ],
         MetricType::MORNING_GENERAL_FATIGUE->value => [
             'persistent_high_7d_min'  => 7,
             'persistent_high_30d_min' => 6,
             'elevated_7d_min'         => 5,
             'elevated_30d_min'        => 5,
-            'z_score_high'            => 1.5,
+            'z_score_high'            => 1.8,
             'z_score_low'             => -2.0,
         ],
         MetricType::MORNING_PAIN->value => [
             'persistent_high_7d_min' => 5,
             'declared_high_min'      => 4,
-            'z_score_high'           => 1.5,
+            'z_score_high'           => 1.8,
             'z_score_low'            => -2.0,
         ],
         MetricType::MORNING_MOOD_WELLBEING->value => [
             'z_score_high' => 2.0,
-            'z_score_low'  => -1.5,
+            'z_score_low'  => -1.8,
         ],
         MetricType::PRE_SESSION_ENERGY_LEVEL->value => [
             'z_score_high' => 2.0,
-            'z_score_low'  => -1.5,
+            'z_score_low'  => -1.8,
         ],
         MetricType::PRE_SESSION_LEG_FEEL->value => [
             'z_score_high' => 2.0,
-            'z_score_low'  => -1.5,
+            'z_score_low'  => -1.8,
         ],
         MetricType::POST_SESSION_SESSION_LOAD->value => [
-            'z_score_high' => 1.5,
+            'z_score_high' => 1.8,
             'z_score_low'  => -2.0,
         ],
         MetricType::POST_SESSION_PERFORMANCE_FEEL->value => [
             'z_score_high' => 2.0,
-            'z_score_low'  => -1.5,
+            'z_score_low'  => -1.8,
         ],
         MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value => [
-            'z_score_high' => 1.5,
+            'z_score_high' => 1.8,
             'z_score_low'  => -2.0,
         ],
         MetricType::POST_SESSION_PAIN->value => [
             'declared_high_min' => 4,
-            'z_score_high'      => 1.5,
+            'z_score_high'      => 1.8,
             'z_score_low'       => -2.0,
         ],
         CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH->value => [
@@ -427,20 +427,38 @@ class MetricAlertsService
         $zScore = ($currentValue - $analysis['mean']) / $analysis['stdDev'];
         $average = $analysis['mean'];
         $thresholds = self::ALERT_THRESHOLDS[$metricType->value] ?? [];
+        $highCritical = $thresholds['z_score_high'] ?? 2.0;
+        $lowCritical = $thresholds['z_score_low'] ?? -2.0;
+        $highVigilance = 1.5;
+        $lowVigilance = -1.5;
 
-        if (isset($thresholds['z_score_high']) && $zScore >= $thresholds['z_score_high']) {
+        $currentValueFormatted = number_format($currentValue, $metricType->getPrecision()).($metricType->getScale() ? '/'.$metricType->getScale() : '');
+
+        if ($zScore >= $highCritical) {
             $this->addAlert(
                 $alerts,
                 'danger',
-                $metricType->getLabel().' ('.$currentValue.'/'.$metricType->getScale().') a significativement augmenté (moy: '.number_format($average, 2).').'
+                $metricType->getLabel().' ('.$currentValueFormatted.') a significativement augmenté (moy: '.number_format($average, 2).').'
+            );
+        } elseif ($zScore >= $highVigilance) {
+            $this->addAlert(
+                $alerts,
+                'warning',
+                $metricType->getLabel().' a augmenté ('.$currentValueFormatted.').',
             );
         }
 
-        if (isset($thresholds['z_score_low']) && $zScore <= $thresholds['z_score_low']) {
+        if ($zScore <= $lowCritical) {
             $this->addAlert(
                 $alerts,
                 'danger',
-                $metricType->getLabel().' ('.$currentValue.'/'.$metricType->getScale().') a significativement baissé (moy: '.number_format($average, 2).').'
+                $metricType->getLabel().' ('.$currentValueFormatted.') a significativement baissé (moy: '.number_format($average, 2).').'
+            );
+        } elseif ($zScore <= $lowVigilance) {
+            $this->addAlert(
+                $alerts,
+                'warning',
+                $metricType->getLabel().' a diminué ('.$currentValueFormatted.').',
             );
         }
     }
