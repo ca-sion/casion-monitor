@@ -3,7 +3,7 @@
         <div>
             <h1 class="text-3xl font-bold text-gray-800">Rapport</h1>
             <p class="text-gray-500">Date : {{ \Carbon\Carbon::parse($report['end_date'])->locale('fr_CH')->isoFormat('LL') }}</p>
-            <x-flux::button tag="a" href="{{ route('athletes.reports.ai', ['hash' => $athlete->hash]) }}" variant="primary" color="blue" class="mt-2" outlined="true">Analyse par IA</x-flux::button>
+            <x-flux::button tag="a" href="{{ route('athletes.reports.ai', ['hash' => $athlete->hash]) }}" variant="primary" color="blue" class="mt-2" outlined="true" icon="chart-bar-square">Analyse par l'IA</x-flux::button>
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">

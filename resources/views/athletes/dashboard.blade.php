@@ -294,7 +294,8 @@
     @endforeach
 
     <div>
-        <x-filament::button tag="a" href="{{ route('athletes.reports.show', ['hash' => $athlete->hash]) }}" size="sm" class="mt-2 mx-auto block text-center">Voir le rapport complet</x-filament::button>
+        <x-flux::button tag="a" href="{{ route('athletes.reports.show', ['hash' => $athlete->hash]) }}" variant="primary" class="mb-2 mx-auto block text-center w-full" outlined="true" icon="document-chart-bar">Voir le rapport complet</x-flux::button>
+        <x-flux::button tag="a" href="{{ route('athletes.reports.ai', ['hash' => $athlete->hash]) }}" variant="primary" color="blue" class="mx-auto block text-center w-full" outlined="true" icon="chart-bar-square">Analyse par l'IA</x-flux::button>
     </div>
 
     {{-- Section Gamification --}}
