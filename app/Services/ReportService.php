@@ -755,12 +755,22 @@ class ReportService
     {
         $sbmHistory = $calculatedMetrics->where('type', CalculatedMetricType::SBM);
         $sbmTrend = $this->trendsService->calculateGenericNumericTrend($sbmHistory);
+
+        // 1. Tenter d'utiliser la VFC/HRV
         $hrvHistory = $allMetrics->where('metric_type', MetricType::MORNING_HRV)->whereBetween('date', [$startDate, $endDate]);
         $hrvTrend = $this->trendsService->calculateMetricEvolutionTrend($hrvHistory, MetricType::MORNING_HRV);
+        $primaryMetric = MetricType::MORNING_HRV;
+
+        // 2. Si la VFC est insuffisante, utiliser la Qualité du sommeil comme substitut
+        if (($hrvTrend['trend'] ?? 'n/a') === 'n/a') {
+            $sleepQualityHistory = $allMetrics->where('metric_type', MetricType::MORNING_SLEEP_QUALITY)->whereBetween('date', [$startDate, $endDate]);
+            $hrvTrend = $this->trendsService->calculateMetricEvolutionTrend($sleepQualityHistory, MetricType::MORNING_SLEEP_QUALITY);
+            $primaryMetric = MetricType::MORNING_SLEEP_QUALITY;
+        }
 
         $data = [
             'title'          => 'Adaptation à long terme',
-            'explanation'    => 'Cette analyse évalue comment votre corps s\'adapte à votre programme d\'entraînement sur une longue période (6 mois). En regardant l\'évolution de votre forme générale (SBM) et de votre système nerveux (VFC), nous pouvons voir si vous devenez plus fort et plus résilient, ou si la fatigue s\'accumule. C\'est essentiel pour ajuster votre entraînement sur le long terme.',
+            'explanation'    => 'Cette analyse évalue comment votre corps s\'adapte à votre programme d\'entraînement sur une longue période (6 mois). En regardant l\'évolution de votre forme générale (SBM) et de votre système nerveux (VFC ou Qualité du Sommeil), nous pouvons voir si vous devenez plus fort et plus résilient, ou si la fatigue s\'accumule. C\'est essentiel pour ajuster votre entraînement sur le long terme.',
             'main_metric'    => null,
             'points'         => [],
             'recommendation' => null,
@@ -772,11 +782,14 @@ class ReportService
         $sbmChange = number_format($sbmTrend['change'] ?? 0, 1);
         $hrvChange = number_format($hrvTrend['change'] ?? 0, 1);
 
-        // Affichage VFC
+        // Déterminer le libellé de la métrique primaire (VFC ou Qualité du Sommeil)
+        $primaryLabel = $primaryMetric->getLabelShort();
+
+        // Affichage VFC ou substitut
         $hrvDisplayStatus = ($hrvStatus === 'increasing') ? 'optimal' : (($hrvStatus === 'n/a') ? 'neutral' : 'warning');
         $hrvText = ($hrvStatus === 'n/a')
-            ? 'Tendance VFC : Données insuffisantes pour l\'analyse.'
-            : "Tendance de votre VFC : {$hrvChange}%";
+            ? "Tendance {$primaryLabel} : Données insuffisantes pour l'analyse."
+            : "Tendance de votre {$primaryLabel} : {$hrvChange}%";
         $data['points'][] = ['status' => $hrvDisplayStatus, 'text' => $hrvText];
 
         // Affichage SBM
@@ -792,7 +805,7 @@ class ReportService
         if ($sbmStatus === 'increasing' && $hrvStatus === 'increasing') {
             $data['status'] = 'optimal';
             $data['summary'] = 'Excellente adaptation et résilience nerveuse.';
-            $data['recommendation'] = 'C\'est l\'équilibre parfait ! Votre corps s\'adapte très bien à la charge (SBM en hausse) et votre système nerveux (VFC) se renforce. Continuez à maintenir cette planification et cet équilibre vie/entraînement pour maximiser les gains à long terme.';
+            $data['recommendation'] = 'C\'est l\'équilibre parfait ! Votre corps s\'adapte très bien à la charge (SBM en hausse) et votre système nerveux (ou son indicateur) se renforce. Continuez à maintenir cette planification et cet équilibre vie/entraînement pour maximiser les gains à long terme.';
         }
 
         // Cas 2: Critique - Déclin de la forme (priorité absolue)
@@ -806,17 +819,17 @@ class ReportService
         elseif ($sbmStatus === 'increasing' && in_array($hrvStatus, ['decreasing', 'stable'])) {
             $data['status'] = 'warning';
             $data['summary'] = 'Progression physique au prix d\'une fatigue nerveuse.';
-            $data['recommendation'] = 'Votre forme physique augmente, mais le déclin ou la stagnation de votre VFC sur 6 mois est un signal d\'alarme précoce de stress chronique. Réduisez temporairement l\'intensité globale et concentrez-vous sur le sommeil, la nutrition et la gestion du stress externe.';
+            $data['recommendation'] = "Votre forme physique augmente, mais le déclin ou la stagnation de votre {$primaryLabel} sur 6 mois est un signal d'alarme précoce de stress chronique. Réduisez temporairement l'intensité globale et concentrez-vous sur le sommeil, la nutrition et la gestion du stress externe.";
         }
 
-        // Cas 4: Neutral - Potentiel inexploité (VFC monte, SBM stagne)
+        // Cas 4: Neutral - Potentiel inexploité (VFC/Substitut monte, SBM stagne)
         elseif ($hrvStatus === 'increasing' && $sbmStatus === 'stable') {
             $data['status'] = 'low_risk';
             $data['summary'] = 'Réserve de forme non exploitée.';
-            $data['recommendation'] = 'Votre système nerveux se renforce (VFC monte), mais votre forme (SBM) stagne. Vous pouvez probablement augmenter la charge d\'entraînement de manière progressive pour exploiter cette réserve de résilience.';
+            $data['recommendation'] = "Votre système nerveux se renforce, mais votre forme (SBM) stagne. Vous pouvez probablement augmenter la charge d'entraînement de manière progressive pour exploiter cette réserve de résilience.";
         }
 
-        // Cas 5: Neutral - Stagnation (SBM stable/décroissant, VFC stable/décroissant)
+        // Cas 5: Neutral - Stagnation (SBM stable/décroissant, VFC/Substitut stable/décroissant)
         elseif ($sbmStatus === 'stable' && in_array($hrvStatus, ['stable', 'decreasing'])) {
             $data['status'] = 'low_risk';
             $data['summary'] = 'Stagnation de l\'adaptation.';
@@ -826,11 +839,11 @@ class ReportService
         // Cas 6: Analyse Partielle (Si l'une ou les deux tendances sont 'n/a')
         elseif ($sbmStatus === 'n/a' || $hrvStatus === 'n/a') {
             $data['status'] = 'neutral';
-            $data['summary'] = 'Analyse partielle : Données insuffisantes.';
-            $data['recommendation'] = 'Une analyse d\'adaptation à long terme nécessite des données complètes. Veuillez vous assurer d\'avoir suffisamment de données VFC et SBM sur la période de 6 mois pour une interprétation fiable.';
+            $data['summary'] = "Analyse partielle : Données insuffisantes pour le SBM ou la {$primaryLabel}.";
+            $data['recommendation'] = "Une analyse d'adaptation à long terme nécessite des données complètes. Veuillez vous assurer d'avoir suffisamment de données SBM et de {$primaryLabel} sur la période de 6 mois pour une interprétation fiable.";
         }
 
-        // Cas 7: Dernier recours / Situation non couverte (ex: SBM n/a et HRV increasing)
+        // Cas 7: Dernier recours / Situation non couverte
         else {
             $data['status'] = 'neutral';
             $data['summary'] = 'Analyse incomplète ou situation atypique.';
