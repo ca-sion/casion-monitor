@@ -59,7 +59,7 @@
                     <textarea id="promptPart1" rows="20"
                         class="w-full p-3 border rounded-md bg-gray-50 font-mono text-sm resize-y">Rôle et Objectif :
 
-"Vous êtes un analyste de données de performance sportive de haut niveau, spécialisé dans la gestion de la charge et de la récupération. Votre objectif est d'analyser les jeu de données CSV 1, CSV 2 et CSV 3 pour fournir un rapport d'expertise complet et actionable à l'entraîneur et à l'athlète professionnel."
+"Vous êtes un analyste de données de performance sportive de haut niveau, spécialisé dans la gestion de la charge et de la récupération. Votre objectif est d'analyser les jeu de données CSV 1, CSV 2 et CSV 3 pour fournir un rapport d'expertise complet et actionable à l'entraîneur et à l'athlète. Puis de générer un rapport d'analyse de performance narratif, interprétatif et orienté action, destiné à un athlète et son entraîneur. Le rapport doit aller au-delà de la simple alerte et établir des liens de cause à effet."
 
 ## Contexte des données et définitions
 
@@ -86,42 +86,51 @@ Définition détaillée des métriques :
 | Après Session | POST_SESSION_SUBJECTIVE_FATIGUE | Évaluation de la fatigue | Score sur 1-10 (aucune ➝ extrême). | Mauvaise |
 | Après Session | POST_SESSION_PAIN | Douleurs après séance | Score sur 1-10 (aucune ➝ très fortes). | Mauvaise |
 
-Définition détaillée des métriques calculées :
+Définition détaillée des métriques calculées (`calculated_metric`):
 
-### 1. Score de Bien-être Matinal (SBM)
-* Définition : Indicateur synthétique de la récupération et du bien-être général.
-* Calcul (Journalier) : SBM = (SQ + (10 - GF) + (10 - P) + MW / (4 * 10)) * 10
-    * Où : SQ (`MORNING_SLEEP_QUALITY`), GF (`MORNING_GENERAL_FATIGUE`), P (`MORNING_PAIN`), MW (`MORNING_MOOD_WELLBEING`).
-    * Note : Les scores sont normalisés sur 10.
-* Tendance Optimale : Haute (Indicateur de bonne récupération).
+| Nom CSV (`type` colonne) | Nom Complet | Description | Échelle Max. (Approximative) | Tendance Optimale |
+| :--- | :--- | :--- | :--- | :--- |
+| SBM | Score de bien-être matinal | Score agrégé des métriques de bien-être matinal (Hooper Index). | 10 | Bonne (Augmentation positive) |
+| CIH | Charge interne hebdomadaire | Somme des Charges subjectives réelles par séance (CSR-S) pour la semaine. | 70 | Mauvaise (Augmentation négative) |
+| CIH_NORMALIZED | Charge interne hebdomadaire normalisée | Somme des Charges subjectives réelles par séance (CSR-S) normalisée. Calculée comme : Somme des charges / Nombre de jours avec charge. | 10 | Mauvaise (Augmentation négative) |
+| CPH | Charge planifiée hebdomadaire | Charge d'entraînement planifiée selon la formule spécifique. | 10 | Neutre |
+| RATIO_CIH_CPH | Ratio CIH/CPH | Ratio entre la Charge interne hebdomadaire (CIH) et la Charge planifiée hebdomadaire (CPH). | 1 | Neutre |
+| RATIO_CIH_NORMALIZED_CPH | Ratio CIH normalisée/CPH | Ratio entre la Charge interne hebdomadaire normalisée (CIH-N) et la Charge planifiée hebdomadaire (CPH). | 1 | Neutre |
+| ACWR | Ratio Aiguë:Chronique (ACWR) | Ratio entre la charge d'entraînement aiguë (7 jours) et chronique (4 semaines). | 3 | Mauvaise (Augmentation négative) |
+| READINESS_SCORE | Readiness | Indique à quel point le corps est prêt pour l'entraînement et la performance chaque jour. | 100 | Neutre |
 
-### 2. Charge Interne Hebdomadaire (CIH)
-* Définition : Charge d'entraînement interne (subjective) totale pour la semaine.
-* Calcul (Hebdomadaire) : Somme de la métrique `POST_SESSION_SESSION_LOAD` (RPE) pour toutes les sessions de la semaine.
-* Tendance Optimale : Doit être dans la plage planifiée (Contrôlée).
+### Notes sur les métriques clés calculées et seuil critiques
 
-#### 3. Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED)
-* Définition : Charge moyenne des sessions (utile pour comparer l'intensité moyenne des sessions d'une semaine à l'autre).
-* Calcul (Hebdomadaire) : CIH_NORMALIZED = SOMME(POST_SESSION_SESSION_LOAD) / Nombre de jours avec session
-* Tendance Optimale : Contrôlée, doit correspondre à l'intensité planifiée.
+#### ACWR
+Le ratio de charge aiguë:chronique est un indicateur clé pour évaluer le risque de blessure lié à une variation trop rapide de la charge d'entraînement.
 
-#### 4. Charge Planifiée Hebdomadaire (CPH)
-* Définition : Charge planifiée des sessions par semaine (volume et intensité).
+* Zone Verte (Sécurité/Progression Optimale) : 0.8 à 1.3
+    * Le risque de blessure est le plus faible. La charge d'entraînement aiguë est proche de la charge habituelle (chronique), permettant l'adaptation sans surcharger le système. 
+* Zone Rouge (Danger) : > 1.5
+    * Un ratio supérieur à 1.5 (parfois cité à > 1.3) indique une augmentation trop rapide de la charge aiguë. Le risque de blessure augmente considérablement.
+* Zone Bleue (Sous-entraînement) : < 0.8
+    * Un ratio trop bas peut indiquer un sous-entraînement ou une désadaptation. L'athlète pourrait ne pas être suffisamment préparé pour les exigences futures, exposant paradoxalement à un risque de blessure lors de la reprise d'une charge normale.
 
-### 5. Ratio CIH / CPH normalisé (Charge Interne vs. Charge Planifiée)
-* Hypothèse : Assumer que le CSV inclut la colonne `CPH_PLANIFIEE` (Charge Planifiée Hebdomadaire) pour chaque semaine.
-* Calcul (Hebdomadaire) : Ratio = CIH / CPH_PLANIFIEE
-* Analyse :
-    * Ratio > 1.1 (ou seuil défini) : L'athlète subit une charge significativement plus élevée que prévu (risque de surcharge/fatigue).
-    * Ratio < 0.9 (ou seuil défini) : L'athlète subit une charge significativement plus faible que prévu (risque de sous-entraînement).
+#### 2. RATIO CIH / CPH (Charge Interne vs. Planifiée)
+Ce ratio compare ce qui a été réellement fait (CIH) par rapport à ce qui était prévu (CPH) sur la semaine.
 
-### 6. Ratio ACWR (Acute:Chronic Workload Ratio)
-* Définition : Évaluation du risque de blessure lié à une augmentation trop rapide de la charge.
-*Calcul : CIH des 7 derniers jours / Moyenne CIH des 28 derniers jours (Charge Chronique).
-*Seuils d'Analyse :
-    * Optimal : 0.8 < ACWR < 1.3
-    * Warning (Risque accru) : 1.3 < ACWR < 1.5
-    * $High Risk (Danger) : ACWR > 1.5
+* Ratio Idéal : approx 1.0
+    * Cela signifie que la charge interne subjective de l'athlète correspond parfaitement à la charge planifiée.
+* Ratio Élevé (> 1.0) : Surcharge ou Fatigue
+    * La charge réelle perçue est supérieure à la charge prévue. Cela peut indiquer :
+        * L'athlète est fatigué ou stressé, rendant la charge prévue plus difficile.
+        * Les séances ont été modifiées/prolongées.
+        * Le plan d'entraînement était sous-estimé.
+* Ratio Faible (< 1.0) : Sous-charge ou Adaptation Exceptionnelle
+    * La charge réelle perçue est inférieure à la charge prévue. Cela peut indiquer :
+        * Les séances n'ont pas été complétées.
+        * L'athlète est en pleine forme et adapte exceptionnellement bien la charge.
+
+#### 3. SBM (Score de Bien-être Matinal)
+Le SBM n'a pas de "seuil critique" unique universellement validé, car il dépend de la baseline de chaque athlète. Cependant, la règle d'analyse est la suivante :
+
+* Baisse critique : 2 * Déviation Standard (SD)
+    * Un score qui chute de plus de deux fois l'écart-type de la moyenne de l'athlète (sa "baseline") est un signal d'alarme fort pour une mauvaise récupération et justifie une réduction ou une modification de la séance du jour.
 
 ## Instructions pour l'analyse :
 
@@ -251,7 +260,7 @@ Le rapport peut être effectuée selon les instructions.</textarea>
                     <textarea id="singlePromptContent" rows="10"
                         class="w-full p-3 border rounded-md bg-gray-50 font-mono text-sm resize-y">Rôle et Objectif :
 
-"Vous êtes un analyste de données de performance sportive de haut niveau, spécialisé dans la gestion de la charge et de la récupération. Votre objectif est d'analyser le jeu de données CSV ci-dessous (fourni après ce prompt) pour fournir un rapport d'expertise complet et actionable à l'entraîneur et à l'athlète professionnel."
+"Vous êtes un analyste de données de performance sportive de haut niveau, spécialisé dans la gestion de la charge et de la récupération. Votre objectif est d'analyser le jeu de données CSV ci-dessous (fourni après ce prompt) pour fournir un rapport d'expertise complet et actionable à l'entraîneur et à l'athlète. Puis de générer un rapport d'analyse de performance narratif, interprétatif et orienté action, destiné à un athlète et son entraîneur. Le rapport doit aller au-delà de la simple alerte et établir des liens de cause à effet."
 
 ## Contexte des données et définitions
 
@@ -295,53 +304,60 @@ Définition détaillée des métriques brutes ('metric'):
 
 Définition détaillée des métriques calculées (`calculated_metric`):
 
-### 1. Score de Bien-être Matinal (SBM)
-* Définition : Indicateur synthétique de la récupération et du bien-être général.
-* Calcul (Journalier) : SBM = (SQ + (10 - GF) + (10 - P) + MW / (4 * 10)) * 10
-    * Où : SQ (`MORNING_SLEEP_QUALITY`), GF (`MORNING_GENERAL_FATIGUE`), P (`MORNING_PAIN`), MW (`MORNING_MOOD_WELLBEING`).
-    * Note : Les scores sont normalisés sur 10.
-* Tendance Optimale : Haute (Indicateur de bonne récupération).
+| Nom CSV (`type` colonne) | Nom Complet | Description | Échelle Max. (Approximative) | Tendance Optimale |
+| :--- | :--- | :--- | :--- | :--- |
+| SBM | Score de bien-être matinal | Score agrégé des métriques de bien-être matinal (Hooper Index). | 10 | Bonne (Augmentation positive) |
+| CIH | Charge interne hebdomadaire | Somme des Charges subjectives réelles par séance (CSR-S) pour la semaine. | 70 | Mauvaise (Augmentation négative) |
+| CIH_NORMALIZED | Charge interne hebdomadaire normalisée | Somme des Charges subjectives réelles par séance (CSR-S) normalisée. Calculée comme : Somme des charges / Nombre de jours avec charge. | 10 | Mauvaise (Augmentation négative) |
+| CPH | Charge planifiée hebdomadaire | Charge d'entraînement planifiée selon la formule spécifique. | 10 | Neutre |
+| RATIO_CIH_CPH | Ratio CIH/CPH | Ratio entre la Charge interne hebdomadaire (CIH) et la Charge planifiée hebdomadaire (CPH). | 1 | Neutre |
+| RATIO_CIH_NORMALIZED_CPH | Ratio CIH normalisée/CPH | Ratio entre la Charge interne hebdomadaire normalisée (CIH-N) et la Charge planifiée hebdomadaire (CPH). | 1 | Neutre |
+| ACWR | Ratio Aiguë:Chronique (ACWR) | Ratio entre la charge d'entraînement aiguë (7 jours) et chronique (4 semaines). | 3 | Mauvaise (Augmentation négative) |
+| READINESS_SCORE | Readiness | Indique à quel point le corps est prêt pour l'entraînement et la performance chaque jour. | 100 | Neutre |
 
-### 2. Charge Interne Hebdomadaire (CIH)
-* Définition : Charge d'entraînement interne (subjective) totale pour la semaine.
-* Calcul (Hebdomadaire) : Somme de la métrique `POST_SESSION_SESSION_LOAD` (RPE) pour toutes les sessions de la semaine.
-* Tendance Optimale : Doit être dans la plage planifiée (Contrôlée).
+### Notes sur les métriques clés calculées et seuil critiques
 
-#### 3. Charge Interne Hebdomadaire Normalisée (CIH_NORMALIZED)
-* Définition : Charge moyenne des sessions (utile pour comparer l'intensité moyenne des sessions d'une semaine à l'autre).
-* Calcul (Hebdomadaire) : CIH_NORMALIZED = SOMME(POST_SESSION_SESSION_LOAD) / Nombre de jours avec session
-* Tendance Optimale : Contrôlée, doit correspondre à l'intensité planifiée.
+#### ACWR
+Le ratio de charge aiguë:chronique est un indicateur clé pour évaluer le risque de blessure lié à une variation trop rapide de la charge d'entraînement.
 
-#### 4. Charge Planifiée Hebdomadaire (CPH)
-* Définition : Charge planifiée des sessions par semaine (volume et intensité).
+* Zone Verte (Sécurité/Progression Optimale) : 0.8 à 1.3
+    * Le risque de blessure est le plus faible. La charge d'entraînement aiguë est proche de la charge habituelle (chronique), permettant l'adaptation sans surcharger le système. 
+* Zone Rouge (Danger) : > 1.5
+    * Un ratio supérieur à 1.5 (parfois cité à > 1.3) indique une augmentation trop rapide de la charge aiguë. Le risque de blessure augmente considérablement.
+* Zone Bleue (Sous-entraînement) : < 0.8
+    * Un ratio trop bas peut indiquer un sous-entraînement ou une désadaptation. L'athlète pourrait ne pas être suffisamment préparé pour les exigences futures, exposant paradoxalement à un risque de blessure lors de la reprise d'une charge normale.
 
-### 5. Ratio CIH / CPH normalisé (Charge Interne vs. Charge Planifiée)
-* Hypothèse : Assumer que le CSV inclut la colonne `CPH_PLANIFIEE` (Charge Planifiée Hebdomadaire) pour chaque semaine.
-* Calcul (Hebdomadaire) : Ratio = CIH / CPH_PLANIFIEE
-* Analyse :
-    * Ratio > 1.1 (ou seuil défini) : L'athlète subit une charge significativement plus élevée que prévu (risque de surcharge/fatigue).
-    * Ratio < 0.9 (ou seuil défini) : L'athlète subit une charge significativement plus faible que prévu (risque de sous-entraînement).
+#### 2. RATIO CIH / CPH (Charge Interne vs. Planifiée)
+Ce ratio compare ce qui a été réellement fait (CIH) par rapport à ce qui était prévu (CPH) sur la semaine.
 
-### 6. Ratio ACWR (Acute:Chronic Workload Ratio)
-* Définition : Évaluation du risque de blessure lié à une augmentation trop rapide de la charge.
-* Calcul : CIH des 7 derniers jours / Moyenne CIH des 28 derniers jours (Charge Chronique).
-* Seuils d'Analyse :
-    * Optimal : 0.8 < ACWR < 1.3
-    * Warning (Risque accru) : 1.3 < ACWR < 1.5
-    * High Risk (Danger) : ACWR > 1.5
+* Ratio Idéal : approx 1.0
+    * Cela signifie que la charge interne subjective de l'athlète correspond parfaitement à la charge planifiée.
+* Ratio Élevé (> 1.0) : Surcharge ou Fatigue
+    * La charge réelle perçue est supérieure à la charge prévue. Cela peut indiquer :
+        * L'athlète est fatigué ou stressé, rendant la charge prévue plus difficile.
+        * Les séances ont été modifiées/prolongées.
+        * Le plan d'entraînement était sous-estimé.
+* Ratio Faible (< 1.0) : Sous-charge ou Adaptation Exceptionnelle
+    * La charge réelle perçue est inférieure à la charge prévue. Cela peut indiquer :
+        * Les séances n'ont pas été complétées.
+        * L'athlète est en pleine forme et adapte exceptionnellement bien la charge.
+
+#### 3. SBM (Score de Bien-être Matinal)
+Le SBM n'a pas de "seuil critique" unique universellement validé, car il dépend de la baseline de chaque athlète. Cependant, la règle d'analyse est la suivante :
+
+* Baisse critique : 2 * Déviation Standard (SD)
+    * Un score qui chute de plus de deux fois l'écart-type de la moyenne de l'athlète (sa "baseline") est un signal d'alarme fort pour une mauvaise récupération et justifie une réduction ou une modification de la séance du jour.
 
 ## Instructions pour l'analyse :
 
-L'analyse doit OBLIGATOIREMENT être menée en utilisant les métriques dérivées (SBM, CIH, ACWR).
+L'analyse doit OBLIGATOIREMENT être menée en suivant les points suivants.
 
-1. Évaluation de la Charge et du Risque (ACWR) : Calculer et rapporter l'évolution de l'ACWR pour chaque semaine. Mettre en évidence les périodes de High Risk (ACWR $\ge 1.5$) et les corréler avec les pics de douleurs (MORNING_PAIN/POST_SESSION_PAIN).
-2. Score de Bien-être Matinal (SBM) : Identifier les jours où le SBM est en dessous de 5 et analyser si la cause est un Damping psychologique (VFC basse ET MORNING_MOOD_WELLBEING > 8) ou autre cause. Si Damping est détecté, considérer le jour comme High Risk (Charge interne non reflétée par le moral). Noter les périodes et les dates.
-3. Adhésion et Efficacité (CIH/CPH) : Identifier les semaines de Sur-adhésion (> 1.1) et les corréler avec les baisses de Performance ressentie (POST_SESSION_PERFORMANCE_FEEL) et les indicateurs de fatigue (MORNING_GENERAL_FATIGUE). Noter les périodes et les dates.
-4. Corrélation Clé J-1 vs J : Calculer la corrélation entre la Charge de Session (POST_SESSION_SESSION_LOAD) et le SBM du lendemain. Identifier si l'athlète est sensible à la charge élevée la veille. Noter les périodes et les dates.
-5. Analyse des Hotspots de Douleur : Identifier la zone corporelle la plus fréquemment signalée dans MORNING_PAIN_LOCATION et chercher une corrélation avec une charge sessionnelle élevée. Noter les zone, les périodes et les dates.
-6. Analyse du Cycle Menstruel (Si pertinent) : Si des données sont présentes dans MORNING_FIRST_DAY_PERIOD, comparer les moyennes de la Fatigue et de la Performance pendant la phase folliculaire et lutéale. Noter les constats, les périodes et les dates.
-7. Synthèse Qualitative Contextuelle :
-    * Analyser les périodes identifiées comme problématiques (SBM bas, ACWR High Risk, Performance ressentie basse, etc.) et chercher des causes qualitatives dans le CSV de Feedback ('feedback' category). Noter les constats, les périodes et les dates.
+1. Partout où cela est possible, générer un tableau visuel avec des émojis de couleur qui permet à l'entraîneur et à l'athlète de comprendre les propos rapidement. Puis un petite paragraphe explicatif en dessous de ce tableau.
+2. Noter les constats, les périodes et les dates pour se repérer facilement.
+3. Analyser et faire des liens pertinents entre les métriques calculées. Mais aussi entre les métriques brutes.
+4. Analyse du Cycle menstruel : Si des données sont présentes dans MORNING_FIRST_DAY_PERIOD, comparer les moyennes de la Fatigue et de la Performance pendant la phase folliculaire et lutéale. Noter les constats, les périodes et les dates.
+5. Synthèse qualitative contextuelle :
+    * Analyser les périodes identifiées comme problématiques ou idéales et chercher des causes qualitatives dans le CSV de Feedback ('feedback' category). Noter les constats, les périodes et les dates.
     * Identifier les thèmes récurrents dans les feedbacks qui peuvent expliquer les variations des métriques. (Exemples : stress personnel, problème technique, conflit, motivation élevée, fatigue liée au voyage).
     * Utiliser des extraits de feedback dans le rapport pour justifier les tendances ou les anomalies détectées par les chiffres.
 
@@ -349,27 +365,25 @@ L'analyse doit OBLIGATOIREMENT être menée en utilisant les métriques dérivé
 
 Partie 1 : Résumé & Statut global
 
-* Le Statut global doit être clairement formulé (ex: "Phase de surcharge, Dette de récupération chronique").
+* Le statut global doit être clairement formulé (ex: "Phase de surcharge, Dette de récupération chronique").
 * Résumé en termes simples et compréhensibles du rapport de minimum trois paragraphes.
-* Les 3 principales conclusions (tendances et problèmes) qui doivent inclure la cause probable (chiffres + contexte).
 
 Partie 2 : Analyse de la charge, des blessures, de la récupération et du bien-être
 
-* Évaluation des semaines de Sur- ou Sous-entraînement.
-* Risque de blessure (ACWR) : Semaines avec risque de blessure, et corrélation avec les douleurs.
-* Dette de récupération : Quantification de la fatigue chronique.
-* Jours de Damping
-* Jours de récupération Insuffisante (SBM bas).
-* Hotspots des douleur : Zone, fréquence et lien potentiel avec la charge.
-* Lister les périodes et les jours concernés et les constats des points plus hauts.
-* Crée un tableau hebdomadaire qui résume ces points. Utilise des emojis pour indiquer le niveau de risque.
+1. Adaptation à la charge : Évaluation des semaines de sur-entraînement ou sous-entraînement.
+2. Dette de récupération : Origine de la fatigue.
+3. Jours de damping : Amortissement psychologique. S'il n'y a pas de données HRV, utiliser le SBM.
+4. Jours clés : a. Pattern récurrent sur les jours de la semaine. b. Tableau des 5 jours/périodes les plus critiques. c. Tableau des 5 jours/périodes les plus performants ou agréables.
+5. Risque de blessure : liste des semaines avec risque de blessure et corrélation avec les douleurs.
+6. Hotspots des douleur : Zone, fréquence et lien potentiel avec la charge.
+7. Analyse du cycle menstruel
+8. Tableau récapitulatif : Tableau reprenant tous ces points. Lister les périodes, les jours concernés et les constats. Ajouter une paragraphe explicatif. Utiliser des emojis pour illustrer visuellement.
 
-Partie 4 : Problèmes spécifiques, Contexte qualitatif et Recommandations
+Partie 3 : Recommandations
 
-* Synthèse Qualitative : Mettre en évidence les 2 ou 3 facteurs non liés à l'entraînement (tirés des feedbacks) qui ont le plus impacté positivement ou négativement les métriques de récupération/performance (ex: "Stress externe élevé mentionné par l'athlète A les 3 premières semaines").
-* Tableau des 5 jours/périodes les plus critiques : Liste des 5 événements majeurs (surcharge, SBM effondré, Damping, etc.) avec la raison expliquée par les chiffres et le contexte qualitatif.
-* A contrario, tableau des 5 jours/périodes les plus performants ou agréables.
-* Recommandations Actionnables : 3 Recommandations spécifiques et chiffrées pour ajuster le programme, directement liées aux conclusions (ex: "Réduire la CIH Planifiée de 10% pour les deux prochaines semaines" ou "Changer l'entraînement du mercredi car la VFC est systématiquement basse").
+* Synthèse qualitative : Mettre en évidence les 2 ou 3 facteurs non liés à l'entraînement (tirés des feedbacks) qui ont le plus impacté positivement ou négativement les métriques de récupération/performance (ex: "Stress externe élevé mentionné par l'athlète A les 3 premières semaines").
+* Recommandations actionnables : 3 Recommandations spécifiques et chiffrées pour ajuster le programme, directement liées aux conclusions (ex: "Réduire la CIH Planifiée de 10% pour les deux prochaines semaines" ou "Changer l'entraînement du mercredi car la VFC est systématiquement basse").
+* Focus à long terme et suggestion de suivi
 
 --- Démarrage de l'analyse ---
 Je vais maintenant vous fournir le fichier CSV combiné. Une fois que vous l'avez traité, veuillez générer le rapport en suivant les instructions ci-dessus.</textarea>
