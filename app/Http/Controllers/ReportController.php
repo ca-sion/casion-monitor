@@ -20,23 +20,20 @@ class ReportController extends Controller
         $endDate = Carbon::today();
 
         // 2. Générer le rapport structuré
-        $reportDailyData = resolve(ReportService::class)->generateReport($athlete, 'daily', $endDate);
-        $reportWeeklyData = resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate);
-        $reportMonthlyData = resolve(ReportService::class)->generateReport($athlete, 'monthly', $endDate);
-        $reportBiannualData = resolve(ReportService::class)->generateReport($athlete, 'biannual', $endDate);
-
-        $reportData = $reportDailyData;
-        $reportData['sections'] += $reportWeeklyData['sections'];
-        $reportData['sections'] += $reportMonthlyData['sections'];
-        $reportData['sections'] += $reportBiannualData['sections'];
-        $reportData['glossary'] += $reportWeeklyData['glossary'];
-        $reportData['glossary'] += $reportMonthlyData['glossary'];
-        $reportData['glossary'] += $reportBiannualData['glossary'];
+        $reports = [
+            'daily'    => $sectionForGlossary = resolve(ReportService::class)->generateReport($athlete, 'daily', $endDate),
+            'weekly'   => resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate),
+            'monthly'  => resolve(ReportService::class)->generateReport($athlete, 'monthly', $endDate),
+            'biannual' => resolve(ReportService::class)->generateReport($athlete, 'biannual', $endDate),
+        ];
+        $glossary = $sectionForGlossary['glossary'];
 
         // 3. Passer les données à la vue
         return view('reports.show', [
-            'athlete' => $athlete,
-            'report'  => $reportData,
+            'athlete'  => $athlete,
+            'reports'  => $reports,
+            'glossary' => $glossary,
+            'endDate'  => $endDate,
         ]);
     }
 

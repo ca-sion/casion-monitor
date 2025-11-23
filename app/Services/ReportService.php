@@ -199,24 +199,24 @@ class ReportService
         $alerts = collect($alerts)->filter(fn ($alert) => in_array(data_get($alert, 'type'), ['warning', 'danger']))->all();
         $inconsistencies = [];
 
-        $sessionLoad = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)?->value;
-        $subjectiveFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SUBJECTIVE_FATIGUE->value)?->value;
+        $sessionLoad = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD)?->value;
+        $subjectiveFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_SUBJECTIVE_FATIGUE)?->value;
         if ($sessionLoad !== null && $subjectiveFatigue !== null && $sessionLoad < 4 && $subjectiveFatigue > 7) {
             $inconsistencies[] = ['status' => 'warning', 'text' => "Charge d\'entraînement faible ({$sessionLoad}/10) mais vous vous sentez très fatigué ({$subjectiveFatigue}/10). Cela peut indiquer une fatigue non liée au sport (stress, travail, sommeil) ou un besoin nutritionnel."];
         }
 
-        $energyLevel = $dailyMetrics->firstWhere('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)?->value;
-        $perfFeel = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL->value)?->value;
+        $energyLevel = $dailyMetrics->firstWhere('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL)?->value;
+        $perfFeel = $dailyMetrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)?->value;
         if ($energyLevel !== null && $perfFeel !== null && $energyLevel > 8 && $perfFeel < 5) {
             $inconsistencies[] = ['status' => 'warning', 'text' => "Vous vous sentiez plein d\'énergie avant la séance ({$energyLevel}/10) mais la performance n\'a pas suivi ({$perfFeel}/10). Le problème n\'est peut-être pas physique, mais plutôt d\'ordre technique, tactique ou lié au pacing."];
         }
 
-        $hrv = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_HRV->value)?->value;
-        $mood = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)?->value;
+        $hrv = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_HRV)?->value;
+        $mood = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING)?->value;
 
         $hrvDampingAlerted = false;
         if ($hrv !== null && $mood !== null) {
-            $hrvAvg = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
+            $hrvAvg = $allMetrics->where('metric_type', MetricType::MORNING_HRV)->avg('value');
             if ($hrvAvg > 0 && $hrv < $hrvAvg * 0.90 && $mood > 8) {
                 $inconsistencies[] = ['status' => 'high_risk', 'text' => "Votre corps montre des signes de fatigue (VFC basse : {$hrv}ms) mais votre moral est excellent ({$mood}/10). C\'est un risque de Damping (Amortissement psychologique), où votre motivation masque un état de fatigue réel. Récupération recommandée."];
                 $hrvDampingAlerted = true;
@@ -260,7 +260,7 @@ class ReportService
             ->where('date', '>=', $endDate->copy()->subDays(13));
 
         $loadHistory = $allMetrics
-            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
+            ->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD)
             ->where('date', '>=', $endDate->copy()->subDays(14))
             ->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
 
@@ -516,8 +516,8 @@ class ReportService
             return $data;
         }
 
-        $dayAvgPerformance = $recentMetrics->where('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL->value)->groupBy(fn ($m) => $m->date->englishDayOfWeek)->map(fn ($g) => $g->avg('value'));
-        $dayAvgLegFeel = $recentMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL->value)->groupBy(fn ($m) => $m->date->englishDayOfWeek)->map(fn ($g) => $g->avg('value'));
+        $dayAvgPerformance = $recentMetrics->where('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)->groupBy(fn ($m) => $m->date->englishDayOfWeek)->map(fn ($g) => $g->avg('value'));
+        $dayAvgLegFeel = $recentMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL)->groupBy(fn ($m) => $m->date->englishDayOfWeek)->map(fn ($g) => $g->avg('value'));
 
         $bestPerfDay = $dayAvgPerformance->sortDesc()->keys()->first();
         $worstLegFeelDay = $dayAvgLegFeel->sort()->keys()->first();
@@ -584,7 +584,7 @@ class ReportService
     protected function getSleepImpactAnalysis(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
         $correlationData = $this->trendsService->calculateCorrelation($athlete, MetricType::MORNING_SLEEP_DURATION, MetricType::MORNING_GENERAL_FATIGUE, 30);
-        $avgDuration = $allMetrics->where('metric_type', MetricType::MORNING_SLEEP_DURATION->value)->where('date', '>=', $endDate->copy()->subDays(29))->avg('value');
+        $avgDuration = $allMetrics->where('metric_type', MetricType::MORNING_SLEEP_DURATION)->where('date', '>=', $endDate->copy()->subDays(29))->avg('value');
 
         $data = [
             'title'       => 'Analyse de l\'impact du sommeil (30j)',
@@ -776,11 +776,11 @@ class ReportService
     {
         $performanceGapMetrics = $allMetrics
             ->whereBetween('date', [$startDate, $endDate])
-            ->whereIn('metric_type', [MetricType::POST_SESSION_PERFORMANCE_FEEL->value, MetricType::POST_SESSION_SESSION_LOAD->value])
+            ->whereIn('metric_type', [MetricType::POST_SESSION_PERFORMANCE_FEEL, MetricType::POST_SESSION_SESSION_LOAD])
             ->groupBy(fn ($m) => $m->date->toDateString())
             ->map(function ($group) {
-                $perf = $group->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL->value)?->value;
-                $load = $group->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)?->value;
+                $perf = $group->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)?->value;
+                $load = $group->firstWhere('metric_type', MetricType::POST_SESSION_SESSION_LOAD)?->value;
                 if ($perf === null || $load === null) {
                     return null;
                 }
@@ -834,7 +834,7 @@ class ReportService
             ->where('date', '>=', $endDate->copy()->subDays(89));
 
         $painHistory = $allMetrics
-            ->where('metric_type', MetricType::MORNING_PAIN->value)
+            ->where('metric_type', MetricType::MORNING_PAIN)
             ->where('date', '>=', $endDate->copy()->subDays(90))
             ->map(fn ($m) => (object) ['date' => $m->date->toDateString(), 'value' => $m->value]);
 
@@ -969,7 +969,7 @@ class ReportService
                     $allMetrics->whereBetween('date', [$weekStartDate, $date]) :
                     $athlete->metrics()->whereBetween('date', [$weekStartDate, $date])->get();
 
-                $value = $weekMetrics->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)->sum('value');
+                $value = $weekMetrics->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD)->sum('value');
             }
 
             if ($value !== null) {
