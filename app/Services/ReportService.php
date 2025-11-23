@@ -621,8 +621,8 @@ class ReportService
 
     protected function getPainHotspotAnalysis(Athlete $athlete, Collection $allMetrics, Carbon $endDate): array
     {
-        $monthlyMetrics = $allMetrics->where('date', '>=', $endDate->copy()->subDays(29));
-        $painMetrics = $monthlyMetrics->where('metric_type', MetricType::MORNING_PAIN->value)->filter(fn ($m) => $m->value > 4);
+        $monthlyMetrics = $allMetrics->where('date', '>=', $endDate->copy()->subDays(40));
+        $painMetrics = $monthlyMetrics->where('metric_type', MetricType::MORNING_PAIN)->filter(fn ($m) => $m->value > 4);
 
         $data = [
             'title'          => 'Analyse des hotspots de douleur',
@@ -634,15 +634,15 @@ class ReportService
 
         if ($painMetrics->isEmpty()) {
             $data['status'] = 'optimal';
-            $data['summary'] = 'Aucune Douleur Significative';
+            $data['summary'] = 'Aucune douleur significative';
             $data['points'][] = ['status' => 'optimal', 'text' => 'Excellente nouvelle ! Aucune douleur supérieure à 4/10 n\'a été signalée ce mois-ci.'];
 
             return $data;
         }
 
-        $hotspots = $monthlyMetrics->where('metric_type', MetricType::MORNING_PAIN_LOCATION->value)
+        $hotspots = $monthlyMetrics->where('metric_type', MetricType::MORNING_PAIN_LOCATION)
             ->whereIn('date', $painMetrics->pluck('date'))
-            ->groupBy('value')
+            ->groupBy(MetricType::MORNING_PAIN_LOCATION->getValueColumn())
             ->map(fn ($g) => $g->count())
             ->sortDesc();
 
@@ -655,6 +655,17 @@ class ReportService
         $data['summary'] = "Douleur signalée {$painMetrics->count()} jours ce mois-ci. La zone la plus touchée est : {$dominantLocation}.";
         $data['status'] = 'warning';
         $data['points'][] = ['status' => 'warning', 'text' => "La zone de douleur la plus fréquente est : {$dominantLocation} ({$hotspots->first()} fois)."];
+
+        if ($hotspots->count() > 1) {
+            $hotspotList = $hotspots
+                ->slice(1)
+                ->map(fn ($count, $location) => "{$location} ({$count} fois)")
+                ->implode(', ');
+            $data['points'][] = [
+                'status' => 'low_risk',
+                'text'   => "Autres zones signalées : {$hotspotList}.",
+            ];
+        }
 
         $painTrend = $this->trendsService->calculateMetricEvolutionTrend($painMetrics, MetricType::MORNING_PAIN);
         if ($painTrend['trend'] === 'increasing') {
