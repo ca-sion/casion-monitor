@@ -54,8 +54,8 @@ class NarrativeSummaryService
 
         // 2. Readiness Score et détails
         $readinessData = $this->readinessService->calculateOverallReadinessScore($athlete, $allMetrics);
-        $readinessScore = $readinessData['score'] ?? 50;
-        $readinessDetails = $readinessData['details'] ?? [];
+        $readinessScore = $readinessData['readiness_score'] ?? 50;
+        $readinessDetails = $readinessData['readiness_details'] ?? [];
 
         // 3. Charge et Alertes
         $acwr = $this->calculationService->calculateAcwr($allMetrics, $endDate);
@@ -108,7 +108,7 @@ class NarrativeSummaryService
             $readinessEmoji = '🟡';
         } else {
             $readinessStatus = "🔴 critique (score: {$readinessScore}/100)";
-            $readinessDescription = 'Votre corps signale une **défaillance de récupération**. La seule prescription est un **repos actif ou complet IMMEDIAT**.';
+            $readinessDescription = 'Votre corps signale une **défaillance de récupération**. La seule prescription est un **repos actif ou complet immédiat**.';
             $readinessEmoji = '🛑';
         }
 
@@ -122,11 +122,11 @@ class NarrativeSummaryService
                 $pacingStatus = "Une 🧊 **sous-charge** est présente (ACWR: {$acwrFormatted}), ce qui pourrait entraîner un déconditionnement. ";
                 $pacingEmoji = '📉';
             } else {
-                $pacingStatus = "Le ✅ **Pacing est optimal** (ACWR: {$acwrFormatted}), assurant une progression contrôlée et sécuritaire. ";
+                $pacingStatus = "Le ✅ **pacing est optimal** (ACWR: {$acwrFormatted}), assurant une progression contrôlée et sécuritaire. ";
                 $pacingEmoji = '🎯';
             }
         } else {
-            $pacingStatus = "Le Pacing (ACWR) n'a pas pu être finalisé (données manquantes). ";
+            $pacingStatus = "Le pacing (ACWR) n'a pas pu être finalisé (données manquantes). ";
             $pacingEmoji = '❓';
         }
 
@@ -139,7 +139,7 @@ class NarrativeSummaryService
             $finalAdvice = 'Maintenez le plan. La vigilance est de mise sur les facteurs de fatigue identifiés. Poursuite avec une charge modérée et contrôlée.';
         } elseif ($readinessScore < 40 || ($acwr !== null && $acwr >= $acwrThreshold) || $isDamping || ! empty($dangerAlerts)) {
             $finalStatus = 'voyant 🔴';
-            $finalAdvice = '**Réduction de charge OBLIGATOIRE (minimum 20% ou repos complet)**. Le risque est réel et l\'organisme est en état de surcharge. Priorité à la récupération.';
+            $finalAdvice = '**Réduction de charge obligatoire** (minimum 20% ou repos complet). Le risque est réel et l\'organisme est en état de surcharge. Priorité à la récupération.';
         } else {
             $finalStatus = 'voyant ⚪️';
             $finalAdvice = 'La situation est stable, mais le potentiel de progression est limité. Le facteur limitant se trouve dans les détails de la récupération (sommeil, douleur, VFC). Ciblez les déficits.';
@@ -173,7 +173,7 @@ class NarrativeSummaryService
 
         if ($hrvSleepCorr['correlation'] !== null && $hrvSleepCorr['correlation'] > 0.6) {
             $corr = number_format($hrvSleepCorr['correlation'], 2);
-            $trendsSummary .= "votre **VFC et votre sommeil sont fortement liés (r={$corr}) 🔗**, confirmant que l'optimisation du sommeil est correcte. ";
+            $trendsSummary .= "votre VFC et votre sommeil sont fortement liés (r={$corr}) 🔗, confirmant que l'optimisation du sommeil est correcte. ";
             $significantTrendFound = true;
         }
 
@@ -193,7 +193,7 @@ class NarrativeSummaryService
             $alertMessages = array_map(fn ($a) => $a['message'], $dangerAlerts);
             $alertSummary = '🚨 Attention : '.implode('. ', $alertMessages).'.';
         } elseif ($isDamping) {
-            $alertSummary = "Un 🛑 **Damping** (amortissement psychologique) est détecté : votre moral est bon, mais votre corps est épuisé. Votre perception est déconnectée de la réalité biologique. **Agissez sur la charge sans attendre l'effondrement moral.**";
+            $alertSummary = "Un 🛑 **damping** (amortissement psychologique) est détecté : votre moral est bon, mais votre corps est épuisé. Votre perception est déconnectée de la réalité biologique. **Agissez sur la charge sans attendre l'effondrement moral**.";
         } elseif ($isIncoherence) {
             $alertSummary = 'Une ⚠️ **incohérence des données** est notée (Forte surcharge sans alerte danger). Attendez-vous à une chute brutale de la Readiness sous peu.';
         }
@@ -205,7 +205,7 @@ class NarrativeSummaryService
             $action = $menstrualAnalysis['action'] ?? 'N/A';
 
             if (($menstrualAnalysis['status'] ?? 'neutral') === 'critical') {
-                $menstrualSummary = "⚠️ **Attention**, votre cycle est en déséquilibre (aménorrhée/oligoménorrhée). **Arrêt de l'entraînement intense et consultation médicale immédiate.**";
+                $menstrualSummary = "⚠️ **Attention**, votre cycle est en déséquilibre (aménorrhée/oligoménorrhée). **Arrêt de l'entraînement intense et consultation médicale immédiate**.";
             } elseif ($phase === 'Phase Lutéale') {
                 $menstrualSummary = "Actuellement en phase lutéale 🌕, il est conseillé de **{$action}** en privilégiant l'endurance, car la tolérance à l'intensité pure est réduite.";
             } elseif ($phase === 'Phase Folliculaire') {
@@ -236,7 +236,7 @@ class NarrativeSummaryService
             $p2 .= "Concernant le cycle, $menstrualSummary ";
         }
 
-        $p2 .= "Pour la suite, **{$finalStatus}**. **{$finalAdvice}**.";
+        $p2 .= "Pour la suite, **{$finalStatus}**. {$finalAdvice}.";
 
         $narrative .= $p2."\n\n";
 

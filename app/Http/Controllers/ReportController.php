@@ -21,11 +21,11 @@ class ReportController extends Controller
 
         // 2. Générer le rapport structuré
         $reports = [
-            'narrative' => resolve(ReportService::class)->generateReport($athlete, 'narrative', $endDate),
             'daily'     => $globalSection = resolve(ReportService::class)->generateReport($athlete, 'daily', $endDate),
             'weekly'    => resolve(ReportService::class)->generateReport($athlete, 'weekly', $endDate),
             'monthly'   => resolve(ReportService::class)->generateReport($athlete, 'monthly', $endDate),
             'biannual'  => resolve(ReportService::class)->generateReport($athlete, 'biannual', $endDate),
+            'narrative' => resolve(ReportService::class)->generateReport($athlete, 'narrative', $endDate),
         ];
         $glossary = $globalSection['glossary'];
 
