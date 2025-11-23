@@ -49,8 +49,16 @@ class ReportController extends Controller
         }
 
         // 1. Définir les dates
-        $startDate = Carbon::today()->subMonths(2);
+        $period = request()->query('period', '40d');
         $endDate = Carbon::today();
+        $startDate = match ($period) {
+            '2m'    => Carbon::today()->subMonths(2),
+            '3m'    => Carbon::today()->subMonths(3),
+            '6m'    => Carbon::today()->subMonths(6),
+            '1y'    => Carbon::today()->subYear(),
+            '2y'    => Carbon::today()->subYears(2),
+            default => Carbon::today()->subDays(40),
+        };
 
         // 2. Générer les CSV
         $csvMetrics = $athlete->metrics
@@ -83,7 +91,8 @@ class ReportController extends Controller
             'csvMetrics'           => $csvMetrics,
             'csvCalculatedMetrics' => $csvCalculatedMetrics,
             'csvFeedbacks'         => $csvFeedbacks,
-            'downloadUrl'          => route('athletes.reports.ai.csv', ['hash' => $athlete->hash]),
+            'downloadUrl'          => route('athletes.reports.ai.csv', ['hash' => $athlete->hash, 'period' => $period]),
+            'period'               => $period,
         ]);
     }
 
@@ -94,8 +103,17 @@ class ReportController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
-        $startDate = Carbon::today()->subMonths(6);
+        $period = request()->query('period', '6m'); // Default to 6 months
         $endDate = Carbon::today();
+        $startDate = match ($period) {
+            '40d'   => Carbon::today()->subDays(40),
+            '2m'    => Carbon::today()->subMonths(2),
+            '3m'    => Carbon::today()->subMonths(3),
+            '6m'    => Carbon::today()->subMonths(6),
+            '1y'    => Carbon::today()->subYear(),
+            '2y'    => Carbon::today()->subYears(2),
+            default => Carbon::today()->subMonths(6), // Default to 6 months
+        };
 
         $rows = ['date;category;type;value;author_type;content'];
 
@@ -137,7 +155,7 @@ class ReportController extends Controller
 
         $csvContent = implode("\n", $rows);
 
-        $filename = 'ai_report_'.Carbon::now()->format('Ymd_His').'.csv';
+        $filename = 'report-'.str($athlete->name)->slug('_').'-'.Carbon::now()->format('Ymd_His').'.csv';
 
         return response()->streamDownload(function () use ($csvContent) {
             echo $csvContent;

@@ -2,7 +2,47 @@
     <div class="container mx-auto space-y-6 py-8">
         <div>
             <h1 class="text-3xl font-bold text-gray-800">Demander à votre IA</h1>
-            <p class="text-gray-500">Pour la période du {{ \Carbon\Carbon::parse($startDate)->locale('fr_CH')->isoFormat('LL') }} au {{ \Carbon\Carbon::parse($endDate)->locale('fr_CH')->isoFormat('LL') }}</p>
+            <p class="text-gray-500">
+                Période d'analyse:
+                <span class="font-semibold">
+                    @switch($period)
+                        @case('40d') 40 jours @break
+                        @case('2m') 2 mois @break
+                        @case('3m') 3 mois @break
+                        @case('6m') 6 mois @break
+                        @case('1y') 1 an @break
+                        @case('2y') 2 ans @break
+                        @default 40 jours (défaut) @break
+                    @endswitch
+                </span>
+                (du {{ \Carbon\Carbon::parse($startDate)->locale('fr_CH')->isoFormat('LL') }} au {{ \Carbon\Carbon::parse($endDate)->locale('fr_CH')->isoFormat('LL') }})
+            </p>
+        </div>
+
+        <div class="mb-4 max-w-xs">
+            @php
+                $periods = [
+                    '40d' => '40 jours',
+                    '2m'  => '2 mois',
+                    '3m'  => '3 mois',
+                    '6m'  => '6 mois',
+                    '1y'  => '1 an',
+                    '2y'  => '2 ans',
+                ];
+            @endphp
+
+            <form class="flex items-center space-x-2"
+                action="{{ route('athletes.reports.ai', ['hash' => $athlete->hash]) }}"
+                method="GET">
+                <label for="period-select" class="block text-sm font-medium text-gray-700">Période:</label>
+                <flux:select id="period-select" name="period" onchange="this.form.submit()">
+                    @foreach ($periods as $key => $label)
+                        <option value="{{ $key }}" @selected($period === $key)>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </flux:select>
+            </form>
         </div>
 
         <div x-data="{
@@ -117,14 +157,9 @@ Ce ratio compare ce qui a été réellement fait (CIH) par rapport à ce qui ét
 * Ratio Idéal : approx 1.0
     * Cela signifie que la charge interne subjective de l'athlète correspond parfaitement à la charge planifiée.
 * Ratio Élevé (> 1.0) : Surcharge ou Fatigue
-    * La charge réelle perçue est supérieure à la charge prévue. Cela peut indiquer :
-        * L'athlète est fatigué ou stressé, rendant la charge prévue plus difficile.
-        * Les séances ont été modifiées/prolongées.
-        * Le plan d'entraînement était sous-estimé.
+    * Exemple d'explication : L'athlète est fatigué ou stressé, rendant la charge prévue plus difficile ; Les séances ont été modifiées/prolongées; Le plan d'entraînement était sous-estimé.
 * Ratio Faible (< 1.0) : Sous-charge ou Adaptation Exceptionnelle
-    * La charge réelle perçue est inférieure à la charge prévue. Cela peut indiquer :
-        * Les séances n'ont pas été complétées.
-        * L'athlète est en pleine forme et adapte exceptionnellement bien la charge.
+    * Exemple d'explication : Les séances n'ont pas été complétées; L'athlète est en pleine forme et adapte exceptionnellement bien la charge.
 
 #### 3. SBM (Score de Bien-être Matinal)
 Le SBM n'a pas de "seuil critique" unique universellement validé, car il dépend de la baseline de chaque athlète. Cependant, la règle d'analyse est la suivante :
@@ -168,7 +203,7 @@ Partie 2 : Analyse de la charge, des blessures, de la récupération et du bien-
 
 Partie 4 : Problèmes spécifiques, Contexte qualitatif et Recommandations
 
-* Synthèse Qualitative : Mettre en évidence les 2 ou 3 facteurs non liés à l'entraînement (tirés des feedbacks) qui ont le plus impacté positivement ou négativement les métriques de récupération/performance (ex: "Stress externe élevé mentionné par l'athlète A les 3 premières semaines").
+* Synthèse Qualitative : Mettre en évidence les 2 ou 3 facteurs non liés à l'entraînement (tirés des feedbacks) qui ont le plus impacté positivement ou négativement les métriques de récupération/performance.
 * Tableau des 5 jours/périodes les plus critiques : Liste des 5 événements majeurs (surcharge, SBM effondré, Damping, etc.) avec la raison expliquée par les chiffres et le contexte qualitatif.
 * A contrario, tableau des 5 jours/périodes les plus performants ou agréables.
 * Recommandations Actionnables : 3 Recommandations spécifiques et chiffrées pour ajuster le programme, directement liées aux conclusions (ex: "Réduire la CIH Planifiée de 10% pour les deux prochaines semaines" ou "Changer l'entraînement du mercredi car la VFC est systématiquement basse").
@@ -333,14 +368,9 @@ Ce ratio compare ce qui a été réellement fait (CIH) par rapport à ce qui ét
 * Ratio Idéal : approx 1.0
     * Cela signifie que la charge interne subjective de l'athlète correspond parfaitement à la charge planifiée.
 * Ratio Élevé (> 1.0) : Surcharge ou Fatigue
-    * La charge réelle perçue est supérieure à la charge prévue. Cela peut indiquer :
-        * L'athlète est fatigué ou stressé, rendant la charge prévue plus difficile.
-        * Les séances ont été modifiées/prolongées.
-        * Le plan d'entraînement était sous-estimé.
+    * Exemple d'explication : L'athlète est fatigué ou stressé, rendant la charge prévue plus difficile ; Les séances ont été modifiées/prolongées; Le plan d'entraînement était sous-estimé.
 * Ratio Faible (< 1.0) : Sous-charge ou Adaptation Exceptionnelle
-    * La charge réelle perçue est inférieure à la charge prévue. Cela peut indiquer :
-        * Les séances n'ont pas été complétées.
-        * L'athlète est en pleine forme et adapte exceptionnellement bien la charge.
+    * Exemple d'explication : Les séances n'ont pas été complétées; L'athlète est en pleine forme et adapte exceptionnellement bien la charge.
 
 #### 3. SBM (Score de Bien-être Matinal)
 Le SBM n'a pas de "seuil critique" unique universellement validé, car il dépend de la baseline de chaque athlète. Cependant, la règle d'analyse est la suivante :
@@ -355,13 +385,13 @@ L'analyse doit OBLIGATOIREMENT être menée en suivant les points suivants.
 1. Partout où cela est possible, générer un tableau visuel avec des émojis de couleur qui permet à l'entraîneur et à l'athlète de comprendre les propos rapidement. Puis un petite paragraphe explicatif en dessous de ce tableau.
 2. Noter les constats, les périodes et les dates pour se repérer facilement.
 3. Analyser et faire des liens pertinents entre les métriques calculées. Mais aussi entre les métriques brutes.
-4. Analyse du Cycle menstruel : Si des données sont présentes dans MORNING_FIRST_DAY_PERIOD, comparer les moyennes de la Fatigue et de la Performance pendant la phase folliculaire et lutéale. Noter les constats, les périodes et les dates.
+4. Analyse du Cycle menstruel : Si des données sont présentes dans MORNING_FIRST_DAY_PERIOD, comparer les moyennes de la fatigue et de la performance pendant la phase folliculaire et lutéale. Noter les constats, les périodes et les dates.
 5. Synthèse qualitative contextuelle :
     * Analyser les périodes identifiées comme problématiques ou idéales et chercher des causes qualitatives dans le CSV de Feedback ('feedback' category). Noter les constats, les périodes et les dates.
     * Identifier les thèmes récurrents dans les feedbacks qui peuvent expliquer les variations des métriques. (Exemples : stress personnel, problème technique, conflit, motivation élevée, fatigue liée au voyage).
     * Utiliser des extraits de feedback dans le rapport pour justifier les tendances ou les anomalies détectées par les chiffres.
 
-## Format du Rapport (Structure Demandée) :
+## Format du Rapport (Structure demandée) :
 
 Partie 1 : Résumé & Statut global
 
@@ -381,7 +411,7 @@ Partie 2 : Analyse de la charge, des blessures, de la récupération et du bien-
 
 Partie 3 : Recommandations
 
-* Synthèse qualitative : Mettre en évidence les 2 ou 3 facteurs non liés à l'entraînement (tirés des feedbacks) qui ont le plus impacté positivement ou négativement les métriques de récupération/performance (ex: "Stress externe élevé mentionné par l'athlète A les 3 premières semaines").
+* Synthèse qualitative : Mettre en évidence les 2 ou 3 facteurs non liés à l'entraînement (tirés des feedbacks) qui ont le plus impacté positivement ou négativement les métriques de récupération/performance.
 * Recommandations actionnables : 3 Recommandations spécifiques et chiffrées pour ajuster le programme, directement liées aux conclusions (ex: "Réduire la CIH Planifiée de 10% pour les deux prochaines semaines" ou "Changer l'entraînement du mercredi car la VFC est systématiquement basse").
 * Focus à long terme et suggestion de suivi
 
