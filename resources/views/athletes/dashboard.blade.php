@@ -58,6 +58,7 @@
                 </a>
     </flux:heading>
 
+    {{-- Section Aujourd'hui --}}
     @if ($todayDailyMetrics)
         <div class="mb-4 mt-2 flex flex-wrap gap-1">
             @foreach ($todayDailyMetrics['metrics'] as $metricType => $metricValue)
@@ -82,8 +83,14 @@
                 aria-label="Ajouter une métrique">Ajouter</a>.
         </flux:text>
     @endif
+
+    @if ($readinessStatus)
+        <x-readiness-status-card :readiness-status="$readinessStatus" />
+    @endif
+
+    {{-- Feedbacks --}}
     @if ($today_feedbacks)
-        <div class="mb-4 mt-2 flex flex-col gap-1">
+        <div class="mt-2 flex flex-col gap-1">
             @foreach ($today_feedbacks as $feedback)
                 <flux:callout class="p-0!"
                     :icon="$feedback->author_type === 'trainer' ? 'user-circle' : 'document-text'"
@@ -94,11 +101,67 @@
         </div>
     @endif
 
-    @if ($readinessStatus)
-        <x-readiness-status-card :readiness-status="$readinessStatus" />
+    {{-- Alertes --}}
+    @if (!empty($alerts))
+    <div class="mt-2">
+        @if (!empty($alerts))
+            <div class="flex flex-col gap-3">
+                @foreach ($alerts as $alert)
+                    <flux:badge class="whitespace-normal! w-full"
+                        size="sm"
+                        inset="top bottom"
+                        color="{{ match ($alert['type']) {
+                            'danger' => 'rose',
+                            'warning' => 'amber',
+                            'info' => 'sky',
+                            'success' => 'emerald',
+                            default => 'zinc',
+                        } }}">
+                        <span>{{ $alert['message'] }}</span>
+                    </flux:badge>
+                @endforeach
+            </div>
+        @else
+            <flux:text class="text-center italic text-zinc-500 dark:text-zinc-400">
+                Aucune alerte détectée pour la période sélectionnée. Tout semble en ordre ! 🎉
+            </flux:text>
+        @endif
+    </div>
     @endif
 
-    <flux:separator class="mb-4" variant="subtle" />
+    {{-- Cycle menstruel --}}
+    @if ($athlete->gender->value === 'w' && $menstrualCycleInfo)
+    <div class="mt-2">
+            @php
+                $menstrualCycleBoxBorderColor = 'border-emerald-400';
+                $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';
+
+                if ($menstrualCycleInfo['phase'] === 'Aménorrhée' || $menstrualCycleInfo['phase'] === 'Oligoménorrhée') {
+                    $menstrualCycleBoxBorderColor = 'border-rose-400';
+                    $menstrualCycleBoxBgColor = 'bg-rose-50/50 dark:bg-rose-950/50';
+                } elseif ($menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long') {
+                    $menstrualCycleBoxBorderColor = 'border-amber-400';
+                    $menstrualCycleBoxBgColor = 'bg-amber-50/50 dark:bg-amber-950/50';
+                } elseif ($menstrualCycleInfo['phase'] === 'Inconnue') {
+                    $menstrualCycleBoxBorderColor = 'border-sky-400';
+                    $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
+                }
+            @endphp
+            <div class="{{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }} mt-4 rounded-md border p-3 dark:text-zinc-200">
+                <flux:text class="text-sm font-semibold dark:text-zinc-200">Cycle Menstruel:</flux:text>
+                <flux:text class="text-xs dark:text-zinc-400">
+                    Phase: <span class="font-medium">{{ $menstrualCycleInfo['phase'] }}</span><br>
+                    Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'n/a' }}</span><br>
+                    Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'n/a' }} jours</span>
+                    @if ($menstrualCycleInfo['last_period_start'])
+                        <br>Dernières règles: <span class="font-medium">{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
+                    @endif
+                </flux:text>
+            </div>
+    </div>
+    @endif
+
+    <flux:separator class="my-4" variant="subtle" />
     <flux:heading class="text-base">Cette semaine</flux:heading>
 
     {{-- Section Volume et Intensité Planifiés de la semaine en cours --}}
@@ -132,63 +195,6 @@
             @endforeach
         </div>
     @endif
-
-    {{-- Section Alertes --}}
-    <flux:separator class="mb-4" variant="subtle" />
-    <flux:heading class="text-base">Alertes</flux:heading>
-
-    <div class="mt-4">
-        @if (!empty($alerts))
-            <div class="flex flex-col gap-3">
-                @foreach ($alerts as $alert)
-                    <flux:badge class="whitespace-normal! w-full"
-                        size="sm"
-                        inset="top bottom"
-                        color="{{ match ($alert['type']) {
-                            'danger' => 'rose',
-                            'warning' => 'amber',
-                            'info' => 'sky',
-                            'success' => 'emerald',
-                            default => 'zinc',
-                        } }}">
-                        <span>{{ $alert['message'] }}</span>
-                    </flux:badge>
-                @endforeach
-            </div>
-        @else
-            <flux:text class="text-center italic text-zinc-500 dark:text-zinc-400">
-                Aucune alerte détectée pour la période sélectionnée. Tout semble en ordre ! 🎉
-            </flux:text>
-        @endif
-        @if ($athlete->gender->value === 'w' && $menstrualCycleInfo)
-            @php
-                $menstrualCycleBoxBorderColor = 'border-emerald-400';
-                $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';
-
-                if ($menstrualCycleInfo['phase'] === 'Aménorrhée' || $menstrualCycleInfo['phase'] === 'Oligoménorrhée') {
-                    $menstrualCycleBoxBorderColor = 'border-rose-400';
-                    $menstrualCycleBoxBgColor = 'bg-rose-50/50 dark:bg-rose-950/50';
-                } elseif ($menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long') {
-                    $menstrualCycleBoxBorderColor = 'border-amber-400';
-                    $menstrualCycleBoxBgColor = 'bg-amber-50/50 dark:bg-amber-950/50';
-                } elseif ($menstrualCycleInfo['phase'] === 'Inconnue') {
-                    $menstrualCycleBoxBorderColor = 'border-sky-400';
-                    $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
-                }
-            @endphp
-            <div class="{{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }} mt-4 rounded-md border p-3 dark:text-zinc-200">
-                <flux:text class="text-sm font-semibold dark:text-zinc-200">Cycle Menstruel:</flux:text>
-                <flux:text class="text-xs dark:text-zinc-400">
-                    Phase: <span class="font-medium">{{ $menstrualCycleInfo['phase'] }}</span><br>
-                    Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'n/a' }}</span><br>
-                    Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'n/a' }} jours</span>
-                    @if ($menstrualCycleInfo['last_period_start'])
-                        <br>Dernières règles: <span class="font-medium">{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
-                    @endif
-                </flux:text>
-            </div>
-        @endif
-    </div>
 
     {{-- Section Protocoles de Récupération --}}
     <flux:separator class="mb-4 mt-6" variant="subtle" />

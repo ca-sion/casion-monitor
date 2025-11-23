@@ -123,7 +123,7 @@ class ReportService
         $score = $readinessStatusData['readiness_score'] ?? 0;
         $mainPenaltyReason = $readinessStatusData['details'][0]['metric_short_label'] ?? $readinessStatusData['message'] ?? 'Facteur inconnu';
 
-        $statusMap = ['red' => 'high_risk', 'orange' => 'warning', 'yellow' => 'warning', 'green' => 'optimal'];
+        $statusMap = ['red' => 'critical', 'orange' => 'warning', 'yellow' => 'warning', 'green' => 'optimal'];
 
         $data = [
             'title'       => 'Statut de Readiness quotidien',
@@ -135,9 +135,9 @@ class ReportService
                 'type'   => 'gauge',
                 'max'    => 100,
                 'ranges' => [
-                    'high_risk' => [0, 39],
-                    'warning'   => [40, 69],
-                    'optimal'   => [70, 100],
+                    'critical' => [0, 39],
+                    'warning'  => [40, 69],
+                    'optimal'  => [70, 100],
                 ],
             ],
             'summary'        => "Votre score de Readiness est de {$score}/100.",
@@ -157,7 +157,7 @@ class ReportService
 
         if ($level === 'red') {
             $data['summary'] = 'Alerte : Risque Élevé';
-            $data['points'][] = ['status' => 'high_risk', 'text' => "Un facteur majeur ({$mainPenaltyReason}) impacte fortement votre capacité à performer aujourd'hui."];
+            $data['points'][] = ['status' => 'critical', 'text' => "Un facteur majeur ({$mainPenaltyReason}) impacte fortement votre capacité à performer aujourd'hui."];
             $data['recommendation'] = 'Discutez-en urgemment avec votre entraîneur. Une modification ou un report de la session est très probable.';
         } elseif ($level === 'orange' || $level === 'yellow') {
             $trendChange = number_format(abs($sbmTrend['change'] ?? 0), 1);
@@ -218,19 +218,19 @@ class ReportService
         if ($hrv !== null && $mood !== null) {
             $hrvAvg = $allMetrics->where('metric_type', MetricType::MORNING_HRV)->avg('value');
             if ($hrvAvg > 0 && $hrv < $hrvAvg * 0.90 && $mood > 8) {
-                $inconsistencies[] = ['status' => 'high_risk', 'text' => "Votre corps montre des signes de fatigue (VFC basse : {$hrv}ms) mais votre moral est excellent ({$mood}/10). C\'est un risque de Damping (Amortissement psychologique), où votre motivation masque un état de fatigue réel. Récupération recommandée."];
+                $inconsistencies[] = ['status' => 'critical', 'text' => "Votre corps montre des signes de fatigue (VFC basse : {$hrv}ms) mais votre moral est excellent ({$mood}/10). C\'est un risque de Damping (Amortissement psychologique), où votre motivation masque un état de fatigue réel. Récupération recommandée."];
                 $hrvDampingAlerted = true;
             }
         }
 
         $allPoints = array_merge(
-            array_map(fn ($a) => ['status' => 'high_risk', 'text' => $a['message']], $alerts),
+            array_map(fn ($a) => ['status' => 'critical', 'text' => $a['message']], $alerts),
             $inconsistencies
         );
 
         $finalStatus = empty($allPoints) ? 'optimal' : 'warning';
         if ($hrvDampingAlerted) {
-            $finalStatus = 'high_risk';
+            $finalStatus = 'critical';
         }
 
         $finalRecommendation = empty($allPoints) ? null : 'Analysez ces points. Ils peuvent révéler une fatigue cachée ou d\'autres facteurs qui influencent votre performance.';
@@ -284,10 +284,12 @@ class ReportService
                 'label' => 'Corrélation Charge/SBM',
             ];
             if ($correlation < -0.6) {
+                $data['status'] = 'warning';
                 $data['points'][] = ['status' => 'warning', 'text' => "Le lien est clair : vos grosses séances d'entraînement ont un impact direct et important sur votre récupération du lendemain."];
                 $data['recommendation'] = "C'est une information précieuse. Pensez à compenser activement (nutrition, sommeil, repos) après les entraînements intenses pour aider votre corps à récupérer.";
             } else {
-                $data['points'][] = ['status' => 'optimal', 'text' => "L'impact de la charge d'hier est modéré. Votre récupération semble aussi dépendre d'autres facteurs importants comme la qualité de votre sommeil, votre nutrition ou votre niveau de stress."];
+                $data['status'] = 'low_risk';
+                $data['points'][] = ['status' => 'low_risk', 'text' => "L'impact de la charge d'hier est modéré. Votre récupération semble aussi dépendre d'autres facteurs importants comme la qualité de votre sommeil, votre nutrition ou votre niveau de stress."];
             }
         } else {
             $sbmDates = $sbmHistoryShifted->pluck('date')->unique();
@@ -305,7 +307,7 @@ class ReportService
         $readinessStatusData = $this->readinessService->getAthleteReadinessStatus($athlete, $dailyMetrics);
         $status = $readinessStatusData['level'] ?? 'neutral';
 
-        $statusMap = ['red' => 'high_risk', 'orange' => 'warning', 'yellow' => 'warning', 'green' => 'optimal'];
+        $statusMap = ['red' => 'critical', 'orange' => 'warning', 'yellow' => 'warning', 'green' => 'optimal'];
 
         $recommendationText = match ($status) {
             'red' => 'STOP. Priorité absolue à la récupération. La séance d\'aujourd\'hui doit être annulée ou remplacée par des soins (massage, étirements légers).',
@@ -362,9 +364,9 @@ class ReportService
                 'type'   => 'gauge',
                 'max'    => 2.0,
                 'ranges' => [
-                    'warning'   => [0, 0.69],
-                    'optimal'   => [0.7, 1.3],
-                    'high_risk' => [1.31, 2.0],
+                    'warning'  => [0, 0.69],
+                    'optimal'  => [0.7, 1.3],
+                    'critical' => [1.31, 2.0],
                 ],
             ],
             'points'         => [],
@@ -408,10 +410,10 @@ class ReportService
                 'type'   => 'gauge',
                 'max'    => 2.0,
                 'ranges' => [
-                    'low_risk'  => [0, 0.79],
-                    'optimal'   => [0.8, 1.29],
-                    'warning'   => [1.3, 1.49],
-                    'high_risk' => [1.5, 2.0],
+                    'low_risk' => [0, 0.79],
+                    'optimal'  => [0.8, 1.29],
+                    'warning'  => [1.3, 1.49],
+                    'critical' => [1.5, 2.0],
                 ],
             ],
             'points'         => [],
@@ -419,23 +421,23 @@ class ReportService
         ];
 
         if ($acwr >= 1.5) {
-            $data['status'] = 'high_risk';
-            $data['summary'] = 'Risque Élevé de Blessure';
-            $data['points'][] = ['status' => 'high_risk', 'text' => 'Vous avez augmenté votre charge de plus de 50% cette semaine. C\'est beaucoup trop, trop vite.'];
-            $data['recommendation'] = 'Réduction IMMÉDIATE de la charge de travail. Le risque de blessure est maximal.';
+            $data['status'] = 'critical';
+            $data['summary'] = 'Risque élevé de blessure';
+            $data['points'][] = ['status' => 'critical', 'text' => 'Vous avez augmenté votre charge de plus de 50% cette semaine. C\'est beaucoup trop, trop vite.'];
+            $data['recommendation'] = 'Réduction immédiate de la charge de travail. Le risque de blessure est maximal.';
         } elseif ($acwr >= 1.3 && $acwr < 1.5) {
             $data['status'] = 'warning';
-            $data['summary'] = 'Zone à Risque';
+            $data['summary'] = 'Zone à risque';
             $data['points'][] = ['status' => 'warning', 'text' => 'Vous êtes dans la "zone rouge". C\'est une charge très stimulante pour progresser, mais elle demande une récupération parfaite.'];
             $data['recommendation'] = 'Soyez extrêmement vigilant aux signaux de votre corps. Doublez les efforts sur le sommeil et la nutrition pour bien assimiler le travail.';
         } elseif ($acwr > 0 && $acwr < 0.8) {
             $data['status'] = 'low_risk';
-            $data['summary'] = 'Risque de Désadaptation';
+            $data['summary'] = 'Risque de désadaptation';
             $data['points'][] = ['status' => 'low_risk', 'text' => 'Votre charge de travail actuelle est trop faible pour stimuler une progression. Vous risquez de perdre vos acquis.'];
             $data['recommendation'] = 'Il est temps d\'augmenter l\'intensité ou le volume pour relancer une dynamique de progression.';
         } elseif ($acwr > 0) {
             $data['status'] = 'optimal';
-            $data['summary'] = 'Progression Idéale';
+            $data['summary'] = 'Progression idéale';
             $data['points'][] = ['status' => 'optimal', 'text' => 'Votre progression de charge est sûre et efficace (ratio entre 0.8 et 1.3). C\'est parfait !'];
         } else {
             $data['status'] = 'neutral';
@@ -662,15 +664,15 @@ class ReportService
                 ->map(fn ($count, $location) => "{$location} ({$count} fois)")
                 ->implode(', ');
             $data['points'][] = [
-                'status' => 'low_risk',
+                'status' => 'warning',
                 'text'   => "Autres zones signalées : {$hotspotList}.",
             ];
         }
 
         $painTrend = $this->trendsService->calculateMetricEvolutionTrend($painMetrics, MetricType::MORNING_PAIN);
         if ($painTrend['trend'] === 'increasing') {
-            $data['status'] = 'high_risk';
-            $data['points'][] = ['status' => 'high_risk', 'text' => 'Plus inquiétant, l\'intensité de la douleur dans cette zone semble augmenter.'];
+            $data['status'] = 'critical';
+            $data['points'][] = ['status' => 'critical', 'text' => 'Plus inquiétant, l\'intensité de la douleur dans cette zone semble augmenter.'];
             $data['recommendation'] = 'Consultez un professionnel de santé (médecin, physio). C\'est un signal d\'alerte important à ne pas ignorer.';
         }
 
@@ -717,8 +719,8 @@ class ReportService
         }
 
         if ($longTermTrend['trend'] === 'worsening') {
-            $data['status'] = 'high_risk';
-            $data['points'][] = ['status' => 'high_risk', 'text' => "Tendance sur 6 mois : AGGRAVATION. L'écart de fatigue Lutéale/Folliculaire a augmenté de {$longTermTrend['change']} points. C'est un signe de désadaptation à la charge sur le long terme. Une pause active (micro-cycle de récupération) est fortement recommandée."];
+            $data['status'] = 'critical';
+            $data['points'][] = ['status' => 'critical', 'text' => "Tendance sur 6 mois : AGGRAVATION. L'écart de fatigue Lutéale/Folliculaire a augmenté de {$longTermTrend['change']} points. C'est un signe de désadaptation à la charge sur le long terme. Une pause active (micro-cycle de récupération) est fortement recommandée."];
         } elseif ($longTermTrend['trend'] === 'improving') {
             $data['points'][] = ['status' => 'optimal', 'text' => "Tendance sur 6 mois : AMÉLIORATION. L'impact de votre cycle sur votre fatigue a diminué, preuve que votre stratégie d'adaptation fonctionne. Continuez ainsi !"];
         } else {
@@ -727,10 +729,10 @@ class ReportService
 
         $data['recommendation'] = "Recommandation pour cette phase ({$currentPhase}) : {$phaseRec['action']}. {$phaseRec['justification']}";
         $data['status'] = match (true) {
-            $data['status'] === 'high_risk'     => 'high_risk',
-            $phaseRec['status'] === 'high_risk' => 'high_risk',
-            $phaseRec['status'] === 'warning'   => 'warning',
-            default                             => 'optimal',
+            $data['status'] === 'critical'     => 'critical',
+            $phaseRec['status'] === 'critical' => 'critical',
+            $phaseRec['status'] === 'warning'  => 'warning',
+            default                            => 'optimal',
         };
 
         return $data;
@@ -753,7 +755,7 @@ class ReportService
     {
         $sbmHistory = $calculatedMetrics->where('type', CalculatedMetricType::SBM);
         $sbmTrend = $this->trendsService->calculateGenericNumericTrend($sbmHistory);
-        $hrvHistory = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->whereBetween('date', [$startDate, $endDate]);
+        $hrvHistory = $allMetrics->where('metric_type', MetricType::MORNING_HRV)->whereBetween('date', [$startDate, $endDate]);
         $hrvTrend = $this->trendsService->calculateMetricEvolutionTrend($hrvHistory, MetricType::MORNING_HRV);
 
         $data = [
@@ -764,21 +766,79 @@ class ReportService
             'recommendation' => null,
         ];
 
+        $sbmStatus = $sbmTrend['trend'] ?? 'n/a';
+        $hrvStatus = $hrvTrend['trend'] ?? 'n/a';
+
         $sbmChange = number_format($sbmTrend['change'] ?? 0, 1);
         $hrvChange = number_format($hrvTrend['change'] ?? 0, 1);
 
-        $data['points'][] = ['status' => $sbmTrend['trend'] === 'increasing' ? 'optimal' : 'warning', 'text' => "Tendance de votre Forme (SBM) : {$sbmChange}%"];
-        $data['points'][] = ['status' => $hrvTrend['trend'] === 'increasing' ? 'optimal' : 'warning', 'text' => "Tendance de votre VFC : {$hrvChange}%"];
+        // Affichage VFC
+        $hrvDisplayStatus = ($hrvStatus === 'increasing') ? 'optimal' : (($hrvStatus === 'n/a') ? 'neutral' : 'warning');
+        $hrvText = ($hrvStatus === 'n/a')
+            ? 'Tendance VFC : Données insuffisantes pour l\'analyse.'
+            : "Tendance de votre VFC : {$hrvChange}%";
+        $data['points'][] = ['status' => $hrvDisplayStatus, 'text' => $hrvText];
 
-        if ($sbmTrend['trend'] === 'increasing' && $hrvTrend['trend'] === 'increasing') {
+        // Affichage SBM
+        $sbmDisplayStatus = ($sbmStatus === 'increasing') ? 'optimal' : (($sbmStatus === 'n/a') ? 'neutral' : 'warning');
+        $sbmText = ($sbmStatus === 'n/a')
+            ? 'Tendance SBM : Données insuffisantes pour l\'analyse.'
+            : "Tendance de votre forme (SBM) : {$sbmChange}%";
+        $data['points'][] = ['status' => $sbmDisplayStatus, 'text' => $sbmText];
+
+        // Logique d'interprétation
+
+        // Cas 1: Optimal - Progression avec adaptation du système nerveux
+        if ($sbmStatus === 'increasing' && $hrvStatus === 'increasing') {
             $data['status'] = 'optimal';
-            $data['summary'] = 'Excellente Adaptation Physique';
-            $data['points'][] = ['status' => 'optimal', 'text' => 'Votre corps s\'adapte parfaitement ! Votre forme générale (SBM) et votre système nerveux (VFC) se sont tous deux améliorés sur 6 mois.'];
-        } else {
-            $data['status'] = 'warning';
-            $data['summary'] = 'Adaptation à Améliorer';
-            $data['recommendation'] = 'Il est temps de faire le point avec votre entraîneur sur la planification et les facteurs de stress externes (sommeil, travail, etc.) pour optimiser votre progression.';
+            $data['summary'] = 'Excellente adaptation et résilience nerveuse.';
+            $data['recommendation'] = 'C\'est l\'équilibre parfait ! Votre corps s\'adapte très bien à la charge (SBM en hausse) et votre système nerveux (VFC) se renforce. Continuez à maintenir cette planification et cet équilibre vie/entraînement pour maximiser les gains à long terme.';
         }
+
+        // Cas 2: Critique - Déclin de la forme (priorité absolue)
+        elseif ($sbmStatus === 'decreasing') {
+            $data['status'] = 'critical';
+            $data['summary'] = 'Déclin de la forme et fatigue chronique.';
+            $data['recommendation'] = 'Votre forme générale (SBM) est en déclin constant. Cela indique un déséquilibre persistant entre entraînement et récupération, risquant le surentraînement. Cessez l\'entraînement intense immédiatement et entamez une phase de récupération active complète. Consultation avec l\'entraîneur et un professionnel de santé recommandée.';
+        }
+
+        // Cas 3: Warning - Surcharge masquée
+        elseif ($sbmStatus === 'increasing' && in_array($hrvStatus, ['decreasing', 'stable'])) {
+            $data['status'] = 'warning';
+            $data['summary'] = 'Progression physique au prix d\'une fatigue nerveuse.';
+            $data['recommendation'] = 'Votre forme physique augmente, mais le déclin ou la stagnation de votre VFC sur 6 mois est un signal d\'alarme précoce de stress chronique. Réduisez temporairement l\'intensité globale et concentrez-vous sur le sommeil, la nutrition et la gestion du stress externe.';
+        }
+
+        // Cas 4: Neutral - Potentiel inexploité (VFC monte, SBM stagne)
+        elseif ($hrvStatus === 'increasing' && $sbmStatus === 'stable') {
+            $data['status'] = 'low_risk';
+            $data['summary'] = 'Réserve de forme non exploitée.';
+            $data['recommendation'] = 'Votre système nerveux se renforce (VFC monte), mais votre forme (SBM) stagne. Vous pouvez probablement augmenter la charge d\'entraînement de manière progressive pour exploiter cette réserve de résilience.';
+        }
+
+        // Cas 5: Neutral - Stagnation (SBM stable/décroissant, VFC stable/décroissant)
+        elseif ($sbmStatus === 'stable' && in_array($hrvStatus, ['stable', 'decreasing'])) {
+            $data['status'] = 'low_risk';
+            $data['summary'] = 'Stagnation de l\'adaptation.';
+            $data['recommendation'] = 'Le corps montre une stagnation sur cette période. Il est temps de changer le stimulus d\'entraînement (volume, intensité, méthode) pour provoquer une nouvelle adaptation.';
+        }
+
+        // Cas 6: Analyse Partielle (Si l'une ou les deux tendances sont 'n/a')
+        elseif ($sbmStatus === 'n/a' || $hrvStatus === 'n/a') {
+            $data['status'] = 'neutral';
+            $data['summary'] = 'Analyse partielle : Données insuffisantes.';
+            $data['recommendation'] = 'Une analyse d\'adaptation à long terme nécessite des données complètes. Veuillez vous assurer d\'avoir suffisamment de données VFC et SBM sur la période de 6 mois pour une interprétation fiable.';
+        }
+
+        // Cas 7: Dernier recours / Situation non couverte (ex: SBM n/a et HRV increasing)
+        else {
+            $data['status'] = 'neutral';
+            $data['summary'] = 'Analyse incomplète ou situation atypique.';
+            $data['recommendation'] = 'L\'analyse de long terme est atypique. Il est essentiel de faire le point avec votre entraîneur sur la planification pour s\'assurer que votre entraînement répond à vos objectifs.';
+        }
+
+        // Ajouter un point de synthèse basé sur le statut
+        $data['points'][] = ['status' => $data['status'], 'text' => $data['summary']];
 
         return $data;
     }
