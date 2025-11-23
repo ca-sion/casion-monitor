@@ -24,6 +24,7 @@
                         'weekly' => 'Hebdomadaire',
                         'monthly' => 'Mensuel',
                         'biannual' => 'Semestriel',
+                        'narrative' => 'Résumé',
                         default => 'Inconnu',
                     } }}
                 </flux:heading>
@@ -34,6 +35,11 @@
                             <x-report-card :section="$section" />
                         @endif
                     @endforeach
+                    @if (data_get($report, 'content'))
+                        <div class="prose prose-sm max-w-none lg:col-span-2">
+                            {!! str(data_get($report, 'content'))->markdown() !!}
+                        </div>
+                    @endif
                 </div>
             </div>
         @endforeach

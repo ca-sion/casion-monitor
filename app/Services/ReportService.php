@@ -25,18 +25,22 @@ class ReportService
 
     protected MetricMenstrualService $menstrualService;
 
+    protected NarrativeSummaryService $narrativeSummaryService;
+
     public function __construct(
         MetricCalculationService $calculationService,
         MetricTrendsService $trendsService,
         MetricAlertsService $alertsService,
         MetricReadinessService $readinessService,
         MetricMenstrualService $menstrualService,
+        NarrativeSummaryService $narrativeSummaryService
     ) {
         $this->calculationService = $calculationService;
         $this->trendsService = $trendsService;
         $this->alertsService = $alertsService;
         $this->readinessService = $readinessService;
         $this->menstrualService = $menstrualService;
+        $this->narrativeSummaryService = $narrativeSummaryService;
     }
 
     /**
@@ -75,6 +79,9 @@ class ReportService
                 break;
             case 'biannual':
                 $report['sections'] = $this->generateBiannualAnalysis($athlete, $requiredMetrics, $calculatedMetrics, $endDate);
+                break;
+            case 'narrative':
+                $report['content'] = $this->narrativeSummaryService->generateSummary($athlete, $endDate);
                 break;
             default:
                 $report['sections']['error'] = ['title' => 'Erreur', 'narrative' => 'Type de rapport non supporté.'];

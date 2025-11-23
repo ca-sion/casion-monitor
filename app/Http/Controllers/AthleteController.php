@@ -125,10 +125,11 @@ class AthleteController extends Controller
         $reportService = resolve(ReportService::class);
 
         $reports = [
-            'daily'    => $reportService->generateReport($athlete, 'daily', $endDate),
-            'weekly'   => $reportService->generateReport($athlete, 'weekly', $endDate),
-            'monthly'  => $reportService->generateReport($athlete, 'monthly', $endDate),
-            'biannual' => $reportService->generateReport($athlete, 'biannual', $endDate),
+            'narrative' => $reportService->generateReport($athlete, 'narrative', $endDate),
+            'daily'     => $reportService->generateReport($athlete, 'daily', $endDate),
+            'weekly'    => $reportService->generateReport($athlete, 'weekly', $endDate),
+            'monthly'   => $reportService->generateReport($athlete, 'monthly', $endDate),
+            'biannual'  => $reportService->generateReport($athlete, 'biannual', $endDate),
         ];
 
         $periodOptions = [
