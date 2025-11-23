@@ -883,13 +883,16 @@ class ReportService
 
     protected function getChargePacingAnalysis(Athlete $athlete, Collection $calculatedMetrics, Carbon $endDate): array
     {
-        $cihMetrics = $calculatedMetrics
-            ->where('type', CalculatedMetricType::CIH)
-            ->where('date', '>=', $endDate->copy()->subDays(179));
+        $startDate = $endDate->copy()->subMonths(6);
 
-        $cihValues = $cihMetrics->pluck('value');
-        $averageCih = $cihValues->avg();
-        $stdDevCih = $this->calculateStdDev($cihValues);
+        $cihMetrics = $calculatedMetrics
+            ->where('type', CalculatedMetricType::CIH_NORMALIZED)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->pluck('value')
+            ->filter(fn ($v) => $v > 0);
+
+        $averageCih = $cihMetrics->avg();
+        $stdDevCih = $this->calculateStdDev($cihMetrics);
 
         $cv = 0;
         if ($averageCih > 0) {
@@ -901,13 +904,13 @@ class ReportService
             'explanation' => 'Le "Pacing" analyse la régularité de votre charge d\'entraînement de semaine en semaine sur les 6 derniers mois. Une progression linéaire et contrôlée (faible variation) est idéale. Une variation trop importante, avec des semaines très dures suivies de semaines très faciles, peut augmenter le risque de blessure à cause des "chocs" de charge. L\'objectif est de trouver un rythme stable et efficace.',
             'main_metric' => [
                 'value'  => number_format($cv * 100, 1).'%',
-                'label'  => 'Coeff. de Variation',
+                'label'  => 'Coeff. de variation',
                 'type'   => 'gauge',
                 'min'    => 0,
-                'max'    => 1,
+                'max'    => 100,
                 'ranges' => [
-                    'optimal' => [0, 0.39],
-                    'warning' => [0.4, 1],
+                    'optimal' => [0, 39],
+                    'warning' => [40, 100],
                 ],
             ],
             'points'         => [],
@@ -921,7 +924,7 @@ class ReportService
             $data['recommendation'] = 'Visez une progression plus linéaire et plus douce. Une augmentation progressive est souvent plus efficace et plus sûre sur le long terme.';
         } else {
             $data['status'] = 'optimal';
-            $data['summary'] = 'Pacing Maîtrisé';
+            $data['summary'] = 'Pacing maîtrisé';
             $data['points'][] = ['status' => 'optimal', 'text' => 'La variation de votre charge est bien contrôlée. Cela favorise une adaptation solide et durable.'];
         }
 
