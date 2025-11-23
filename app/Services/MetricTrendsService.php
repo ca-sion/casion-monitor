@@ -249,8 +249,9 @@ class MetricTrendsService
     {
         $rawMetrics = $athlete->metrics()
             ->whereIn('metric_type', [
-                MetricType::MORNING_HRV->value,
-                MetricType::MORNING_MOOD_WELLBEING->value,
+                MetricType::MORNING_HRV,
+                MetricType::MORNING_SLEEP_QUALITY,
+                MetricType::MORNING_MOOD_WELLBEING,
             ])
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
@@ -260,10 +261,27 @@ class MetricTrendsService
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
 
-        $hrvAvg = $rawMetrics->where('metric_type', MetricType::MORNING_HRV->value)->avg('value');
+        // Détermination de la métrique de récupération primaire et de sa moyenne
+        $hrvHistory = $rawMetrics->where('metric_type', MetricType::MORNING_HRV);
+        $hrvAvg = $hrvHistory->avg('value') ?? 0;
+
+        $primaryRecoveryMetric = MetricType::MORNING_HRV;
+        $recoveryAvg = $hrvAvg;
+
+        // La VFC est manquante, on bascule sur la Qualité du Sommeil
+        if ($hrvAvg == 0) {
+            $sleepQualityHistory = $rawMetrics->where('metric_type', MetricType::MORNING_SLEEP_QUALITY);
+            $sleepQualityAvg = $sleepQualityHistory->avg('value') ?? 0;
+
+            $primaryRecoveryMetric = MetricType::MORNING_SLEEP_QUALITY;
+            $recoveryAvg = $sleepQualityAvg;
+        }
+
+        // $hrvAvg = $rawMetrics->where('metric_type', MetricType::MORNING_HRV)->avg('value');
         $sbmAvg = $sbmMetrics->avg('value');
 
-        if ($hrvAvg == 0 || $sbmAvg == 0) {
+        // Si la métrique primaire (VFC ou substitut) ou le SBM manquent
+        if ($recoveryAvg == 0 || $sbmAvg == 0) {
             return 0;
         }
 
@@ -271,23 +289,28 @@ class MetricTrendsService
 
         $sbmMetricsByDate = $sbmMetrics->keyBy(fn ($m) => $m->date->toDateString());
         $rawMetricsByDate = $rawMetrics->groupBy(fn ($m) => $m->date->toDateString());
-
         $commonDates = $sbmMetricsByDate->keys()->intersect($rawMetricsByDate->keys());
 
         foreach ($commonDates as $date) {
             $dailyRawMetrics = $rawMetricsByDate[$date];
-            $hrv = $dailyRawMetrics->firstWhere('metric_type', MetricType::MORNING_HRV->value)?->value;
+            $recoveryValue = $dailyRawMetrics->firstWhere('metric_type', $primaryRecoveryMetric->value)?->value;
             $mood = $dailyRawMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)?->value;
             $sbm = $sbmMetricsByDate[$date]->value;
 
+            // Condition 1 : Amortissement psychologique (Humeur OK)
             if ($mood === null || $mood < 8) {
                 continue;
             }
 
             $physioFatigue = false;
-            if ($hrv !== null && $hrv < $hrvAvg * 0.9) {
+
+            // Condition 2a : Fatigue sur la métrique de récupération primaire (VFC ou Qualité du Sommeil)
+            // Note: La direction optimale pour ces deux métriques est 'good', donc < 90% est un signal de fatigue.
+            if ($recoveryValue !== null && $recoveryValue < $recoveryAvg * 0.9) {
                 $physioFatigue = true;
             }
+
+            // Condition 2b : Fatigue sur le SBM
             if ($sbm !== null && $sbm < $sbmAvg * 0.9) {
                 $physioFatigue = true;
             }

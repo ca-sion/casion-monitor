@@ -185,7 +185,7 @@ class ReportService
 
         if (! $hasMinimalRelevantMetrics) {
             return [
-                'title'          => 'Alertes et Incohérences',
+                'title'          => 'Alertes et incohérences',
                 'explanation'    => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent. Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
                 'status'         => 'neutral',
                 'main_metric'    => null,
@@ -237,11 +237,11 @@ class ReportService
 
         if ($hrv === null && $mood !== null && ! $hrvDampingAlerted) {
             $finalRecommendation = ($finalRecommendation ? $finalRecommendation.' ' : '').
-                "Astuce Pro : Pour détecter les incohérences les plus fines (comme le Damping), la VFC est cruciale. Si vous n\'avez pas l\'équipement, vous pouvez utiliser un score de Sensation Jambes Matinal à la place pour détecter la fatigue physique.";
+                "Astuce Pro : Pour détecter les incohérences les plus fines (comme le Damping), la VFC est cruciale. Si vous n'avez pas l'équipement, vous pouvez utiliser la Qualité du Sommeil à la place pour détecter la fatigue nerveuse et physique.";
         }
 
         return [
-            'title'          => 'Alertes et Incohérences',
+            'title'          => 'Alertes et incohérences',
             'explanation'    => 'Les "incohérences" sont des signaux qui montrent une contradiction entre ce que vous ressentez (par exemple, vous vous sentez en pleine forme) et ce que vos données objectives indiquent (par exemple, votre corps montre des signes de fatigue). Ces alertes sont cruciales pour détecter une fatigue cachée ou des problèmes qui pourraient affecter votre performance.',
             'status'         => $finalStatus,
             'main_metric'    => null,
@@ -324,7 +324,7 @@ class ReportService
         };
 
         $data = [
-            'title'          => 'Recommandation du Jour',
+            'title'          => 'Recommandation du jour',
             'explanation'    => 'Cette recommandation est votre guide personnalisé pour la journée. Elle prend en compte toutes vos données (récupération, fatigue, etc.) pour vous dire si vous devriez vous entraîner normalement ("GO !"), alléger votre séance ("EASY"), ou même prendre un repos complet ("STOP"). C\'est un conseil clair pour optimiser votre entraînement et éviter les risques.',
             'status'         => $statusMap[$status] ?? 'neutral',
             'main_metric'    => null,
@@ -463,7 +463,7 @@ class ReportService
         }
 
         $data = [
-            'title'       => 'Dette de récupération (fatigue aiguë vs chronique)',
+            'title'       => 'Dette de récupération',
             'explanation' => 'La "dette de récupération" compare votre état de forme récent (moyenne des 7 derniers jours) à votre état de forme habituel (moyenne des 30 derniers jours). Si votre forme récente est nettement plus basse, cela signifie que vous accumulez de la fatigue et que vous ne récupérez pas suffisamment. C\'est un signal pour lever le pied !',
             'main_metric' => [
                 'value'  => number_format($diffPercent, 1).'%',
@@ -577,7 +577,7 @@ class ReportService
             $data['status'] = 'warning';
             $data['summary'] = "Damping détecté {$dampingCount} fois ce mois-ci";
             $data['points'][] = ['status' => 'warning', 'text' => "Attention, votre moral élevé semble parfois masquer une fatigue physique bien réelle. C'est un signal précoce de surentraînement."];
-            $data['recommendation'] = 'Accordez-vous un jour de repos *mental* complet. Déconnectez du sport pour mieux recharger les batteries, corps et esprit.';
+            $data['recommendation'] = 'Accordez-vous un jour de repos mental complet. Déconnectez du sport pour mieux recharger les batteries, corps et esprit.';
         }
 
         return $data;
