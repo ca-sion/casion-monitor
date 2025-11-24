@@ -59,7 +59,7 @@ class NarrativeSummaryService
 
         // 3. Charge et Alertes
         $acwr = $this->calculationService->calculateAcwr($allMetrics, $endDate);
-        $acwrThreshold = 1.3;
+        $acwrThreshold = 1.5;
         $ratioCihCph = $this->calculationService->getLastRatioCihCph($athlete, $endDate);
 
         $alerts = $this->alertsService->checkAllAlerts($athlete, $dailyMetrics);
