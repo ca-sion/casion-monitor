@@ -431,12 +431,12 @@ class ReportService
             $data['status'] = 'critical';
             $data['summary'] = 'Risque élevé de blessure';
             $data['points'][] = ['status' => 'critical', 'text' => 'Vous avez augmenté votre charge de plus de 50% cette semaine. C\'est beaucoup trop, trop vite.'];
-            $data['recommendation'] = 'Réduction immédiate de la charge de travail. Le risque de blessure est maximal.';
+            $data['recommendation'] = 'Réduction immédiate de la charge de travail. Un risque de blessure existe.';
         } elseif ($acwr >= 1.3 && $acwr < 1.5) {
             $data['status'] = 'warning';
             $data['summary'] = 'Zone à risque';
-            $data['points'][] = ['status' => 'warning', 'text' => 'Vous êtes dans la "zone rouge". C\'est une charge très stimulante pour progresser, mais elle demande une récupération parfaite.'];
-            $data['recommendation'] = 'Soyez extrêmement vigilant aux signaux de votre corps. Doublez les efforts sur le sommeil et la nutrition pour bien assimiler le travail.';
+            $data['points'][] = ['status' => 'warning', 'text' => 'Vous êtes dans la "zone orange". C\'est une charge très stimulante pour progresser, mais elle demande une récupération parfaite.'];
+            $data['recommendation'] = 'Soyez vigilant aux signaux de votre corps. Doublez les efforts sur le sommeil et la nutrition pour bien assimiler le travail.';
         } elseif ($acwr > 0 && $acwr < 0.8) {
             $data['status'] = 'low_risk';
             $data['summary'] = 'Risque de désadaptation';
