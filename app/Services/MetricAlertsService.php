@@ -443,7 +443,7 @@ class MetricAlertsService
         } elseif ($zScore >= $highVigilance) {
             $this->addAlert(
                 $alerts,
-                $metricType->getTrendOptimalDirection() == 'bad' ? 'warning' : 'info',
+                $metricType->getTrendOptimalDirection() == 'bad' ? 'warning' : 'success',
                 $metricType->getLabel().' a augmenté ('.$currentValueFormatted.').',
             );
         }
@@ -457,7 +457,7 @@ class MetricAlertsService
         } elseif ($zScore <= $lowVigilance) {
             $this->addAlert(
                 $alerts,
-                $metricType->getTrendOptimalDirection() == 'good' ? 'warning' : 'info',
+                $metricType->getTrendOptimalDirection() == 'good' ? 'warning' : 'success',
                 $metricType->getLabel().' a diminué ('.$currentValueFormatted.').',
             );
         }
