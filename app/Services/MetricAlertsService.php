@@ -437,13 +437,13 @@ class MetricAlertsService
         if ($zScore >= $highCritical) {
             $this->addAlert(
                 $alerts,
-                'danger',
+                $metricType->getTrendOptimalDirection() == 'bad' ? 'danger' : 'warning',
                 $metricType->getLabel().' ('.$currentValueFormatted.') a significativement augmenté (moy: '.number_format($average, 2).').'
             );
         } elseif ($zScore >= $highVigilance) {
             $this->addAlert(
                 $alerts,
-                'warning',
+                $metricType->getTrendOptimalDirection() == 'bad' ? 'warning' : 'info',
                 $metricType->getLabel().' a augmenté ('.$currentValueFormatted.').',
             );
         }
@@ -451,13 +451,13 @@ class MetricAlertsService
         if ($zScore <= $lowCritical) {
             $this->addAlert(
                 $alerts,
-                'danger',
+                $metricType->getTrendOptimalDirection() == 'good' ? 'danger' : 'warning',
                 $metricType->getLabel().' ('.$currentValueFormatted.') a significativement baissé (moy: '.number_format($average, 2).').'
             );
         } elseif ($zScore <= $lowVigilance) {
             $this->addAlert(
                 $alerts,
-                'warning',
+                $metricType->getTrendOptimalDirection() == 'good' ? 'warning' : 'info',
                 $metricType->getLabel().' a diminué ('.$currentValueFormatted.').',
             );
         }
