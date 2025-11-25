@@ -177,6 +177,8 @@ class MetricService
                 $athlete->{$key} = $value;
             }
 
+            $athlete->weekly_badges_by_metric = $this->generateWeeklyStatusBadges(collect($athlete->weekly_metrics_data ?? []));
+
             if ($options['chart_metric_type']) {
                 $chartMetricType = MetricType::tryFrom($options['chart_metric_type']);
                 if ($chartMetricType) {
@@ -188,6 +190,69 @@ class MetricService
 
             return $athlete;
         });
+    }
+
+    protected function generateWeeklyStatusBadges(Collection $allMetrics): array
+    {
+        $badges = [];
+
+        // 1. Badge ACWR
+        $acwrData = $allMetrics->get(CalculatedMetricType::ACWR->value);
+        if ($acwrData && is_numeric($acwrData['latest_daily_value'])) {
+            $acwr = $acwrData['latest_daily_value'];
+            $status = 'neutral';
+            $summary = 'ACWR: '.number_format($acwr, 2);
+            if ($acwr >= 1.5) {
+                $status = 'critical';
+                $summary = 'ACWR: Risque élevé';
+            } elseif ($acwr >= 1.3) {
+                $status = 'warning';
+                $summary = 'ACWR: Zone à risque';
+            } elseif ($acwr < 0.8 && $acwr > 0) {
+                $status = 'low_risk';
+                $summary = 'ACWR: Désadaptation';
+            } elseif ($acwr >= 0.8) {
+                $status = 'optimal';
+                $summary = 'ACWR: Idéal';
+            }
+            $badges[CalculatedMetricType::ACWR->value] = ['status' => $status, 'summary' => $summary, 'value' => number_format($acwr, 2)];
+        }
+
+        // 2. Badge Adhérence à la charge (ratio CIH normalisé / CPH)
+        $ratioCihCphData = $allMetrics->get(CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH->value);
+        if ($ratioCihCphData && is_numeric($ratioCihCphData['latest_daily_value'])) {
+            $ratio = $ratioCihCphData['latest_daily_value'];
+            $status = 'neutral';
+            $summary = 'Adhésion: '.number_format($ratio, 2);
+            if ($ratio > 1.3) {
+                $status = 'warning';
+                $summary = 'Adhésion: Surcharge';
+            } elseif ($ratio < 0.7 && $ratio > 0) {
+                $status = 'warning';
+                $summary = 'Adhésion: Sous-charge';
+            } elseif ($ratio >= 0.7) {
+                $status = 'optimal';
+                $summary = 'Adhésion: Idéale';
+            }
+            $badges[CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH->value] = ['status' => $status, 'summary' => $summary, 'value' => number_format($ratio, 2)];
+        }
+
+        // 3. Badge Dette de récupération (SBM)
+        $sbmData = $allMetrics->get(CalculatedMetricType::SBM->value);
+        if ($sbmData && is_numeric($sbmData['formatted_average_7_days']) && is_numeric($sbmData['formatted_average_30_days']) && $sbmData['formatted_average_30_days'] > 0) {
+            $sbmAvg7d = $sbmData['formatted_average_7_days'];
+            $sbmAvg30d = $sbmData['formatted_average_30_days'];
+            $diffPercent = (($sbmAvg7d - $sbmAvg30d) / $sbmAvg30d) * 100;
+            $status = 'optimal';
+            $summary = 'Récupération: Équilibre';
+            if ($diffPercent < -5) {
+                $status = 'warning';
+                $summary = 'Récupération: En dette';
+            }
+            $badges[CalculatedMetricType::SBM->value] = ['status' => $status, 'summary' => $summary, 'value' => number_format($diffPercent, 0).'%'];
+        }
+
+        return $badges;
     }
 
     protected function determineMetricCollectionStartDate(array $options, Carbon $endDate): Carbon
@@ -525,6 +590,8 @@ class MetricService
 
             return $formattedValue;
         }
+
+        return 'n/a';
 
     }
 

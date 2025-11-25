@@ -276,11 +276,19 @@
                             $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
                             $metricData = $allMetric[$metricInfo->value];
                             $chartData = $metricData['chart_data'] ?? ['data' => []];
+                            $badge = $athlete->weekly_badges_by_metric[$metricInfo->value] ?? null;
                         @endphp
                         <flux:table.cell>
                             <div class="flex flex-col gap-2">
                                 <div class="flex items-center justify-between">
-                                    <flux:badge size="sm" color="{{ $metricInfo->getColor() }}">
+                                    <flux:badge size="sm" color="{{ match(data_get($badge, 'status')) {
+                                                'critical' => 'rose',
+                                                'warning' => 'amber',
+                                                'low_risk' => 'sky',
+                                                'optimal' => 'emerald',
+                                                default => $metricInfo->getColor(),
+                                            } }}"
+                                            title="{{ data_get($badge, 'summary') }}">
                                         <span class="{{ $metricInfo->getIconifyTailwind() }} size-4"></span>
                                     </flux:badge>
                                     <flux:text class="ms-1 font-bold">
@@ -339,10 +347,18 @@
                         @php
                             $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
                             $metricData = $allMetric[$metricInfo->value];
+                            $badge = $athlete->weekly_badges_by_metric[$metricInfo->value] ?? null;
                         @endphp
                         <flux:table.cell>
                             <div>
-                                <flux:badge size="sm" color="{{ $metricInfo->getColor() }}">
+                                <flux:badge size="sm" color="{{ match(data_get($badge, 'status')) {
+                                                'critical' => 'rose',
+                                                'warning' => 'amber',
+                                                'low_risk' => 'sky',
+                                                'optimal' => 'emerald',
+                                                default => $metricInfo->getColor(),
+                                            } }}"
+                                            title="{{ data_get($badge, 'summary') }}">
                                     <span class="{{ $metricInfo->getIconifyTailwind() }} size-4 me-1"></span>
                                     {{ $metricData['latest_daily_value'] }}
                                 </flux:badge>
