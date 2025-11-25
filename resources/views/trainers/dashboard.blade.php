@@ -70,7 +70,7 @@
             <flux:table.column class="z-1 sticky left-0 max-w-36 bg-white dark:bg-zinc-900">Athlète</flux:table.column>
             <flux:table.column class="max-w-48 text-center">Readiness</flux:table.column>
             @if ($has_alerts || $show_menstrual_cycle)
-            <flux:table.column class="max-w-48 text-center">Alertes & Cycle</flux:table.column>
+                <flux:table.column class="max-w-48 text-center">Alertes & Cycle</flux:table.column>
             @endif
 
             {{-- Colonnes pour les métriques calculées (générées par boucle) --}}
@@ -178,21 +178,20 @@
                                                 {{ Str::limit($readiness['recommendation'], $truncateLength, '…') }}
                                             </span>
 
-                                            <span x-show="expanded"
-                                                x-cloak>
+                                            <span x-show="expanded" x-cloak>
                                                 {{ $readiness['recommendation'] }}
                                                 <br>{!! nl2br($readiness['details_text']) !!}
                                             </span>
 
                                             @if ($needsTruncation)
-                                            <span class="ms-2">
-                                                <flux:link class="text-xs"
-                                                    href="javascript:void(0)"
-                                                    variant="subtle"
-                                                    @click="expanded = !expanded"
-                                                    x-text="expanded ? '-' : '+'">
-                                                </flux:link>
-                                            </span>
+                                                <span class="ms-2">
+                                                    <flux:link class="text-xs"
+                                                        href="javascript:void(0)"
+                                                        variant="subtle"
+                                                        @click="expanded = !expanded"
+                                                        x-text="expanded ? '-' : '+'">
+                                                    </flux:link>
+                                                </span>
                                             @endif
                                         </flux:text>
                                     </div>
@@ -202,67 +201,67 @@
                     </flux:table.cell>
 
                     @if ($has_alerts || $show_menstrual_cycle)
-                    {{-- Cellule Alertes & Cycle --}}
-                    <flux:table.cell>
-                        <div class="flex w-48 flex-col gap-2">
-                            @if ($has_alerts)
-                            {{-- Alertes --}}
-                            <div class="flex flex-col gap-2">
-                                @foreach (array_merge($athlete->alerts) as $alert)
-                                    @if ($show_info_alerts || $alert['type'] !== 'info')
-                                        <div>
-                                            <flux:badge class="whitespace-normal!"
-                                                size="sm"
-                                                inset="top bottom"
-                                                color="{{ match ($alert['type']) {
-                                                    'danger' => 'rose',
-                                                    'warning' => 'amber',
-                                                    'info' => 'sky',
-                                                    'success' => 'emerald',
-                                                    default => 'zinc',
-                                                } }}">
-                                                {{ $alert['message'] }}
-                                            </flux:badge>
-                                        </div>
-                                    @endif
-                                @endforeach
-                            </div>
-                            @endif
+                        {{-- Cellule Alertes & Cycle --}}
+                        <flux:table.cell>
+                            <div class="flex w-48 flex-col gap-2">
+                                @if ($has_alerts)
+                                    {{-- Alertes --}}
+                                    <div class="flex flex-col gap-2">
+                                        @foreach (array_merge($athlete->alerts) as $alert)
+                                            @if ($show_info_alerts || $alert['type'] !== 'info')
+                                                <div>
+                                                    <flux:badge class="whitespace-normal!"
+                                                        size="sm"
+                                                        inset="top bottom"
+                                                        color="{{ match ($alert['type']) {
+                                                            'danger' => 'rose',
+                                                            'warning' => 'amber',
+                                                            'info' => 'sky',
+                                                            'success' => 'emerald',
+                                                            default => 'zinc',
+                                                        } }}">
+                                                        {{ $alert['message'] }}
+                                                    </flux:badge>
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                @endif
 
-                            {{-- Cycle Menstruel --}}
-                            @if ($show_menstrual_cycle && $athlete->menstrual_cycle_info)
-                                @php
-                                    $info = $athlete->menstrual_cycle_info;
-                                    $borderColor = match ($info['phase']) {
-                                        'Aménorrhée', 'Oligoménorrhée' => 'border-rose-400',
-                                        'Potentiel retard ou cycle long' => 'border-amber-400',
-                                        'Inconnue' => 'border-sky-400',
-                                        default => 'border-emerald-400',
-                                    };
-                                    $bgColor = match ($info['phase']) {
-                                        'Aménorrhée', 'Oligoménorrhée' => 'bg-rose-50/50 dark:bg-rose-950/50',
-                                        'Potentiel retard ou cycle long' => 'bg-amber-50/50 dark:bg-amber-950/50',
-                                        'Inconnue' => 'bg-sky-50/50 dark:bg-sky-950/50',
-                                        default => 'bg-emerald-50/50 dark:bg-emerald-950/50',
-                                    };
-                                @endphp
-                                <div class="{{ $borderColor }} {{ $bgColor }} rounded-md border p-2">
-                                    <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
-                                    <flux:text class="text-xs whitespace-normal!">
-                                        Phase: <span class="font-medium">{{ $info['phase'] }}</span><br>
-                                        Jours dans la phase: <span class="font-medium">{{ intval($info['days_in_phase']) ?? 'n/a' }}</span><br>
-                                        Longueur moy. cycle: <span class="font-medium">{{ $info['cycle_length_avg'] ?? 'n/a' }} jours</span>
-                                        @if ($info['last_period_start'])
-                                            <br>Dernier J1: <span class="font-medium">{{ $info['last_period_start'] }}</span>
-                                        @endif
-                                        @if ($info['reason'])
-                                            <br><span class="whitespace-normal! text-xs italic text-zinc-500">{{ $info['reason'] }}</span>
-                                        @endif
-                                    </flux:text>
-                                </div>
-                            @endif
-                        </div>
-                    </flux:table.cell>
+                                {{-- Cycle Menstruel --}}
+                                @if ($show_menstrual_cycle && $athlete->menstrual_cycle_info)
+                                    @php
+                                        $info = $athlete->menstrual_cycle_info;
+                                        $borderColor = match ($info['phase']) {
+                                            'Aménorrhée', 'Oligoménorrhée' => 'border-rose-400',
+                                            'Potentiel retard ou cycle long' => 'border-amber-400',
+                                            'Inconnue' => 'border-sky-400',
+                                            default => 'border-emerald-400',
+                                        };
+                                        $bgColor = match ($info['phase']) {
+                                            'Aménorrhée', 'Oligoménorrhée' => 'bg-rose-50/50 dark:bg-rose-950/50',
+                                            'Potentiel retard ou cycle long' => 'bg-amber-50/50 dark:bg-amber-950/50',
+                                            'Inconnue' => 'bg-sky-50/50 dark:bg-sky-950/50',
+                                            default => 'bg-emerald-50/50 dark:bg-emerald-950/50',
+                                        };
+                                    @endphp
+                                    <div class="{{ $borderColor }} {{ $bgColor }} rounded-md border p-2">
+                                        <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
+                                        <flux:text class="whitespace-normal! text-xs">
+                                            Phase: <span class="font-medium">{{ $info['phase'] }}</span><br>
+                                            Jours dans la phase: <span class="font-medium">{{ intval($info['days_in_phase']) ?? 'n/a' }}</span><br>
+                                            Longueur moy. cycle: <span class="font-medium">{{ $info['cycle_length_avg'] ?? 'n/a' }} jours</span>
+                                            @if ($info['last_period_start'])
+                                                <br>Dernier J1: <span class="font-medium">{{ $info['last_period_start'] }}</span>
+                                            @endif
+                                            @if ($info['reason'])
+                                                <br><span class="whitespace-normal! text-xs italic text-zinc-500">{{ $info['reason'] }}</span>
+                                            @endif
+                                        </flux:text>
+                                    </div>
+                                @endif
+                            </div>
+                        </flux:table.cell>
                     @endif
 
                     {{-- Boucle pour les cellules de métriques (calculées + brutes) --}}
@@ -270,121 +269,123 @@
                         $allMetricsToDisplay = collect($calculated_metric_types)->merge(collect($dashboard_metric_types));
                     @endphp
 
-                    @if($show_chart_and_avg)
-                    @foreach ($allMetricsToDisplay as $metricInfo)
-                        @php
-                            $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
-                            $metricData = $allMetric[$metricInfo->value];
-                            $chartData = $metricData['chart_data'] ?? ['data' => []];
-                            $badge = $athlete->weekly_badges_by_metric[$metricInfo->value] ?? null;
-                        @endphp
-                        <flux:table.cell>
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center justify-between">
-                                    <flux:badge size="sm" color="{{ match(data_get($badge, 'status')) {
+                    @if ($show_chart_and_avg)
+                        @foreach ($allMetricsToDisplay as $metricInfo)
+                            @php
+                                $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
+                                $metricData = $allMetric[$metricInfo->value];
+                                $chartData = $metricData['chart_data'] ?? ['data' => []];
+                                $badge = $athlete->weekly_badges_by_metric[$metricInfo->value] ?? null;
+                            @endphp
+                            <flux:table.cell>
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <flux:badge title="{{ data_get($badge, 'summary') }}"
+                                            size="sm"
+                                            color="{{ match (data_get($badge, 'status')) {
                                                 'critical' => 'rose',
                                                 'warning' => 'amber',
                                                 'low_risk' => 'sky',
                                                 'optimal' => 'emerald',
                                                 default => $metricInfo->getColor(),
-                                            } }}"
-                                            title="{{ data_get($badge, 'summary') }}">
-                                        <span class="{{ $metricInfo->getIconifyTailwind() }} size-4"></span>
-                                    </flux:badge>
-                                    <flux:text class="ms-1 font-bold">
-                                        @if ($metricData['is_latest_daily_value_today'])
-                                            <span class="icon-[material-symbols-light--check-small] size-4 align-middle"></span>
-                                        @endif
-                                        {{ $metricData['latest_daily_value'] }}
-                                    </flux:text>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <flux:text class="text-xs text-zinc-600">Moy. hebdo:</flux:text>
-                                    <flux:text class="ms-1 font-medium">{{ $metricData['formatted_latest_weekly_average'] }}</flux:text>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
-                                    <flux:text class="ms-1 font-medium">{{ $metricData['formatted_average_7_days'] }}</flux:text>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
-                                    <flux:text class="ms-1 font-medium">{{ $metricData['formatted_average_30_days'] }}</flux:text>
-                                </div>
-                                @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
-                                    <div class="mt-1 flex items-center justify-between">
-                                        <flux:badge size="sm"
-                                            inset="top bottom"
-                                            color="{{ $metricData['trend_color'] }}">
-                                            <div class="flex items-center gap-1">
-                                                <x-filament::icon class="-mr-0.5 shrink-0 [:where(&)]:size-4" name="{{ $metricData['trend_icon'] }}" />
-                                                <span>{{ $metricData['trend_percentage'] }}</span>
-                                            </div>
+                                            } }}">
+                                            <span class="{{ $metricInfo->getIconifyTailwind() }} size-4"></span>
                                         </flux:badge>
+                                        <flux:text class="ms-1 font-bold">
+                                            @if ($metricData['is_latest_daily_value_today'])
+                                                <span class="icon-[material-symbols-light--check-small] size-4 align-middle"></span>
+                                            @endif
+                                            {{ $metricData['latest_daily_value'] }}
+                                        </flux:text>
                                     </div>
-                                @else
-                                    <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">n/a</span></flux:text>
-                                @endif
-                            </div>
-                            <div class="mt-2">
-                                @if ($chartData && !empty($chartData['data']) && count(array_filter($chartData['data'], fn($val) => $val !== null)) >= 2)
-                                    <flux:chart class="aspect-[3/1] h-10 w-full" :value="collect($chartData['data']) -> filter(fn($val) => $val !== null) -> take(14)">
-                                        <flux:chart.svg gutter="0">
-                                            <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
-                                        </flux:chart.svg>
-                                    </flux:chart>
-                                @else
-                                    <flux:card class="flex h-10 items-center border-2 border-dashed">
-                                        <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
-                                    </flux:card>
-                                @endif
-                            </div>
-                        </flux:table.cell>
-                    @endforeach
+                                    <div class="flex items-center justify-between">
+                                        <flux:text class="text-xs text-zinc-600">Moy. hebdo:</flux:text>
+                                        <flux:text class="ms-1 font-medium">{{ $metricData['formatted_latest_weekly_average'] }}</flux:text>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <flux:text class="text-xs text-zinc-600">Moy. 7j:</flux:text>
+                                        <flux:text class="ms-1 font-medium">{{ $metricData['formatted_average_7_days'] }}</flux:text>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <flux:text class="text-xs text-zinc-600">Moy. 30j:</flux:text>
+                                        <flux:text class="ms-1 font-medium">{{ $metricData['formatted_average_30_days'] }}</flux:text>
+                                    </div>
+                                    @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
+                                        <div class="mt-1 flex items-center justify-between">
+                                            <flux:badge size="sm"
+                                                inset="top bottom"
+                                                color="{{ $metricData['trend_color'] }}">
+                                                <div class="flex items-center gap-1">
+                                                    <x-filament::icon class="-mr-0.5 shrink-0 [:where(&)]:size-4" name="{{ $metricData['trend_icon'] }}" />
+                                                    <span>{{ $metricData['trend_percentage'] }}</span>
+                                                </div>
+                                            </flux:badge>
+                                        </div>
+                                    @else
+                                        <flux:text class="mt-1 text-xs font-semibold uppercase text-zinc-500">Tendance: <span class="text-zinc-500 dark:text-zinc-400" title="Tendance inconnue">n/a</span></flux:text>
+                                    @endif
+                                </div>
+                                <div class="mt-2">
+                                    @if ($chartData && !empty($chartData['data']) && count(array_filter($chartData['data'], fn($val) => $val !== null)) >= 2)
+                                        <flux:chart class="aspect-[3/1] h-10 w-full" :value="collect($chartData['data']) -> filter(fn($val) => $val !== null) -> take(14)">
+                                            <flux:chart.svg gutter="0">
+                                                <flux:chart.line class="text-zinc-500 dark:text-zinc-400" />
+                                            </flux:chart.svg>
+                                        </flux:chart>
+                                    @else
+                                        <flux:card class="flex h-10 items-center border-2 border-dashed">
+                                            <flux:text class="text-center text-sm text-zinc-500"> </flux:text>
+                                        </flux:card>
+                                    @endif
+                                </div>
+                            </flux:table.cell>
+                        @endforeach
                     @endif
 
-                    @if(! $show_chart_and_avg)
-                    @foreach ($allMetricsToDisplay as $metricInfo)
-                        @php
-                            $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
-                            $metricData = $allMetric[$metricInfo->value];
-                            $badge = $athlete->weekly_badges_by_metric[$metricInfo->value] ?? null;
-                        @endphp
-                        <flux:table.cell>
-                            <div>
-                                <flux:badge size="sm" color="{{ match(data_get($badge, 'status')) {
-                                                'critical' => 'rose',
-                                                'warning' => 'amber',
-                                                'low_risk' => 'sky',
-                                                'optimal' => 'emerald',
-                                                default => $metricInfo->getColor(),
-                                            } }}"
-                                            title="{{ data_get($badge, 'summary') }}">
-                                    <span class="{{ $metricInfo->getIconifyTailwind() }} size-4 me-1"></span>
-                                    {{ $metricData['latest_daily_value'] }}
-                                </flux:badge>
-                                @if ($metricData['is_latest_daily_value_today'])
-                                    <span class="icon-[material-symbols-light--check-small] size-4"></span>
-                                @endif
-                            </div>
-                            <div>
-                                @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
-                                    <div class="mt-2 flex items-center justify-between">
-                                        <flux:badge size="sm"
-                                            inset="top bottom"
-                                            color="{{ $metricData['trend_color'] }}"
-                                            style="background-color: transparent;">
-                                            <div class="flex items-center gap-1">
-                                                <x-filament::icon class="-mr-0.5 shrink-0 [:where(&)]:size-4" name="{{ $metricData['trend_icon'] }}" />
-                                                <span>{{ $metricData['trend_percentage'] }}</span>
-                                            </div>
-                                        </flux:badge>
-                                    </div>
-                                @else
-                                    <flux:text class="mt-2 text-xs font-semibold uppercase text-zinc-500"> </flux:text>
-                                @endif
-                            </div>
-                        </flux:table.cell>
-                    @endforeach
+                    @if (!$show_chart_and_avg)
+                        @foreach ($allMetricsToDisplay as $metricInfo)
+                            @php
+                                $allMetric = collect($athlete->dashboard_metrics_data)->merge($athlete->weekly_metrics_data);
+                                $metricData = $allMetric[$metricInfo->value];
+                                $badge = $athlete->weekly_badges_by_metric[$metricInfo->value] ?? null;
+                            @endphp
+                            <flux:table.cell>
+                                <div>
+                                    <flux:badge title="{{ data_get($badge, 'summary') }}"
+                                        size="sm"
+                                        color="{{ match (data_get($badge, 'status')) {
+                                            'critical' => 'rose',
+                                            'warning' => 'amber',
+                                            'low_risk' => 'sky',
+                                            'optimal' => 'emerald',
+                                            default => $metricInfo->getColor(),
+                                        } }}">
+                                        <span class="{{ $metricInfo->getIconifyTailwind() }} me-1 size-4"></span>
+                                        {{ $metricData['latest_daily_value'] }}
+                                    </flux:badge>
+                                    @if ($metricData['is_latest_daily_value_today'])
+                                        <span class="icon-[material-symbols-light--check-small] size-4"></span>
+                                    @endif
+                                </div>
+                                <div>
+                                    @if ($metricData['is_numerical'] && $metricData['trend_icon'] && $metricData['trend_percentage'] !== 'n/a')
+                                        <div class="mt-2 flex items-center justify-between">
+                                            <flux:badge style="background-color: transparent;"
+                                                size="sm"
+                                                inset="top bottom"
+                                                color="{{ $metricData['trend_color'] }}">
+                                                <div class="flex items-center gap-1">
+                                                    <x-filament::icon class="-mr-0.5 shrink-0 [:where(&)]:size-4" name="{{ $metricData['trend_icon'] }}" />
+                                                    <span>{{ $metricData['trend_percentage'] }}</span>
+                                                </div>
+                                            </flux:badge>
+                                        </div>
+                                    @else
+                                        <flux:text class="mt-2 text-xs font-semibold uppercase text-zinc-500"> </flux:text>
+                                    @endif
+                                </div>
+                            </flux:table.cell>
+                        @endforeach
                     @endif
 
                     <flux:table.cell class="text-center">
