@@ -252,6 +252,28 @@ class MetricService
             $badges[CalculatedMetricType::SBM->value] = ['status' => $status, 'summary' => $summary, 'value' => number_format($diffPercent, 0).'%'];
         }
 
+        // 3. Readiness
+        $readdinessData = $allMetrics->get(CalculatedMetricType::READINESS_SCORE->value);
+        if ($readdinessData && is_numeric($readdinessData['latest_daily_value'])) {
+            $readinessScore = $readdinessData['latest_daily_value'];
+            $status = 'neutral';
+            $summary = 'Score: Score non calculable.';
+            if ($readinessScore < 50) {
+                $status = 'critical';
+                $summary = 'Readiness: Risque accru de fatigue ou blessure.';
+            } elseif ($readinessScore < 70) {
+                $status = 'warning';
+                $summary = 'Readiness: Signes de fatigue ou de stress.';
+            } elseif ($readinessScore < 80) {
+                $status = 'low_risk';
+                $summary = 'Readiness: Rester attentif aux sensations et adapter si nécessaire.';
+            } elseif ($acwr <= 100) {
+                $status = 'optimal';
+                $summary = 'Readiness: Idéal';
+            }
+            $badges[CalculatedMetricType::READINESS_SCORE->value] = ['status' => $status, 'summary' => $summary, 'value' => number_format($acwr, 2)];
+        }
+
         return $badges;
     }
 
