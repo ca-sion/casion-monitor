@@ -271,7 +271,7 @@ class MetricService
                 $status = 'optimal';
                 $summary = 'Readiness: Idéal';
             }
-            $badges[CalculatedMetricType::READINESS_SCORE->value] = ['status' => $status, 'summary' => $summary, 'value' => number_format($acwr, 2)];
+            $badges[CalculatedMetricType::READINESS_SCORE->value] = ['status' => $status, 'summary' => $summary, 'value' => number_format($readinessScore, 0)];
         }
 
         return $badges;
