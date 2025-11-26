@@ -267,7 +267,7 @@ class MetricService
             } elseif ($readinessScore < 80) {
                 $status = 'low_risk';
                 $summary = 'Readiness: Rester attentif aux sensations et adapter si nécessaire.';
-            } elseif ($acwr <= 100) {
+            } elseif ($acwr < 100) {
                 $status = 'optimal';
                 $summary = 'Readiness: Idéal';
             }
