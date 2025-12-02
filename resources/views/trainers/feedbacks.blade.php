@@ -132,7 +132,7 @@
                                 {{-- Nom de l'athlète et lien vers son profil --}}
                                 <div class="mb-2">
                                     <flux:text class="text-sm font-semibold text-gray-700">
-                                        Pour : <a href="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete_id' => $feedback->athlete->id]) }}" class="text-indigo-600 hover:text-indigo-800 underline">
+                                        Pour : <a href="{{ route('trainers.athlete', ['hash' => $trainer->hash, 'athlete' => $feedback->athlete->id]) }}" class="text-indigo-600 hover:text-indigo-800 underline">
                                             {{ $feedback->athlete->first_name }} {{ $feedback->athlete->last_name }}
                                         </a>
                                     </flux:text>
@@ -178,7 +178,7 @@
                                 <div class="mt-4 text-right">
                                     <a href="{{ route('trainers.feedbacks.form', [
                                         'hash' => $trainer->hash,
-                                        'athlete' => $feedback->athlete->id,
+                                        'athlete_id' => $feedback->athlete->id,
                                         'd' => \Carbon\Carbon::parse($feedback->date)->format('Y-m-d')
                                     ]) }}"
                                     class="text-sm text-blue-600 hover:text-blue-800 underline flex items-center justify-end">
