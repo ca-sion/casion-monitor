@@ -29,7 +29,7 @@ class TrainerInjuryShow extends Component
     #[Layout('components.layouts.trainer')]
     public function render()
     {
-        return view('livewire.trainer.injury-show', [
+        return view('livewire.trainer-injury-show', [
             'injury' => $this->injury,
         ]);
     }

@@ -109,6 +109,6 @@ class TrainerInjuryForm extends Component implements HasForms
     #[Layout('components.layouts.trainer')]
     public function render()
     {
-        return view('livewire.trainer.injury-form');
+        return view('livewire.trainer-injury-form');
     }
 }

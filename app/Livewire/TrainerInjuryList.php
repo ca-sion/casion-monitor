@@ -41,7 +41,7 @@ class TrainerInjuryList extends Component
         $athleteIds = $this->trainer->athletes()->pluck('athletes.id');
         $injuries = Injury::whereIn('athlete_id', $athleteIds)->with('athlete')->latest('declaration_date')->paginate(10);
 
-        return view('livewire.trainer.injury-list', [
+        return view('livewire.trainer-injury-list', [
             'injuries' => $injuries,
             'statuses' => InjuryStatus::cases(),
         ]);

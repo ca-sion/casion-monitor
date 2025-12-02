@@ -2,14 +2,14 @@
     <div class="flex items-center justify-between">
         <div>
             <flux:heading size="xl">
-                {{ $injury->injury_type?->getPrefixForLocation() }} - {{ $injury->pain_location?->getLabel() }}
+                Blessure de {{ $injury->athlete->name }}
             </flux:heading>
             <flux:text class="mt-2 text-base">
-                Déclarée le {{ $injury->declaration_date->format('d.m.Y') }}
+                {{ $injury->injury_type?->getPrefixForLocation() }} - {{ $injury->pain_location?->getLabel() }} - Déclarée le {{ $injury->declaration_date->format('d.m.Y') }}
             </flux:text>
         </div>
         <flux:button
-            href="{{ route('athletes.injuries.index', ['hash' => $athlete->hash]) }}"
+            href="{{ route('trainers.injuries.index', ['hash' => $trainer->hash]) }}"
             variant="filled"
             icon="arrow-long-left"
         >
@@ -29,6 +29,10 @@
                     </div>
                 </x-slot:header>
                 <div class="grid grid-cols-1 gap-x-6 gap-y-6 text-gray-700 md:grid-cols-2">
+                    <div>
+                        <flux:text class="mb-1 block text-sm">Athlète</flux:text>
+                        <flux:text class="font-semibold">{{ $injury->athlete->name }}</flux:text>
+                    </div>
                     <div>
                         <flux:text class="mb-1 block text-sm">Date de Déclaration</flux:text>
                         <flux:text class="font-semibold">{{ $injury->declaration_date->format('d.m.Y') }}</flux:text>
@@ -65,7 +69,7 @@
                 <x-slot:header>
                     <div class="flex items-center">
                         <flux:icon name="chat-bubble-left-right" class="mr-2 h-6 w-6 text-primary-500"></flux:icon>
-                        <h2 class="text-xl font-bold">Détails de la déclaration</h2>
+                        <h2 class="text-xl font-bold">Détails fournis par l'athlète</h2>
                     </div>
                 </x-slot:header>
                 <div class="space-y-6">
@@ -98,7 +102,7 @@
 
                     <div>
                         <h3 class="mb-2 text-lg font-semibold text-gray-800">
-                            Mon ressenti
+                            Ressenti de l'athlète
                         </h3>
                         <div class="prose max-w-none rounded-lg border border-gray-200 bg-gray-50/50 p-4">
                             <p>{{ $injury->athlete_diagnosis_feeling ?? 'Non spécifié.' }}</p>
@@ -117,7 +121,7 @@
                                 <flux:icon name="plus-circle" class="mr-2 h-6 w-6 text-primary-500"></flux:icon>
                                 <h2 class="text-xl font-bold">Feedbacks Médicaux</h2>
                             </div>
-                            <flux:button href="{{ route('athletes.injuries.health-events.create', ['hash' => $athlete->hash, 'injury' => $injury->id]) }}" size="sm" variant="outline" icon="plus">
+                            <flux:button href="{{ route('trainers.injuries.health-events.create', ['hash' => $trainer->hash, 'injury' => $injury->id]) }}" size="sm" variant="outline" icon="plus">
                                 Ajouter
                             </flux:button>
                         </div>
@@ -126,7 +130,6 @@
                         <div class="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50/50 py-10 text-center">
                             <flux:icon name="document-magnifying-glass" class="mx-auto h-12 w-12 text-gray-400"></flux:icon>
                             <p class="mt-4 text-gray-600">Aucun feedback médical.</p>
-                            <p class="mt-2 text-sm text-gray-500">Ajoutez un feedback après une consultation.</p>
                         </div>
                     @else
                         <div class="space-y-6">
@@ -140,7 +143,7 @@
                                             <p class="text-sm text-gray-500">
                                                 <span class="font-medium">Date:</span> {{ $healthEvent->date->format('d.m.Y') }}
                                                 @if ($healthEvent->reported_by_athlete)
-                                                    <span class="mx-2">•</span> Rapporté par moi
+                                                    <span class="mx-2">•</span> Rapporté par l'athlète
                                                 @endif
                                                 @if ($healthEvent->trainer)
                                                     <span class="mx-2">•</span> Complété par {{ $healthEvent->trainer->name }}
