@@ -8,6 +8,7 @@ use Livewire\Component;
 use App\Enums\InjuryStatus;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
+use Filament\Notifications\Notification;
 
 class TrainerInjuryList extends Component
 {
@@ -28,7 +29,10 @@ class TrainerInjuryList extends Component
 
         $injury->update(['status' => InjuryStatus::from($status)]);
 
-        $this->dispatch('notify', ['message' => 'Statut de la blessure mis à jour.', 'type' => 'success']);
+        Notification::make()
+            ->title('Statut de la blessure mis à jour.')
+            ->success()
+            ->send();
     }
 
     #[Layout('components.layouts.trainer')]

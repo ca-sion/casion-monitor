@@ -5,11 +5,14 @@ namespace App\Models;
 use App\Enums\BodyPart;
 use App\Enums\InjuryType;
 use App\Enums\InjuryStatus;
+use App\Observers\InjuryObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 
+#[ObservedBy([InjuryObserver::class])]
 class Injury extends Model
 {
     use HasFactory;
