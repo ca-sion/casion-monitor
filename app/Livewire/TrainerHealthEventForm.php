@@ -67,6 +67,7 @@ class TrainerHealthEventForm extends Component implements HasActions, HasSchemas
 
         if (! $this->healthEvent) {
             $this->form->fill([
+                'athlete_id'          => $this->athlete?->id,
                 'injury_id'           => $this->injury?->id,
                 'date'                => $date,
                 'reported_by_athlete' => true,
@@ -179,10 +180,7 @@ class TrainerHealthEventForm extends Component implements HasActions, HasSchemas
                 ->send();
         }
 
-        $this->redirect(route('trainers.athlete', [
-            'hash'    => $this->trainer->hash,
-            'athlete' => $this->medicalFeedback->injury->athlete_id,
-        ]));
+        $this->redirect(url()->previous());
     }
 
     #[Layout('components.layouts.trainer')]
