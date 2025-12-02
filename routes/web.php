@@ -6,6 +6,9 @@ use App\Livewire\TrainerSettings;
 use App\Livewire\AthleteInjuryForm;
 use App\Livewire\AthleteInjuryList;
 use App\Livewire\AthleteInjuryShow;
+use App\Livewire\TrainerInjuryForm;
+use App\Livewire\TrainerInjuryList;
+use App\Livewire\TrainerInjuryShow;
 use App\Livewire\AthleteMonthlyForm;
 use App\Livewire\AthleteFeedbackForm;
 use App\Livewire\TrainerFeedbackForm;
@@ -38,6 +41,9 @@ Route::middleware([TrainerHashProtect::class])->group(function () {
     Route::get('/t/{hash}/feedbacks/form', TrainerFeedbackForm::class)->name('trainers.feedbacks.form');
     Route::get('/t/{hash}/health-events/create', TrainerHealthEventForm::class)->name('trainers.health-events.create');
     Route::get('/t/{hash}/health-events/{healthEvent}/edit', TrainerHealthEventForm::class)->name('trainers.health-events.edit');
+    Route::get('/t/{hash}/injuries', TrainerInjuryList::class)->name('trainers.injuries.index');
+    Route::get('/t/{hash}/injuries/create', TrainerInjuryForm::class)->name('trainers.injuries.create');
+    Route::get('/t/{hash}/injuries/{injury}', TrainerInjuryShow::class)->name('trainers.injuries.show');
     Route::get('/t/{hash}/injuries/{injury}/health-events/create', TrainerHealthEventForm::class)->name('trainers.injuries.health-events.create');
 });
 

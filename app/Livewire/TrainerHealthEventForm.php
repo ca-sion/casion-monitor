@@ -58,6 +58,7 @@ class TrainerHealthEventForm extends Component implements HasActions, HasSchemas
 
         if ($injury?->exists) {
             $this->injury = $injury;
+            $this->athlete = $injury->athlete;
             // Vérifier que la blessure appartient à l\'athlète connecté
             if ($injury->athlete_id !== $this->athlete->id) {
                 abort(403, 'Accès non autorisé à cette blessure.');
