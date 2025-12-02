@@ -53,7 +53,7 @@ class TrainerHealthEventForm extends Component implements HasActions, HasSchemas
         if ($healthEvent?->exists) {
             $this->athlete = $healthEvent->athlete;
             $this->healthEvent = $healthEvent;
-            $this->form->fill($this->healthEvent->toArray());
+            $this->form->fill($this->healthEvent->attributesToArray());
         }
 
         if ($injury?->exists) {
