@@ -94,10 +94,20 @@ class MetricCalculationService
     {
         $sbmSum = 0;
         $maxPossibleSbm = 0;
+        $sleepDuration = null;
 
         $sleepQuality = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY)?->value;
         if ($sleepQuality !== null) {
             $sbmSum += $sleepQuality;
+            $maxPossibleSbm += 10;
+        }
+
+        $durationMetric = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_DURATION);
+        if ($durationMetric !== null && $durationMetric->value !== null) {
+            $sleepDuration = (float) $durationMetric->value;
+            // Normalisation : 8h = 10 pts, 4h = 0 pts.
+            $sleepScore = max(0, min(10, ($sleepDuration - 4) * 2.5));
+            $sbmSum += $sleepScore;
             $maxPossibleSbm += 10;
         }
 
@@ -123,11 +133,22 @@ class MetricCalculationService
             return null;
         }
 
-        $smb = (($sbmSum / $maxPossibleSbm) * 10);
+        $sbm = (($sbmSum / $maxPossibleSbm) * 10);
 
-        $sbm = number_format($smb, 1);
+        // Application d'une réduction si le sommeil est insuffisant (< 8h)
+        if ($sleepDuration !== null) {
+            if ($sleepDuration < 5) {
+                $sbm -= 4;
+            } elseif ($sleepDuration < 6) {
+                $sbm -= 2;
+            } elseif ($sleepDuration < 7) {
+                $sbm -= 1;
+            } elseif ($sleepDuration < 8) {
+                $sbm -= 0.5;
+            }
+        }
 
-        return (float) $sbm;
+        return (float) number_format($sbm, 1);
     }
 
     /**
@@ -187,10 +208,20 @@ class MetricCalculationService
     {
         $sbmSum = 0;
         $maxPossibleSbm = 0;
+        $sleepDuration = null;
 
         $sleepQuality = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)->first()?->value;
         if ($sleepQuality !== null) {
             $sbmSum += $sleepQuality;
+            $maxPossibleSbm += 10;
+        }
+
+        $durationMetric = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_DURATION->value)->first();
+        if ($durationMetric !== null && $durationMetric->value !== null) {
+            $sleepDuration = (float) $durationMetric->value;
+            // Normalisation : 8h = 10 pts, 4h = 0 pts.
+            $sleepScore = max(0, min(10, ($sleepDuration - 4) * 2.5));
+            $sbmSum += $sleepScore;
             $maxPossibleSbm += 10;
         }
 
@@ -216,11 +247,22 @@ class MetricCalculationService
             return null;
         }
 
-        $smb = (($sbmSum / $maxPossibleSbm) * 10);
+        $sbm = (($sbmSum / $maxPossibleSbm) * 10);
 
-        $sbm = number_format($smb, 1);
+        // Application d'une réduction si le sommeil est insuffisant (< 8h)
+        if ($sleepDuration !== null) {
+            if ($sleepDuration < 5) {
+                $sbm -= 4;
+            } elseif ($sleepDuration < 6) {
+                $sbm -= 2;
+            } elseif ($sleepDuration < 7) {
+                $sbm -= 1;
+            } elseif ($sleepDuration < 8) {
+                $sbm -= 0.5;
+            }
+        }
 
-        return (float) $sbm;
+        return (float) number_format($sbm, 1);
     }
 
     /**

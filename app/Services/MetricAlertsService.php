@@ -42,6 +42,11 @@ class MetricAlertsService
             'z_score_high'           => 2.0,
             'z_score_low'            => -1.8,
         ],
+        MetricType::MORNING_SLEEP_DURATION->value => [
+            'z_score_high' => 2.0,
+            'z_score_low'  => -1.8,
+            'critical_low' => 6.0,
+        ],
         MetricType::MORNING_GENERAL_FATIGUE->value => [
             'persistent_high_7d_min'  => 7,
             'persistent_high_30d_min' => 6,
@@ -146,6 +151,7 @@ class MetricAlertsService
             MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
+            MetricType::MORNING_SLEEP_DURATION,
             MetricType::MORNING_BODY_WEIGHT_KG,
             MetricType::MORNING_PAIN,
             MetricType::MORNING_MOOD_WELLBEING,
@@ -161,6 +167,7 @@ class MetricAlertsService
         }
 
         $this->checkSleepQualityAlerts($athlete, $metrics, $alerts);
+        $this->checkSleepDurationAlerts($athlete, $metrics, $alerts);
         $this->checkFatigueAlerts($athlete, $metrics, $alerts);
         $this->checkPainAlerts($athlete, $metrics, $alerts);
 
@@ -338,6 +345,26 @@ class MetricAlertsService
 
             if ($averageSleep7Days !== null && $averageSleep7Days <= $sleepThresholds['persistent_low_7d_max'] && $averageSleep30Days <= $sleepThresholds['persistent_low_30d_max']) {
                 $this->addAlert($alerts, 'warning', 'Qualité de sommeil très faible persistante (moy. '.round($averageSleep7Days).'/10). Peut affecter la récupération et la performance.');
+            }
+        }
+    }
+
+    protected function checkSleepDurationAlerts(Athlete $athlete, Collection $metrics, array &$alerts): void
+    {
+        $sleepType = MetricType::MORNING_SLEEP_DURATION;
+        $sleepMetrics = $metrics->filter(fn ($m) => $m->metric_type === $sleepType);
+        $sleepThresholds = self::ALERT_THRESHOLDS[$sleepType->value];
+
+        $latestSleep = $sleepMetrics->sortByDesc('date')->first();
+
+        if ($latestSleep && $latestSleep->value !== null && $latestSleep->value < $sleepThresholds['critical_low']) {
+            $this->addAlert($alerts, 'danger', 'Durée de sommeil très faible ('.$latestSleep->value.'h). Un sommeil suffisant est crucial pour la récupération et la prévention des blessures.');
+        }
+
+        if ($sleepMetrics->count() > 5) {
+            $averageSleep7Days = $this->metricTrendsService->calculateMetricAveragesFromCollection($sleepMetrics, $sleepType)['averages']['Derniers 7 jours'] ?? null;
+            if ($averageSleep7Days !== null && $averageSleep7Days < 7.0) {
+                $this->addAlert($alerts, 'warning', 'Moyenne de sommeil faible sur les 7 derniers jours ('.number_format($averageSleep7Days, 1).'h). Viser 7-10h pour une récupération optimale.');
             }
         }
     }

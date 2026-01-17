@@ -141,7 +141,7 @@ class MetricService
                 $dashboardMetricTypes = $options['metric_types'] ?: [
                     MetricType::MORNING_HRV, MetricType::POST_SESSION_SESSION_LOAD,
                     MetricType::POST_SESSION_SUBJECTIVE_FATIGUE, MetricType::MORNING_GENERAL_FATIGUE,
-                    MetricType::MORNING_SLEEP_QUALITY, MetricType::MORNING_BODY_WEIGHT_KG,
+                    MetricType::MORNING_SLEEP_QUALITY, MetricType::MORNING_SLEEP_DURATION, MetricType::MORNING_BODY_WEIGHT_KG,
                 ];
                 $metricsDataForDashboard = [];
                 foreach ($dashboardMetricTypes as $metricType) {
