@@ -207,6 +207,7 @@ class MetricAlertsService
         if ($rec && $rec['status'] !== 'neutral') {
             $alertType = match ($rec['status']) {
                 'optimal' => 'success',
+                'moderate' => 'success',
                 'warning' => 'warning',
                 'critical' => 'danger',
                 'easy' => 'warning',

@@ -81,6 +81,9 @@ class MetricService
                 ->all();
         }
 
+        // Charger les données menstruelles si demandées par l'affichage OU par les alertes
+        $needsMenstrualData = $options['include_menstrual_cycle'] || in_array('menstrual', $options['include_alerts']);
+
         // Déterminer la date de début maximale pour la collecte des métriques brutes, en fonction de la période et des options d'inclusion.
         $maxStartDate = $this->determineMetricCollectionStartDate($options, $endDate);
 
@@ -92,7 +95,7 @@ class MetricService
             ->get()
             ->groupBy('athlete_id');
 
-        if ($options['include_menstrual_cycle']) {
+        if ($needsMenstrualData) {
             $menstrualMetricsByAthlete = Metric::whereIn('athlete_id', $athleteIds)
                 ->where('date', '>=', $endDate->copy()->subYears(2)->startOfDay())
                 ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD)
@@ -161,7 +164,7 @@ class MetricService
             }
 
             if (! empty($options['include_alerts'])) {
-                $athleteData['alerts'] = $this->metricAlertsService->getAlerts($athlete, $filteredAthleteMetrics, $athletePlanWeeks, $options);
+                $athleteData['alerts'] = $this->metricAlertsService->getAlerts($athlete, $athleteMetrics, $athletePlanWeeks, $options);
             }
 
             if ($options['include_menstrual_cycle'] && $athlete->gender->value === 'w') {
