@@ -696,12 +696,14 @@ class ReportService
         $longTermTrend = $this->menstrualService->getLongTermPhaseTrend($athlete, MetricType::MORNING_GENERAL_FATIGUE);
         $phaseRec = $this->menstrualService->getPhaseSpecificRecommendation($athlete, $currentPhase);
 
+        $daysInPhase = $currentPhaseSummary['days_in_phase'] ?? 0;
+
         $data = [
             'title'          => 'Analyse du Cycle Menstruel & Adaptation',
             'explanation'    => 'Cette analyse personnalisée révèle comment chaque phase de votre cycle influence votre corps. Le but et de vous aider à adapter votre charge d\'entraînement pour optimiser les performances et minimiser les risques. Ceci est votre clé pour une progression en harmonie avec votre biologie.',
             'status'         => 'neutral',
             'summary'        => "Vous êtes actuellement en phase : {$currentPhase}.",
-            'main_metric'    => ['value' => number_format($currentPhaseSummary['days_in_phase'], 0), 'label' => 'Jours dans la phase'],
+            'main_metric'    => ['value' => number_format($daysInPhase, 0), 'label' => 'Jours dans la phase'],
             'points'         => [],
             'recommendation' => null,
         ];

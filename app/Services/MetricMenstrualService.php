@@ -51,7 +51,7 @@ class MetricMenstrualService
         $daysSinceLastPeriod = null;
         $lastPeriodStart = null;
 
-        // Récupérer toutes les métriques J1 (Premier Jour des Règles) dans l'ordre chronologique inverse des deux dernière années
+        // Récupérer toutes les métriques J1 (Premier Jour des Règles) dans l'ordre chronologique inverse des deux dernières années
         if (is_null($allMetrics)) {
             $j1Metrics = $athlete->metrics()
                 ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
@@ -69,7 +69,7 @@ class MetricMenstrualService
         // Déterminer le dernier J1 et les jours depuis le dernier J1
         if ($j1Metrics->isNotEmpty()) {
             $lastPeriodStart = Carbon::parse($j1Metrics->first()->date);
-            $daysSinceLastPeriod = Carbon::now()->diffInDays($lastPeriodStart, true);
+            $daysSinceLastPeriod = Carbon::now()->startOfDay()->diffInDays($lastPeriodStart->startOfDay(), true);
         }
 
         // Calculer les longueurs des cycles précédents et la moyenne
@@ -86,8 +86,13 @@ class MetricMenstrualService
         // --- DÉDUCTION DE LA PHASE DU CYCLE MENSTRUEL PAR ORDRE DE PRIORITÉ ---
         // 1. Cas : Données insuffisantes pour établir un historique de cycle
         if ($j1Metrics->count() < 2 || $averageCycleLength === null) {
-            $phase = 'Inconnue';
-            $reason = 'Enregistrez au moins deux J1 pour calculer la durée moyenne de votre cycle.';
+            if ($j1Metrics->count() === 1 && $daysSinceLastPeriod <= 5) {
+                $phase = 'Menstruelle';
+                $reason = 'Phase de réinitialisation hormonale (basée sur votre seul J1 enregistré).';
+            } else {
+                $phase = 'Inconnue';
+                $reason = 'Enregistrez au moins deux J1 pour calculer la durée moyenne de votre cycle.';
+            }
         }
         // 2. Cas : Aménorrhée (absence prolongée de règles) - La condition la plus grave
         elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null && $daysSinceLastPeriod > ($averageCycleLength + $menstrualThresholds['amenorrhea_days_beyond_avg'])) {
@@ -106,27 +111,29 @@ class MetricMenstrualService
         }
         // 5. Cas : Déduction des phases normales du cycle (si aucune anomalie majeure n'est détectée)
         elseif ($daysSinceLastPeriod !== null && $averageCycleLength !== null) {
-            // Phase Menstruelle (généralement J1 à J5)
-            if ($daysSinceLastPeriod >= 1 && $daysSinceLastPeriod <= 5) {
+            $dayInCycle = $daysSinceLastPeriod + 1;
+
+            // Phase Menstruelle (Jour 1 à 5)
+            if ($dayInCycle <= 5) {
                 $phase = 'Menstruelle';
-                $reason = 'Phase de saignement.';
+                $reason = 'Phase de réinitialisation hormonale et gestion de l\'inflammation.';
             }
-            // Phase Folliculaire (post-menstruation, pré-ovulation)
-            elseif ($daysSinceLastPeriod > 5 && $daysSinceLastPeriod < ($averageCycleLength / 2)) {
+            // Phase Folliculaire (Jour 6 à Ovulation)
+            elseif ($dayInCycle > 5 && $dayInCycle < ($averageCycleLength / 2)) {
                 $phase = 'Folliculaire';
-                $reason = 'Développement des follicules ovariens.';
+                $reason = 'Fenêtre de force : Capacité de récupération et tolérance à l\'intensité optimales.';
             }
-            // Phase Ovulatoire (autour de l'ovulation estimée)
-            elseif ($daysSinceLastPeriod >= ($averageCycleLength / 2) && $daysSinceLastPeriod <= ($averageCycleLength / 2) + 2) {
-                $phase = 'Ovulatoire (estimée)';
-                $reason = 'Libération de l\'ovule.';
+            // Phase Ovulatoire (Fenêtre autour du milieu du cycle)
+            elseif ($dayInCycle >= ($averageCycleLength / 2) && $dayInCycle <= ($averageCycleLength / 2) + 2) {
+                $phase = 'Ovulatoire';
+                $reason = 'Pic hormonal : Performance maximale, mais vigilance accrue sur la stabilité articulaire.';
             }
-            // Phase Lutéale (post-ovulation, pré-prochaines règles)
-            elseif ($daysSinceLastPeriod > ($averageCycleLength / 2) + 2 && $daysSinceLastPeriod < $averageCycleLength) {
+            // Phase Lutéale (Post-ovulation jusqu'à fin du cycle)
+            elseif ($dayInCycle > ($averageCycleLength / 2) + 2) {
                 $phase = 'Lutéale';
-                $reason = 'Préparation de l\'utérus pour une éventuelle grossesse.';
+                $reason = 'Phase métabolique : Température centrale plus élevée et utilisation accrue des graisses.';
             }
-            // Cas de secours pour les phases normales si non couvertes
+            // Cas de secours
             else {
                 $phase = 'Inconnue';
                 $reason = 'Impossible de déterminer la phase du cycle normal avec les données actuelles.';
@@ -136,9 +143,10 @@ class MetricMenstrualService
         return [
             'phase'             => $phase,
             'reason'            => $reason,
-            'days_in_phase'     => $daysSinceLastPeriod,
+            'days_in_phase'     => $daysSinceLastPeriod !== null ? $daysSinceLastPeriod + 1 : null,
             'cycle_length_avg'  => $averageCycleLength !== null ? round($averageCycleLength) : null,
             'last_period_start' => $lastPeriodStart ? $lastPeriodStart->format('d.m.Y') : null,
+            'last_period_date'  => $lastPeriodStart,
         ];
     }
 
@@ -148,6 +156,7 @@ class MetricMenstrualService
      * @param  string  $phaseA  Phase de comparaison (ex: 'Lutéale')
      * @param  string  $phaseB  Phase de référence (ex: 'Folliculaire')
      * @param  int  $daysToAnalyze  Nombre de jours à analyser en arrière.
+     * @param  Carbon|null  $endDate  Date de fin de l'analyse (par défaut aujourd'hui).
      * @return array Résultat de la comparaison.
      */
     public function compareMetricAcrossPhases(
@@ -155,24 +164,38 @@ class MetricMenstrualService
         MetricType $metricType,
         string $phaseA = 'Lutéale',
         string $phaseB = 'Folliculaire',
-        int $daysToAnalyze = 90
+        int $daysToAnalyze = 90,
+        ?Carbon $endDate = null
     ): array {
-        // 1. Récupérer l'historique des cycles (J1) sur la dernière année pour être robuste
+        $endDate = $endDate ?? Carbon::now();
+        $startDate = $endDate->copy()->subDays($daysToAnalyze);
+
+        // 1. Récupérer l'historique des cycles (J1) sur une période large pour couvrir les métriques
         $j1Metrics = $athlete->metrics()
             ->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
             ->where('value', 1)
-            ->where('date', '>=', Carbon::now()->subYear())
+            ->where('date', '<=', $endDate)
             ->orderBy('date', 'asc')
             ->get();
 
-        if ($j1Metrics->count() < 2) {
-            return ['impact' => 'n/a', 'reason' => 'Données de cycle insuffisantes (moins de 2 J1).'];
+        if ($j1Metrics->isEmpty()) {
+            return ['impact' => 'n/a', 'reason' => 'Aucune donnée de cycle (J1) enregistrée.'];
         }
 
-        // 2. Récupérer les métriques à analyser sur la période voulue
+        // Calculer la moyenne du cycle pour les estimations
+        $averageCycleLength = 28; // Valeur par défaut
+        if ($j1Metrics->count() >= 2) {
+            $cycleLengths = [];
+            for ($i = 0; $i < $j1Metrics->count() - 1; $i++) {
+                $cycleLengths[] = Carbon::parse($j1Metrics[$i + 1]->date)->diffInDays(Carbon::parse($j1Metrics[$i]->date), true);
+            }
+            $averageCycleLength = array_sum($cycleLengths) / count($cycleLengths);
+        }
+
+        // 2. Récupérer les métriques à analyser
         $metricsToAnalyze = $athlete->metrics()
             ->where('metric_type', $metricType->value)
-            ->where('date', '>=', Carbon::now()->subDays($daysToAnalyze))
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->orderBy('date', 'asc')
             ->get();
 
@@ -188,16 +211,15 @@ class MetricMenstrualService
                 continue;
             }
 
-            // Trouver le J1 qui suit
+            // Trouver le J1 qui suit pour connaître la longueur réelle du cycle
             $nextJ1 = $j1Metrics->first(fn ($j1) => Carbon::parse($j1->date) > Carbon::parse($previousJ1->date));
-            if (! $nextJ1) {
-                continue;
-            }
+            $cycleLength = $nextJ1
+                ? Carbon::parse($nextJ1->date)->diffInDays(Carbon::parse($previousJ1->date))
+                : $averageCycleLength;
 
-            $cycleLength = Carbon::parse($nextJ1->date)->diffInDays(Carbon::parse($previousJ1->date));
-            $dayInCycle = $metricDate->diffInDays(Carbon::parse($previousJ1->date)) + 1;
+            $dayInCycle = $metricDate->startOfDay()->diffInDays(Carbon::parse($previousJ1->date)->startOfDay(), true) + 1;
 
-            // Déterminer la phase (logique simplifiée de `deduceMenstrualCyclePhase`)
+            // Déterminer la phase
             $phase = 'Inconnue';
             if ($dayInCycle <= 5) {
                 $phase = 'Menstruelle';
@@ -289,7 +311,7 @@ class MetricMenstrualService
             'change'      => round(abs($change), 1),
             'recent_diff' => round($diffRecent, 1),
             'past_diff'   => round($diffPast, 1),
-            'reason'      => $trend === 'worsening' ? "L'écart entre la phase {$phaseA} et la phase {$phaseB} s'est aggravé de ".round($change, 1).' points sur les 6 derniers mois.' : null,
+            'reason'      => $trend === 'worsening' ? "L'écart entre la phase {$phaseA} et la phase {$phaseB} s'est aggravé de ".round($change, 1).' points.' : null,
         ];
     }
 
@@ -316,25 +338,25 @@ class MetricMenstrualService
             case 'Menstruelle':
                 return [
                     'action'        => 'EASY (Technique/Mobilité)',
-                    'justification' => "L'objectif est la gestion de l'inflammation et de la douleur. C'est la phase idéale pour la récupération active et le travail technique à faible intensité (sauf si l'absence de douleur permet le 'GO').",
+                    'justification' => "L'objectif est la gestion de l'inflammation et de la douleur. C'est la phase idéale pour la récupération active et le travail technique à faible intensité.",
                     'status'        => 'easy',
                 ];
             case 'Folliculaire':
                 return [
                     'action'        => 'GO! (Force/Puissance)',
-                    'justification' => "Taux d'oestrogènes en hausse = tolérance à la douleur et récupération accrues. Idéal pour les charges lourdes, les séances de pic et les tests.",
+                    'justification' => "Taux d'oestrogènes en hausse = tolérance à la douleur et récupération accrues. Fenêtre idéale pour les charges lourdes, les séances de pic et les tests de force maximale.",
                     'status'        => 'optimal',
                 ];
-            case 'Ovulatoire (estimée)':
+            case 'Ovulatoire':
                 return [
                     'action'        => 'GO! (Endurance/Volume)',
-                    'justification' => "Pic de performance générale. Attention à la potentielle laxité ligamentaire due au pic hormonal : prudence sur les mouvements à haut risque d'entorse.",
+                    'justification' => "Pic de performance générale. Attention toutefois à la potentielle laxité ligamentaire accrue lors de mouvements brusques ou changements de direction.",
                     'status'        => 'optimal',
                 ];
             case 'Lutéale':
                 $action = $isLutealFatigueHigh ? 'EASY (Volume Réduit)' : 'MODERATE (Endurance)';
                 $justification = $isLutealFatigueHigh ?
-                    "Votre fatigue est significativement plus haute dans cette phase. **Il faut lever le pied** et réduire le volume d'entraînement de 10-20% pour minimiser le risque de surentraînement. Privilégiez l'endurance à l'intensité pure." :
+                    "Votre fatigue est significativement plus haute dans cette phase. **Il est conseillé de lever le pied** et de réduire le volume d'entraînement de 10-20% pour minimiser le risque de surentraînement." :
                     "Votre corps gère bien cette phase. Maintenez une charge modérée en privilégiant l'endurance. Si la fatigue du jour est élevée, basculez en 'EASY'.";
                 $status = $isLutealFatigueHigh ? 'warning' : 'moderate';
 
@@ -347,13 +369,13 @@ class MetricMenstrualService
             case 'Oligoménorrhée':
                 return [
                     'action'        => 'STOP! (Alerte Santé)',
-                    'justification' => "Arrêtez les charges d'entraînement intenses et consultez un spécialiste. Votre cycle indique un déséquilibre potentiellement lié à un déficit énergétique ou un stress physique excessif.",
+                    'justification' => "Arrêtez les charges d'entraînement intenses et consultez un spécialiste. Votre cycle indique un déséquilibre potentiellement lié à un déficit énergétique (RED-S) ou un stress excessif.",
                     'status'        => 'critical',
                 ];
             default:
                 return [
                     'action'        => 'EASY (Data Manquantes)',
-                    'justification' => 'Renseignez vos dates de J1 pour une analyse personnalisée et des recommandations fiables.',
+                    'justification' => 'Renseignez vos dates de règles (J1) pour une analyse personnalisée et des recommandations fiables.',
                     'status'        => 'neutral',
                 ];
         }

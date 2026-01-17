@@ -207,8 +207,8 @@ class MetricAlertsService
             $this->addAlert($alerts, 'danger', 'Cycle menstruel irrégulier (moy. '.$cycleData['cycle_length_avg'].' jours). Il est suggéré de consulter pour évaluer un potentiel RED-S.');
         }
         // 2. Absence de règles prolongée sans données de cycle moyen (cas où 'deduceMenstrualCyclePhase' n'aurait pas pu déterminer la phase 'Aménorrhée' faute de données de moyenne)
-        elseif ($cycleData['cycle_length_avg'] === null && $cycleData['last_period_start']) {
-            $daysSinceLastPeriod = Carbon::parse($cycleData['last_period_start'])->diffInDays(Carbon::now());
+        elseif ($cycleData['cycle_length_avg'] === null && isset($cycleData['last_period_date'])) {
+            $daysSinceLastPeriod = $cycleData['last_period_date']->startOfDay()->diffInDays(now()->startOfDay(), true);
             if ($daysSinceLastPeriod > $menstrualThresholds['prolonged_absence_no_avg']) {
                 $this->addAlert($alerts, 'danger', 'Absence de règles prolongée ('.$daysSinceLastPeriod.' jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative.');
             }
