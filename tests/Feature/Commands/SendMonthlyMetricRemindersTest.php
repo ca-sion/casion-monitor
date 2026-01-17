@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Athlete;
 use App\Models\Metric;
+use App\Models\Athlete;
 use App\Enums\MetricType;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\SendMonthlyMetricReminder;
@@ -17,10 +17,10 @@ it('sends monthly reminders to athletes who havent filled metrics', function () 
 
     // Fill metric for one athlete
     Metric::create([
-        'athlete_id' => $athleteWithMetric->id,
+        'athlete_id'  => $athleteWithMetric->id,
         'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
-        'date' => now()->startOfMonth(),
-        'value' => 70.0,
+        'date'        => now()->startOfMonth(),
+        'value'       => 70.0,
     ]);
 
     $this->artisan('reminders:monthly')

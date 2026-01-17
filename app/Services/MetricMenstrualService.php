@@ -350,7 +350,7 @@ class MetricMenstrualService
             case 'Ovulatoire':
                 return [
                     'action'        => 'GO',
-                    'justification' => "Pic de performance générale. Attention toutefois à la potentielle laxité ligamentaire accrue lors de mouvements brusques ou changements de direction.",
+                    'justification' => 'Pic de performance générale. Attention toutefois à la potentielle laxité ligamentaire accrue lors de mouvements brusques ou changements de direction.',
                     'status'        => 'optimal',
                 ];
             case 'Lutéale':

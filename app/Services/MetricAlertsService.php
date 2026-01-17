@@ -206,14 +206,14 @@ class MetricAlertsService
         $rec = $this->metricMenstrualService->getPhaseSpecificRecommendation($athlete, $cycleData['phase']);
         if ($rec && $rec['status'] !== 'neutral') {
             $alertType = match ($rec['status']) {
-                'optimal' => 'success',
+                'optimal'  => 'success',
                 'moderate' => 'success',
-                'warning' => 'warning',
+                'warning'  => 'warning',
                 'critical' => 'danger',
-                'easy' => 'warning',
-                default => 'info',
+                'easy'     => 'warning',
+                default    => 'info',
             };
-            $this->addAlert($alerts, $alertType, "Cycle : " . $rec['action'] . ".");
+            $this->addAlert($alerts, $alertType, 'Cycle : '.$rec['action'].'.');
         }
 
         // 2. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)

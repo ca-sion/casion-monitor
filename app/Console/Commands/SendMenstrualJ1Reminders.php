@@ -33,6 +33,7 @@ class SendMenstrualJ1Reminders extends Command
 
         if ($athletes->isEmpty()) {
             $this->info('No athletes need a menstrual reminder today.');
+
             return;
         }
 

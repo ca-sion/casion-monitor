@@ -14,9 +14,7 @@ class SendMenstrualJ1Reminder extends Notification
 {
     use Queueable;
 
-    public function __construct(protected array $status)
-    {
-    }
+    public function __construct(protected array $status) {}
 
     public function via(object $notifiable): array
     {
@@ -66,7 +64,7 @@ class SendMenstrualJ1Reminder extends Notification
     {
         return TelegramMessage::create()
             ->to($notifiable->routeNotificationFor('telegram'))
-            ->content('*'.$this->getTitle()."*\n" . $this->getBody($notifiable))
+            ->content('*'.$this->getTitle()."*\n".$this->getBody($notifiable))
             ->button('Saisir J1', $this->getUrl($notifiable));
     }
 }

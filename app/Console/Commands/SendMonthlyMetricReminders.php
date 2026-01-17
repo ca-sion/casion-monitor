@@ -33,13 +33,14 @@ class SendMonthlyMetricReminders extends Command
 
         if ($athletes->isEmpty()) {
             $this->info('All athletes have filled their monthly metrics.');
+
             return;
         }
 
         $count = 0;
         foreach ($athletes as $athlete) {
             if ($athlete->pushSubscriptions()->exists() || $athlete->telegram_chat_id) {
-                $athlete->notify(new SendMonthlyMetricReminder());
+                $athlete->notify(new SendMonthlyMetricReminder);
                 $count++;
             }
         }

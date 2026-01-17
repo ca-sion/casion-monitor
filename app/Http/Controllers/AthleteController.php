@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 class AthleteController extends Controller
 {
     protected MetricService $metricService;
+
     protected ReminderService $reminderService;
 
     public function __construct(MetricService $metricService, ReminderService $reminderService)

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\Athlete;
+use Tests\TestCase;
 use App\Models\Metric;
+use App\Models\Athlete;
 use App\Enums\MetricType;
 use Illuminate\Support\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class DashboardMenstrualTest extends TestCase
 {
@@ -29,16 +29,16 @@ class DashboardMenstrualTest extends TestCase
 
         // Setup a regular cycle
         Metric::create([
-            'athlete_id' => $this->athlete->id,
+            'athlete_id'  => $this->athlete->id,
             'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD,
-            'date' => '2026-01-15',
-            'value' => 1,
+            'date'        => '2026-01-15',
+            'value'       => 1,
         ]);
         Metric::create([
-            'athlete_id' => $this->athlete->id,
+            'athlete_id'  => $this->athlete->id,
             'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD,
-            'date' => '2025-12-18',
-            'value' => 1,
+            'date'        => '2025-12-18',
+            'value'       => 1,
         ]);
 
         $response = $this->actingAs($this->athlete, 'athlete')
@@ -71,28 +71,28 @@ class DashboardMenstrualTest extends TestCase
 
         // Suppose ReminderService says we need a reminder
         // The dashboard check is: if ($menstrualReminder ?? false)
-        
+
         // To trigger it via real service, we'd need to set up the data.
         // Let's see ReminderService::getMenstrualReminderStatus
-        
+
         // Actually, let's just test that IF it's there, it shows up.
         // But better test the real logic.
-        
+
         // ReminderService::getMenstrualReminderStatus returns an array with 'message', 'color', etc.
         // It shows up if we are close to the next period.
-        
+
         // Last J1: 2025-12-23 (28 days ago)
         Metric::create([
-            'athlete_id' => $this->athlete->id,
+            'athlete_id'  => $this->athlete->id,
             'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD,
-            'date' => '2025-12-23',
-            'value' => 1,
+            'date'        => '2025-12-23',
+            'value'       => 1,
         ]);
         Metric::create([
-            'athlete_id' => $this->athlete->id,
+            'athlete_id'  => $this->athlete->id,
             'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD,
-            'date' => '2025-11-25',
-            'value' => 1,
+            'date'        => '2025-11-25',
+            'value'       => 1,
         ]);
 
         $response = $this->actingAs($this->athlete, 'athlete')

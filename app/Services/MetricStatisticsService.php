@@ -19,10 +19,10 @@ class MetricStatisticsService
         $maxPossibleSbm = 0;
 
         $metrics = [
-            MetricType::MORNING_SLEEP_QUALITY->value => 'positive',
+            MetricType::MORNING_SLEEP_QUALITY->value   => 'positive',
             MetricType::MORNING_GENERAL_FATIGUE->value => 'negative',
-            MetricType::MORNING_PAIN->value => 'negative',
-            MetricType::MORNING_MOOD_WELLBEING->value => 'positive',
+            MetricType::MORNING_PAIN->value            => 'negative',
+            MetricType::MORNING_MOOD_WELLBEING->value  => 'positive',
         ];
 
         foreach ($metrics as $type => $polarity) {
@@ -48,10 +48,10 @@ class MetricStatisticsService
     public function calculatePeriodStartDate(string $period): Carbon
     {
         return match ($period) {
-            'last_7_days' => now()->subDays(7)->startOfDay(),
+            'last_7_days'  => now()->subDays(7)->startOfDay(),
             'last_30_days' => now()->subDays(30)->startOfDay(),
-            'all_time' => Carbon::createFromTimestamp(0),
-            default => now()->subDays(7)->startOfDay(),
+            'all_time'     => Carbon::createFromTimestamp(0),
+            default        => now()->subDays(7)->startOfDay(),
         };
     }
 
@@ -87,11 +87,12 @@ class MetricStatisticsService
             MetricType::MORNING_PAIN,
             MetricType::MORNING_MOOD_WELLBEING,
         ])) {
-            return is_numeric($value) ? round($value, 0) . '/10' : (string) $value;
+            return is_numeric($value) ? round($value, 0).'/10' : (string) $value;
         }
 
         $unit = $type->getUnit();
-        return $value . ($unit ? ' ' . $unit : '');
+
+        return $value.($unit ? ' '.$unit : '');
     }
 
     /**
@@ -101,17 +102,17 @@ class MetricStatisticsService
     {
         $sorted = $metrics->sortBy('date');
 
-        $labels = $sorted->pluck('date')->map(fn($d) => $d instanceof Carbon ? $d->toDateString() : $d)->values()->toArray();
-        $data = $sorted->pluck('value')->map(fn($v) => (float) $v)->values()->toArray();
+        $labels = $sorted->pluck('date')->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : $d)->values()->toArray();
+        $data = $sorted->pluck('value')->map(fn ($v) => (float) $v)->values()->toArray();
 
         return [
-            'labels' => $labels,
-            'data' => $data,
-            'labels_and_data' => $sorted->map(fn($m) => [
-                'date' => $m->date instanceof Carbon ? $m->date->toDateString() : $m->date,
+            'labels'          => $labels,
+            'data'            => $data,
+            'labels_and_data' => $sorted->map(fn ($m) => [
+                'date'  => $m->date instanceof Carbon ? $m->date->toDateString() : $m->date,
                 'value' => (float) $m->value,
             ])->values()->toArray(),
-            'unit' => $type->getUnit(),
+            'unit'  => $type->getUnit(),
             'label' => $type->getLabel(),
         ];
     }
@@ -121,8 +122,8 @@ class MetricStatisticsService
      */
     public function calculateGenericNumericTrend(Collection $dataCollection): array
     {
-        $numericData = $dataCollection->filter(fn($item) => is_numeric($item->value ?? null))
-            ->sortBy(fn($item) => $item->date);
+        $numericData = $dataCollection->filter(fn ($item) => is_numeric($item->value ?? null))
+            ->sortBy(fn ($item) => $item->date);
 
         if ($numericData->count() < 2) {
             return ['trend' => 'n/a', 'change' => null];
@@ -139,7 +140,7 @@ class MetricStatisticsService
         $change = $firstValue != 0 ? (($lastValue - $firstValue) / abs($firstValue)) * 100 : 100;
 
         return [
-            'trend' => $trend,
+            'trend'  => $trend,
             'change' => round($change, 1),
         ];
     }

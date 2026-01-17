@@ -1,11 +1,10 @@
 <?php
 
-use App\Models\Athlete;
 use App\Models\Metric;
+use App\Models\Athlete;
 use App\Enums\MetricType;
-use App\Services\MetricAlertsService;
-use App\ValueObjects\Gender;
 use Illuminate\Support\Carbon;
+use App\Services\MetricAlertsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -16,19 +15,19 @@ beforeEach(function () {
 
 it('does not show menstrual alerts for men', function () {
     $athlete = Athlete::factory()->create(['gender' => 'm']);
-    
+
     // Last J1 100 days ago (would be amenorrhea for a woman)
     Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD->value,
-        'date' => now()->subDays(100),
-        'value' => 1,
+        'date'        => now()->subDays(100),
+        'value'       => 1,
     ]);
     Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD->value,
-        'date' => now()->subDays(128),
-        'value' => 1,
+        'date'        => now()->subDays(128),
+        'value'       => 1,
     ]);
 
     $alerts = $this->alertsService->getAlerts($athlete, collect(), collect(), ['include_alerts' => ['menstrual']]);
@@ -38,21 +37,21 @@ it('does not show menstrual alerts for men', function () {
 
 it('shows amenorrhea alert for women when applicable', function () {
     $athlete = Athlete::factory()->create(['gender' => 'w']);
-    
+
     Carbon::setTestNow('2026-01-20');
-    
+
     // Avg cycle 28, last J1 100 days ago
     $j1_1 = Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD->value,
-        'date' => Carbon::now()->subDays(100),
-        'value' => 1,
+        'date'        => Carbon::now()->subDays(100),
+        'value'       => 1,
     ]);
     $j1_2 = Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD->value,
-        'date' => Carbon::now()->subDays(128),
-        'value' => 1,
+        'date'        => Carbon::now()->subDays(128),
+        'value'       => 1,
     ]);
 
     $metrics = collect([$j1_1, $j1_2]);
@@ -75,24 +74,24 @@ it('shows phase specific fatigue correlation alert', function () {
 
     // Phase Menstruelle (Day 3)
     $j1_1 = Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD->value,
-        'date' => '2026-01-15',
-        'value' => 1,
+        'date'        => '2026-01-15',
+        'value'       => 1,
     ]);
     $j1_2 = Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD->value,
-        'date' => '2025-12-18',
-        'value' => 1,
+        'date'        => '2025-12-18',
+        'value'       => 1,
     ]);
 
     // High fatigue during menstrual phase (7/10)
     $fatigue = Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_GENERAL_FATIGUE->value,
-        'date' => '2026-01-17',
-        'value' => 8,
+        'date'        => '2026-01-17',
+        'value'       => 8,
     ]);
 
     $metrics = collect([$j1_1, $j1_2, $fatigue]);

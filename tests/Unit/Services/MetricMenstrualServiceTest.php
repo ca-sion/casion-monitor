@@ -2,25 +2,28 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Athlete;
-use App\Models\Metric;
-use App\Enums\MetricType;
-use App\Services\MetricMenstrualService;
-use App\Services\MetricCalculationService;
-use App\Services\MetricTrendsService;
-use App\Services\MetricReadinessService;
-use Illuminate\Support\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use App\Models\Metric;
+use App\Models\Athlete;
+use App\Enums\MetricType;
+use Illuminate\Support\Carbon;
+use App\Services\MetricTrendsService;
+use PHPUnit\Framework\Attributes\Test;
+use App\Services\MetricMenstrualService;
+use App\Services\MetricReadinessService;
+use App\Services\MetricCalculationService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class MetricMenstrualServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     protected MetricMenstrualService $service;
+
     protected $calculationService;
+
     protected $trendsService;
+
     protected $readinessService;
 
     protected function setUp(): void
@@ -186,10 +189,10 @@ class MetricMenstrualServiceTest extends TestCase
     private function createJ1(Athlete $athlete, string $date): void
     {
         Metric::create([
-            'athlete_id' => $athlete->id,
+            'athlete_id'  => $athlete->id,
             'metric_type' => MetricType::MORNING_FIRST_DAY_PERIOD->value,
-            'date' => $date,
-            'value' => 1,
+            'date'        => $date,
+            'value'       => 1,
         ]);
     }
 }

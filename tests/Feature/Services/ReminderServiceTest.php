@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Athlete;
 use App\Models\Metric;
+use App\Models\Athlete;
 use App\Enums\MetricType;
-use App\Services\ReminderService;
 use Illuminate\Support\Carbon;
+use App\Services\ReminderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -20,10 +20,10 @@ it('correctly identifies if monthly metric is filled', function () {
     expect($this->reminderService->hasFilledMonthlyMetric($athlete, $date))->toBeFalse();
 
     Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
-        'date' => $date->copy()->startOfMonth(),
-        'value' => 75.5,
+        'date'        => $date->copy()->startOfMonth(),
+        'value'       => 75.5,
     ]);
 
     expect($this->reminderService->hasFilledMonthlyMetric($athlete, $date))->toBeTrue();
@@ -31,15 +31,15 @@ it('correctly identifies if monthly metric is filled', function () {
 
 it('should show monthly metric alert when metric is missing', function () {
     $athlete = Athlete::factory()->create();
-    
+
     // For current month
     expect($this->reminderService->shouldShowMonthlyMetricAlert($athlete))->toBeTrue();
 
     Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
-        'date' => now()->startOfMonth(),
-        'value' => 75.5,
+        'date'        => now()->startOfMonth(),
+        'value'       => 75.5,
     ]);
 
     expect($this->reminderService->shouldShowMonthlyMetricAlert($athlete))->toBeFalse();
@@ -48,7 +48,7 @@ it('should show monthly metric alert when metric is missing', function () {
 it('gets athletes needing monthly reminder', function () {
     $athlete1 = Athlete::factory()->create(['first_name' => 'Athlete 1']);
     $athlete2 = Athlete::factory()->create(['first_name' => 'Athlete 2']);
-    
+
     $date = Carbon::parse('2025-02-15');
 
     // Initially both need reminder
@@ -57,10 +57,10 @@ it('gets athletes needing monthly reminder', function () {
 
     // Fill for athlete 1
     Metric::create([
-        'athlete_id' => $athlete1->id,
+        'athlete_id'  => $athlete1->id,
         'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
-        'date' => $date->copy()->startOfMonth(),
-        'value' => 70.0,
+        'date'        => $date->copy()->startOfMonth(),
+        'value'       => 70.0,
     ]);
 
     $needing = $this->reminderService->getAthletesNeedingMonthlyReminder($date);

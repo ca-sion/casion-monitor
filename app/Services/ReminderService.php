@@ -70,9 +70,9 @@ class ReminderService
         // Cas 1 : Données manquantes pour établir une prédiction
         if ($phase === 'Inconnue' && str_contains($cycleData['reason'], 'deux J1')) {
             return [
-                'type' => 'MISSING_DATA',
+                'type'    => 'MISSING_DATA',
                 'message' => 'Configurez votre suivi de cycle pour bénéficier des conseils d\'entraînement personnalisés.',
-                'color' => 'sky'
+                'color'   => 'sky',
             ];
         }
 
@@ -84,18 +84,18 @@ class ReminderService
         // Cas 3 : Retard ou oubli de saisie
         if ($phase === 'Potentiel retard ou cycle long') {
             return [
-                'type' => 'OVERDUE',
+                'type'    => 'OVERDUE',
                 'message' => 'Votre J1 semble avoir du retard. N\'oubliez pas de le saisir dès qu\'il arrive.',
-                'color' => 'amber'
+                'color'   => 'amber',
             ];
         }
 
         // Cas 4 : Anticipation (Fenêtre J1 proche)
         if ($avg && $daysInPhase >= ($avg - 2)) {
             return [
-                'type' => 'EXPECTED',
+                'type'    => 'EXPECTED',
                 'message' => 'Votre nouveau cycle devrait bientôt commencer. Prête à noter votre J1 ?',
-                'color' => 'purple'
+                'color'   => 'purple',
             ];
         }
 
@@ -109,6 +109,7 @@ class ReminderService
     {
         return Athlete::where('gender', 'w')->get()->filter(function ($athlete) {
             $status = $this->getMenstrualReminderStatus($athlete);
+
             // On ne notifie que pour le retard ou le jour prévu
             return $status && in_array($status['type'], ['OVERDUE', 'EXPECTED']);
         });

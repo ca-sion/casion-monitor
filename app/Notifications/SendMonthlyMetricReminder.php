@@ -83,7 +83,7 @@ class SendMonthlyMetricReminder extends Notification
     {
         return TelegramMessage::create()
             ->to($notifiable->routeNotificationFor('telegram'))
-            ->content('*'.$this->getTitle($notifiable)."*\n" . $this->getBody($notifiable))
+            ->content('*'.$this->getTitle($notifiable)."*\n".$this->getBody($notifiable))
             ->button('Saisir mon poids', $this->getUrl($notifiable));
     }
 }
