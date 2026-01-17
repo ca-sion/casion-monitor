@@ -245,7 +245,15 @@
                                             $phase === 'Lutéale' => 'orange',
                                             default => 'zinc',
                                         };
+                                        // border-rose-400 bg-rose-50/50 dark:bg-rose-950/30
+                                        // border-amber-400 bg-amber-50/50 dark:bg-amber-950/30
+                                        // border-purple-400 bg-purple-50/50 dark:bg-purple-950/30
+                                        // border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30
+                                        // border-sky-400 bg-sky-50/50 dark:bg-sky-950/30
+                                        // border-orange-400 bg-orange-50/50 dark:bg-orange-950/30
+                                        // border-zinc-400 bg-zinc-50/50 dark:bg-zinc-950/30
                                     @endphp
+                                    
                                     <div class="border-{{ $color }}-400 bg-{{ $color }}-50/50 dark:bg-{{ $color }}-950/30 rounded-md border p-2">
                                         <flux:text class="text-sm font-semibold">Cycle menstruel:</flux:text>
                                         <flux:text class="whitespace-normal! text-xs">

@@ -33,6 +33,7 @@ class AthleteController extends Controller
         }
 
         $showMonthlyMetricAlert = $this->reminderService->shouldShowMonthlyMetricAlert($athlete);
+        $menstrualReminder = $this->reminderService->getMenstrualReminderStatus($athlete);
 
         $period = $request->input('period', 'last_30_days');
 
@@ -164,6 +165,7 @@ class AthleteController extends Controller
             'today_feedbacks'               => $todaysFeedbacks,
             'reports'                       => $reports,
             'showMonthlyMetricAlert'        => $showMonthlyMetricAlert,
+            'menstrualReminder'             => $menstrualReminder,
         ];
 
         if ($request->expectsJson()) {

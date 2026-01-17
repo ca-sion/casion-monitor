@@ -16,6 +16,19 @@
         </div>
     @endif
 
+    @if ($menstrualReminder ?? false)
+        <div class="mb-4">
+            <flux:callout :color="$menstrualReminder['color']" icon="information-circle" inline>
+                <flux:callout.heading>{{ $menstrualReminder['message'] }}</flux:callout.heading>
+                <x-slot name="actions">
+                    <flux:button :href="route('athletes.menstrual-cycle.form', ['hash' => $athlete->hash])">
+                        Noter mon J1
+                    </flux:button>
+                </x-slot>
+            </flux:callout>
+        </div>
+    @endif
+
     {{-- Raccourcis rapides --}}
     <div class="my-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {{-- Ajouter des métriques quotidiennes --}}
@@ -162,6 +175,14 @@
 
                 $rec = $menstrualCycleInfo['recommendation'] ?? null;
             @endphp
+
+            {{-- border-rose-400! dark:border-rose-800!
+            border-amber-400! dark:border-amber-800!
+            border-purple-400! dark:border-purple-800!
+            border-emerald-400! dark:border-emerald-800!
+            border-sky-400! dark:border-sky-800!
+            border-orange-400! dark:border-orange-800!
+            border-zinc-400! dark:border-zinc-800! --}}
 
             <flux:card class="p-0! overflow-hidden border-{{ $color }}-400! dark:border-{{ $color }}-800!">
                 <div class="bg-{{ $color }}-50 dark:bg-{{ $color }}-950/30 p-4 border-b border-{{ $color }}-100 dark:border-{{ $color }}-900/50">

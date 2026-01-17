@@ -357,7 +357,7 @@ class MetricMenstrualService
                 $action = $isLutealFatigueHigh ? 'Tranquille' : 'Modéré';
                 $justification = $isLutealFatigueHigh ?
                     "Votre fatigue est significativement plus haute dans cette phase. **Il est conseillé de lever le pied** et de réduire le volume d'entraînement de 10-20% pour minimiser le risque de surentraînement." :
-                    "Votre corps gère bien cette phase. Maintenez une charge modérée en privilégiant l'endurance. Si la fatigue du jour est élevée, basculez en 'EASY'.";
+                    "Votre corps gère bien cette phase. Maintenez une charge modérée en privilégiant l'endurance. Si la fatigue du jour est élevée, rester tranquille.";
                 $status = $isLutealFatigueHigh ? 'warning' : 'moderate';
 
                 return [

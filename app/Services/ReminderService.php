@@ -9,6 +9,10 @@ use Illuminate\Support\Carbon;
 
 class ReminderService
 {
+    public function __construct(
+        protected MetricMenstrualService $menstrualService
+    ) {}
+
     /**
      * Vérifie si l'athlète a rempli sa métrique mensuelle pour le mois donné.
      * La métrique de référence est le poids corporel (MORNING_BODY_WEIGHT_KG).
@@ -46,5 +50,67 @@ class ReminderService
                 ->whereMonth('date', $date->month)
                 ->whereYear('date', $date->year);
         })->get();
+    }
+
+    /**
+     * Détermine le statut de rappel du cycle menstruel pour une athlète.
+     * Retourne un tableau avec le type de rappel et des infos complémentaires.
+     */
+    public function getMenstrualReminderStatus(Athlete $athlete): ?array
+    {
+        if ($athlete->gender->value !== 'w') {
+            return null;
+        }
+
+        $cycleData = $this->menstrualService->deduceMenstrualCyclePhase($athlete);
+        $phase = $cycleData['phase'];
+        $daysInPhase = $cycleData['days_in_phase'];
+        $avg = $cycleData['cycle_length_avg'];
+
+        // Cas 1 : Données manquantes pour établir une prédiction
+        if ($phase === 'Inconnue' && str_contains($cycleData['reason'], 'deux J1')) {
+            return [
+                'type' => 'MISSING_DATA',
+                'message' => 'Configurez votre suivi de cycle pour bénéficier des conseils d\'entraînement personnalisés.',
+                'color' => 'sky'
+            ];
+        }
+
+        // Cas 2 : Déjà en cours de règles (ou J1 saisi récemment) -> Pas de rappel
+        if ($phase === 'Menstruelle') {
+            return null;
+        }
+
+        // Cas 3 : Retard ou oubli de saisie
+        if ($phase === 'Potentiel retard ou cycle long') {
+            return [
+                'type' => 'OVERDUE',
+                'message' => 'Votre J1 semble avoir du retard. N\'oubliez pas de le saisir dès qu\'il arrive.',
+                'color' => 'amber'
+            ];
+        }
+
+        // Cas 4 : Anticipation (Fenêtre J1 proche)
+        if ($avg && $daysInPhase >= ($avg - 2)) {
+            return [
+                'type' => 'EXPECTED',
+                'message' => 'Votre nouveau cycle devrait bientôt commencer. Prête à noter votre J1 ?',
+                'color' => 'purple'
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Récupère les athlètes qui doivent recevoir une notification de rappel J1 aujourd'hui.
+     */
+    public function getAthletesNeedingMenstrualNotification(): \Illuminate\Support\Collection
+    {
+        return Athlete::where('gender', 'w')->get()->filter(function ($athlete) {
+            $status = $this->getMenstrualReminderStatus($athlete);
+            // On ne notifie que pour le retard ou le jour prévu
+            return $status && in_array($status['type'], ['OVERDUE', 'EXPECTED']);
+        });
     }
 }
