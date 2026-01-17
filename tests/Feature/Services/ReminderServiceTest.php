@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->reminderService = new ReminderService();
+    $this->reminderService = app(ReminderService::class);
 });
 
 it('correctly identifies if monthly metric is filled', function () {
