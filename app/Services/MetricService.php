@@ -165,7 +165,9 @@ class MetricService
             }
 
             if ($options['include_menstrual_cycle'] && $athlete->gender->value === 'w') {
-                $athleteData['menstrual_cycle_info'] = $this->metricMenstrualService->deduceMenstrualCyclePhase($athlete, $athleteMetrics);
+                $cycleData = $this->metricMenstrualService->deduceMenstrualCyclePhase($athlete, $athleteMetrics);
+                $cycleData['recommendation'] = $this->metricMenstrualService->getPhaseSpecificRecommendation($athlete, $cycleData['phase']);
+                $athleteData['menstrual_cycle_info'] = $cycleData;
             }
 
             if ($options['include_readiness_status']) {

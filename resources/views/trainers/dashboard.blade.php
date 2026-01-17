@@ -232,30 +232,32 @@
                                 @if ($show_menstrual_cycle && $athlete->menstrual_cycle_info)
                                     @php
                                         $info = $athlete->menstrual_cycle_info;
-                                        $borderColor = match ($info['phase']) {
-                                            'Aménorrhée', 'Oligoménorrhée' => 'border-rose-400',
-                                            'Potentiel retard ou cycle long' => 'border-amber-400',
-                                            'Inconnue' => 'border-sky-400',
-                                            default => 'border-emerald-400',
-                                        };
-                                        $bgColor = match ($info['phase']) {
-                                            'Aménorrhée', 'Oligoménorrhée' => 'bg-rose-50/50 dark:bg-rose-950/50',
-                                            'Potentiel retard ou cycle long' => 'bg-amber-50/50 dark:bg-amber-950/50',
-                                            'Inconnue' => 'bg-sky-50/50 dark:bg-sky-950/50',
-                                            default => 'bg-emerald-50/50 dark:bg-emerald-950/50',
+                                        $phase = $info['phase'];
+                                        $isCritical = in_array($phase, ['Aménorrhée', 'Oligoménorrhée']);
+                                        $isWarning = $phase === 'Potentiel retard ou cycle long' || ($info['recommendation']['status'] ?? '') === 'warning';
+                                        
+                                        $color = match (true) {
+                                            $isCritical => 'rose',
+                                            $isWarning => 'amber',
+                                            $phase === 'Menstruelle' => 'purple',
+                                            $phase === 'Folliculaire' => 'emerald',
+                                            $phase === 'Ovulatoire' => 'sky',
+                                            $phase === 'Lutéale' => 'orange',
+                                            default => 'zinc',
                                         };
                                     @endphp
-                                    <div class="{{ $borderColor }} {{ $bgColor }} rounded-md border p-2">
-                                        <flux:text class="text-sm font-semibold">Cycle Menstruel:</flux:text>
+                                    <div class="border-{{ $color }}-400 bg-{{ $color }}-50/50 dark:bg-{{ $color }}-950/30 rounded-md border p-2">
+                                        <flux:text class="text-sm font-semibold">Cycle menstruel:</flux:text>
                                         <flux:text class="whitespace-normal! text-xs">
-                                            Phase: <span class="font-medium">{{ $info['phase'] }}</span><br>
-                                            Jours dans la phase: <span class="font-medium">{{ intval($info['days_in_phase']) ?? 'n/a' }}</span><br>
-                                            Longueur moy. cycle: <span class="font-medium">{{ $info['cycle_length_avg'] ?? 'n/a' }} jours</span>
+                                            Phase: <span class="font-medium">{{ $phase }}</span><br>
+                                            Cycle: <span class="font-medium">Jour {{ $info['days_in_phase'] ?? 'n/a' }}</span> <span>/ {{ $info['cycle_length_avg'] ?? '--' }}j</span>
                                             @if ($info['last_period_start'])
                                                 <br>Dernier J1: <span class="font-medium">{{ $info['last_period_start'] }}</span>
                                             @endif
-                                            @if ($info['reason'])
-                                                <br><span class="whitespace-normal! text-xs italic text-zinc-500">{{ $info['reason'] }}</span>
+                                            @if ($info['recommendation'] && ($info['recommendation']['status'] ?? '') !== 'neutral')
+                                                <br>
+                                                <span class="font-bold text-{{ $color }}-800 dark:text-{{ $color }}-200">{{ $info['recommendation']['action'] }}:
+                                                </span><span class="whitespace-normal! text-xs italic">{{ $info['recommendation']['justification'] }}</span>
                                             @endif
                                         </flux:text>
                                     </div>

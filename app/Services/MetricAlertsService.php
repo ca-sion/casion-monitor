@@ -202,29 +202,38 @@ class MetricAlertsService
         $menstrualThresholds = self::ALERT_THRESHOLDS['MENSTRUAL_CYCLE'];
         $cycleData = $this->metricMenstrualService->deduceMenstrualCyclePhase($athlete, $athleteMetrics);
 
-        // 1. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)
+        // 1. Recommandation d'entraînement basée sur la phase (Priorité info/conseil)
+        $rec = $this->metricMenstrualService->getPhaseSpecificRecommendation($athlete, $cycleData['phase']);
+        if ($rec && $rec['status'] !== 'neutral') {
+            $alertType = match ($rec['status']) {
+                'optimal' => 'success',
+                'warning' => 'warning',
+                'critical' => 'danger',
+                'easy' => 'warning',
+                default => 'info',
+            };
+            $this->addAlert($alerts, $alertType, "Cycle : " . $rec['action'] . ".");
+        }
+
+        // 2. Aménorrhée ou Oligoménorrhée (détecté par la phase calculée)
         if ($cycleData['phase'] === 'Aménorrhée' || $cycleData['phase'] === 'Oligoménorrhée') {
             $this->addAlert($alerts, 'danger', 'Cycle menstruel irrégulier (moy. '.$cycleData['cycle_length_avg'].' jours). Il est suggéré de consulter pour évaluer un potentiel RED-S.');
         }
-        // 2. Absence de règles prolongée sans données de cycle moyen (cas où 'deduceMenstrualCyclePhase' n'aurait pas pu déterminer la phase 'Aménorrhée' faute de données de moyenne)
+        // 3. Absence de règles prolongée sans données de cycle moyen
         elseif ($cycleData['cycle_length_avg'] === null && isset($cycleData['last_period_date'])) {
             $daysSinceLastPeriod = $cycleData['last_period_date']->startOfDay()->diffInDays(now()->startOfDay(), true);
             if ($daysSinceLastPeriod > $menstrualThresholds['prolonged_absence_no_avg']) {
                 $this->addAlert($alerts, 'danger', 'Absence de règles prolongée ('.$daysSinceLastPeriod.' jours depuis les dernières règles). Forte suspicion de RED-S. Consultation médicale impérative.');
             }
         }
-        // 3. Potentiel retard ou cycle long avec une moyenne de cycle NORMAL (21-35 jours)
+        // 4. Potentiel retard ou cycle long avec une moyenne de cycle NORMAL
         elseif ($cycleData['phase'] === 'Potentiel retard ou cycle long'
             && $cycleData['cycle_length_avg'] >= $menstrualThresholds['oligomenorrhea_min_cycle']
             && $cycleData['cycle_length_avg'] <= $menstrualThresholds['oligomenorrhea_max_cycle']) {
             $this->addAlert($alerts, 'warning', 'Retard du cycle menstruel (moy. '.$cycleData['cycle_length_avg'].' jours). Suggéré de surveiller.');
         }
-        // 4. Phase 'Inconnue' en raison de l'absence de données J1 (priorité faible)
-        elseif ($cycleData['phase'] === 'Inconnue' && $cycleData['reason'] === 'Enregistrez au moins deux J1 pour calculer la durée moyenne de votre cycle.') {
-            $this->addAlert($alerts, 'info', 'Aucune donnée récente sur le premier jour des règles pour cette athlète. Un suivi est recommandé.');
-        }
 
-        // 5. Corrélation entre phase menstruelle et performance/fatigue
+        // 5. Corrélation spécifique à la phase menstruelle
         if ($cycleData['phase'] === 'Menstruelle') {
             $currentDayFatigue = $athleteMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value;
             $currentDayPerformanceFeel = $athleteMetrics->firstWhere('metric_type', MetricType::POST_SESSION_PERFORMANCE_FEEL)?->value;

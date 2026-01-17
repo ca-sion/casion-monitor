@@ -337,24 +337,24 @@ class MetricMenstrualService
         switch ($currentPhase) {
             case 'Menstruelle':
                 return [
-                    'action'        => 'EASY (Technique/Mobilité)',
+                    'action'        => 'Tranquille',
                     'justification' => "L'objectif est la gestion de l'inflammation et de la douleur. C'est la phase idéale pour la récupération active et le travail technique à faible intensité.",
                     'status'        => 'easy',
                 ];
             case 'Folliculaire':
                 return [
-                    'action'        => 'GO! (Force/Puissance)',
+                    'action'        => 'GO',
                     'justification' => "Taux d'oestrogènes en hausse = tolérance à la douleur et récupération accrues. Fenêtre idéale pour les charges lourdes, les séances de pic et les tests de force maximale.",
                     'status'        => 'optimal',
                 ];
             case 'Ovulatoire':
                 return [
-                    'action'        => 'GO! (Endurance/Volume)',
+                    'action'        => 'GO',
                     'justification' => "Pic de performance générale. Attention toutefois à la potentielle laxité ligamentaire accrue lors de mouvements brusques ou changements de direction.",
                     'status'        => 'optimal',
                 ];
             case 'Lutéale':
-                $action = $isLutealFatigueHigh ? 'EASY (Volume Réduit)' : 'MODERATE (Endurance)';
+                $action = $isLutealFatigueHigh ? 'Tranquille' : 'Modéré';
                 $justification = $isLutealFatigueHigh ?
                     "Votre fatigue est significativement plus haute dans cette phase. **Il est conseillé de lever le pied** et de réduire le volume d'entraînement de 10-20% pour minimiser le risque de surentraînement." :
                     "Votre corps gère bien cette phase. Maintenez une charge modérée en privilégiant l'endurance. Si la fatigue du jour est élevée, basculez en 'EASY'.";
@@ -368,13 +368,13 @@ class MetricMenstrualService
             case 'Aménorrhée':
             case 'Oligoménorrhée':
                 return [
-                    'action'        => 'STOP! (Alerte Santé)',
+                    'action'        => 'STOP! (Alerte santé)',
                     'justification' => "Arrêtez les charges d'entraînement intenses et consultez un spécialiste. Votre cycle indique un déséquilibre potentiellement lié à un déficit énergétique (RED-S) ou un stress excessif.",
                     'status'        => 'critical',
                 ];
             default:
                 return [
-                    'action'        => 'EASY (Data Manquantes)',
+                    'action'        => 'Données manquantes',
                     'justification' => 'Renseignez vos dates de règles (J1) pour une analyse personnalisée et des recommandations fiables.',
                     'status'        => 'neutral',
                 ];

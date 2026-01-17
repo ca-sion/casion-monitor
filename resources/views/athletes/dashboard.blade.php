@@ -144,34 +144,62 @@
 
     {{-- Cycle menstruel --}}
     @if ($athlete->gender->value === 'w' && $menstrualCycleInfo)
-    <div class="mt-2">
+        <div class="mt-4">
             @php
-                $menstrualCycleBoxBorderColor = 'border-emerald-400';
-                $menstrualCycleBoxBgColor = 'bg-emerald-50/50 dark:bg-emerald-950/50';
+                $phase = $menstrualCycleInfo['phase'];
+                $isCritical = in_array($phase, ['Aménorrhée', 'Oligoménorrhée']);
+                $isWarning = $phase === 'Potentiel retard ou cycle long' || ($menstrualCycleInfo['recommendation']['status'] ?? '') === 'warning';
+                
+                $color = match (true) {
+                    $isCritical => 'rose',
+                    $isWarning => 'amber',
+                    $phase === 'Menstruelle' => 'purple',
+                    $phase === 'Folliculaire' => 'emerald',
+                    $phase === 'Ovulatoire' => 'sky',
+                    $phase === 'Lutéale' => 'orange',
+                    default => 'zinc',
+                };
 
-                if ($menstrualCycleInfo['phase'] === 'Aménorrhée' || $menstrualCycleInfo['phase'] === 'Oligoménorrhée') {
-                    $menstrualCycleBoxBorderColor = 'border-rose-400';
-                    $menstrualCycleBoxBgColor = 'bg-rose-50/50 dark:bg-rose-950/50';
-                } elseif ($menstrualCycleInfo['phase'] === 'Potentiel retard ou cycle long') {
-                    $menstrualCycleBoxBorderColor = 'border-amber-400';
-                    $menstrualCycleBoxBgColor = 'bg-amber-50/50 dark:bg-amber-950/50';
-                } elseif ($menstrualCycleInfo['phase'] === 'Inconnue') {
-                    $menstrualCycleBoxBorderColor = 'border-sky-400';
-                    $menstrualCycleBoxBgColor = 'bg-sky-50/50 dark:bg-sky-950/50';
-                }
+                $rec = $menstrualCycleInfo['recommendation'] ?? null;
             @endphp
-            <div class="{{ $menstrualCycleBoxBorderColor }} {{ $menstrualCycleBoxBgColor }} mt-4 rounded-md border p-3 dark:text-zinc-200">
-                <flux:text class="text-sm font-semibold dark:text-zinc-200">Cycle Menstruel:</flux:text>
-                <flux:text class="text-xs dark:text-zinc-400">
-                    Phase: <span class="font-medium">{{ $menstrualCycleInfo['phase'] }}</span><br>
-                    Jours dans la phase: <span class="font-medium">{{ intval($menstrualCycleInfo['days_in_phase']) ?? 'n/a' }}</span><br>
-                    Longueur moy. cycle: <span class="font-medium">{{ $menstrualCycleInfo['cycle_length_avg'] ?? 'n/a' }} jours</span>
+
+            <flux:card class="p-0! overflow-hidden border-{{ $color }}-400! dark:border-{{ $color }}-800!">
+                <div class="bg-{{ $color }}-50 dark:bg-{{ $color }}-950/30 p-4 border-b border-{{ $color }}-100 dark:border-{{ $color }}-900/50">
+                    <div class="flex items-center justify-between">
+                        <flux:heading size="sm" class="text-{{ $color }}-800 dark:text-{{ $color }}-200 flex items-center gap-2">
+                            Phase : {{ $phase }}
+                        </flux:heading>
+                        @if ($rec && $rec['status'] !== 'neutral')
+                            <flux:badge size="sm" color="{{ $color }}" inset="top bottom">
+                                {{ $rec['action'] }}
+                            </flux:badge>
+                        @endif
+                    </div>
+                    <flux:text class="mt-1 text-xs text-{{ $color }}-700 dark:text-{{ $color }}-400 font-medium">
+                        {{ $menstrualCycleInfo['reason'] }}
+                    </flux:text>
+                    @if ($rec && $rec['status'] !== 'neutral')
+                    <flux:text class="text-xs leading-relaxed text-{{ $color }}-700 dark:text-{{ $color }}-400">{{ $rec['justification'] }}</flux:text>
+                    @endif
+                </div>
+
+                <div class="p-4 space-y-2">
+
+                    <flux:text class="text-xs text-{{ $color }}-800 dark:text-{{ $color }}-200">
+                        Cycle: Jour {{ $menstrualCycleInfo['days_in_phase'] ?? 'n/a' }} <span>/ {{ $menstrualCycleInfo['cycle_length_avg'] ?? '--' }}j
                     @if ($menstrualCycleInfo['last_period_start'])
-                        <br>Dernières règles: <span class="font-medium">{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
+                        <br>Dernier J1: <span>{{ \Carbon\Carbon::parse($menstrualCycleInfo['last_period_start'])->locale('fr_CH')->isoFormat('L') }}</span>
                     @endif
                 </flux:text>
-            </div>
-    </div>
+
+                    <div class="pt-1">
+                        <flux:button variant="ghost" size="xs" class="p-0! h-auto text-zinc-500! hover:text-zinc-800! dark:hover:text-zinc-200!" href="{{ route('athletes.menstrual-cycle.form', ['hash' => $athlete->hash]) }}">
+                            Mettre à jour mes dates de règles →
+                        </flux:button>
+                    </div>
+                </div>
+            </flux:card>
+        </div>
     @endif
 
     <flux:separator class="my-4" variant="subtle" />
