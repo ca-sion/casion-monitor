@@ -3,6 +3,19 @@
         <flux:heading size="xl" level="1">{{ $athlete->first_name }}</flux:heading>
     </div>
 
+    @if ($showMonthlyMetricAlert ?? false)
+        <div class="mb-4">
+            <flux:callout color="amber" icon="exclamation-triangle" inline>
+                <flux:callout.heading>Rappel mensuel : <span class="font-normal">N'oublie pas de saisir ton poids pour ce mois-ci.</span></flux:callout.heading>
+                <x-slot name="actions">
+                    <flux:button href="{{ route('athletes.metrics.monthly.form', ['hash' => $athlete->hash]) }}">
+                        Saisir maintenant
+                    </flux:button>
+                </x-slot>
+            </flux:callout>
+        </div>
+    @endif
+
     {{-- Raccourcis rapides --}}
     <div class="my-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {{-- Ajouter des métriques quotidiennes --}}

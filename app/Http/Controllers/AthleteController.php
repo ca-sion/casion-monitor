@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use App\Services\MetricService;
 use App\Services\ReportService;
+use App\Services\ReminderService;
 use Illuminate\Http\JsonResponse;
 use App\Enums\CalculatedMetricType;
 use Illuminate\Support\Facades\Auth;
@@ -15,10 +16,12 @@ use Illuminate\Support\Facades\Auth;
 class AthleteController extends Controller
 {
     protected MetricService $metricService;
+    protected ReminderService $reminderService;
 
-    public function __construct(MetricService $metricService)
+    public function __construct(MetricService $metricService, ReminderService $reminderService)
     {
         $this->metricService = $metricService;
+        $this->reminderService = $reminderService;
     }
 
     public function dashboard(Request $request): View|JsonResponse
@@ -28,6 +31,8 @@ class AthleteController extends Controller
         if (! $athlete) {
             abort(403, 'Accès non autorisé');
         }
+
+        $showMonthlyMetricAlert = $this->reminderService->shouldShowMonthlyMetricAlert($athlete);
 
         $period = $request->input('period', 'last_30_days');
 
@@ -158,6 +163,7 @@ class AthleteController extends Controller
             'last_days_feedbacks'           => $lastSevenDaysFeedbacks,
             'today_feedbacks'               => $todaysFeedbacks,
             'reports'                       => $reports,
+            'showMonthlyMetricAlert'        => $showMonthlyMetricAlert,
         ];
 
         if ($request->expectsJson()) {
