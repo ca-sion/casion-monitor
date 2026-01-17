@@ -72,3 +72,15 @@ Route::get('/run/reminders', function () {
 
     return response('Reminders command executed.', 200);
 })->name('run.reminders');
+
+Route::get('/run/daily', function () {
+    Artisan::call('reminders:menstrual');
+
+    return response('Daily command executed.', 200);
+})->name('run.daily');
+
+Route::get('/run/monthly', function () {
+    Artisan::call('reminders:monthly');
+
+    return response('Monthly command executed.', 200);
+})->name('run.monthly');
