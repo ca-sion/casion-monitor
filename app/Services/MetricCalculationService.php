@@ -55,11 +55,15 @@ class MetricCalculationService
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::ACWR, $acwr);
 
         // 5. Calculate and store Readiness Score
+
         $readinessService = resolve(MetricReadinessService::class);
+
         // We use $metricsForCalculations which now contains 28 days of data, which is better for readiness.
-        $readinessResult = $readinessService->calculateOverallReadinessScore($athlete, $metricsForCalculations);
+
+        $readinessResult = $readinessService->calculateOverallReadinessScore($athlete, $metricsForCalculations, $date);
 
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::READINESS_SCORE, $readinessResult['readiness_score'] ?? null);
+
         $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::READINESS_CONFIDENCE, $readinessResult['confidence_index'] ?? null);
     }
 

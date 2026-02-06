@@ -50,6 +50,8 @@ class MetricReadinessService
         MetricType::MORNING_GENERAL_FATIGUE,
         MetricType::PRE_SESSION_ENERGY_LEVEL,
         MetricType::PRE_SESSION_LEG_FEEL,
+        MetricType::MORNING_HRV,
+        MetricType::MORNING_PAIN,
     ];
 
     /**
@@ -58,12 +60,13 @@ class MetricReadinessService
      *
      * @param  Athlete  $athlete  L'athlète pour lequel calculer le score.
      * @param  Collection  $allMetrics  Toutes les métriques disponibles pour l'athlète.
+     * @param  Carbon|null  $targetDate  La date pour laquelle calculer le score (défaut: aujourd'hui).
      * @return array Un tableau contenant 'readiness_score' (int) et 'readiness_details' (array).
      */
-    public function calculateOverallReadinessScore(Athlete $athlete, Collection $allMetrics): array
+    public function calculateOverallReadinessScore(Athlete $athlete, Collection $allMetrics, ?Carbon $targetDate = null): array
     {
         $this->readinessDetails = [];
-        $today = now()->startOfDay();
+        $today = $targetDate ? $targetDate->copy()->startOfDay() : now()->startOfDay();
 
         $pillars = [
             'physio' => [
@@ -240,12 +243,14 @@ class MetricReadinessService
      *
      * @param  Athlete  $athlete  L'athlète pour lequel récupérer le statut.
      * @param  Collection  $allMetrics  Toutes les métriques disponibles pour l'athlète.
+     * @param  Carbon|null  $targetDate  La date pour laquelle récupérer le statut (défaut: aujourd'hui).
      * @return array Un tableau associatif contenant le statut complet de readiness.
      */
-    public function getAthleteReadinessStatus(Athlete $athlete, Collection $allMetrics): array
+    public function getAthleteReadinessStatus(Athlete $athlete, Collection $allMetrics, ?Carbon $targetDate = null): array
     {
         $readinessScore = 100;
         $readinessThresholds = self::ALERT_THRESHOLDS['READINESS_SCORE'];
+        $today = $targetDate ? $targetDate->copy()->startOfDay() : now()->startOfDay();
 
         $status = [
             'level'           => 'green',
@@ -258,7 +263,7 @@ class MetricReadinessService
         ];
 
         // Vérification des métriques quotidiennes manquantes
-        $missingDailyMetricsData = $this->checkMissingDailyReadinessMetrics($allMetrics);
+        $missingDailyMetricsData = $this->checkMissingDailyReadinessMetrics($allMetrics, $today);
         $status['alerts'] = $missingDailyMetricsData['alerts'];
         $missingCount = $missingDailyMetricsData['missing_count'];
         $missingMetricNames = $missingDailyMetricsData['missing_metric_names'];
@@ -271,7 +276,7 @@ class MetricReadinessService
             $status['readiness_score'] = 'n/a';
         } else {
             // Calcul du score global de readiness UNIQUEMENT si pas trop de données manquantes
-            $readinessResult = $this->calculateOverallReadinessScore($athlete, $allMetrics);
+            $readinessResult = $this->calculateOverallReadinessScore($athlete, $allMetrics, $today);
             $readinessScore = $readinessResult['readiness_score'];
             $readinessDetails = $readinessResult['readiness_details'];
             $confidenceIndex = $readinessResult['confidence_index'];
@@ -282,7 +287,7 @@ class MetricReadinessService
             if ($readinessScore === null) {
                 $status['level'] = 'neutral';
                 $status['message'] = 'Données insuffisantes.';
-                $status['recommendation'] = "Veuillez remplir les métriques quotidiennes pour calculer votre état de forme.";
+                $status['recommendation'] = 'Veuillez remplir les métriques quotidiennes pour calculer votre état de forme.';
             } else {
                 // Définition des règles pour les niveaux de readiness basées sur le score
                 if ($readinessScore < $readinessThresholds['level_red_threshold']) {
@@ -302,7 +307,7 @@ class MetricReadinessService
 
             // Règle d'exception pour la douleur sévère, qui peut surclasser le score
             $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
-                ->where('date', now()->startOfDay())
+                ->where('date', $today)
                 ->first()?->value;
             if ($morningPain !== null && $morningPain >= $readinessThresholds['severe_pain_threshold']) {
                 $status['level'] = 'red';
@@ -312,10 +317,10 @@ class MetricReadinessService
 
             // Règle d'exception pour le premier jour des règles avec niveau d'énergie bas
             $firstDayPeriod = $allMetrics->where('metric_type', MetricType::MORNING_FIRST_DAY_PERIOD->value)
-                ->where('date', now()->startOfDay())
+                ->where('date', $today)
                 ->first()?->value;
             $preSessionEnergy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
-                ->where('date', now()->startOfDay())
+                ->where('date', $today)
                 ->first()?->value;
 
             if ($firstDayPeriod && ($preSessionEnergy !== null && $preSessionEnergy <= $readinessThresholds['menstrual_energy_low'])) {
@@ -335,12 +340,11 @@ class MetricReadinessService
         return $status;
     }
 
-    protected function checkMissingDailyReadinessMetrics(Collection $allMetrics): array
+    protected function checkMissingDailyReadinessMetrics(Collection $allMetrics, Carbon $today): array
     {
         $missingAlerts = [];
         $missingCount = 0;
         $missingMetricNames = [];
-        $today = now()->startOfDay();
 
         foreach (self::ESSENTIAL_DAILY_READINESS_METRICS as $metricType) {
             $metricExists = $allMetrics->where('metric_type', $metricType->value)
@@ -359,7 +363,7 @@ class MetricReadinessService
 
         // Cas spécifique pour le CIH/CPH qui est hebdomadaire mais dépend des données quotidiennes
         $sessionLoadMetricsThisWeek = $allMetrics->where('metric_type', MetricType::POST_SESSION_SESSION_LOAD->value)
-            ->whereBetween('date', [now()->startOfWeek(Carbon::MONDAY), now()->endOfWeek(Carbon::SUNDAY)]);
+            ->whereBetween('date', [$today->copy()->startOfWeek(Carbon::MONDAY), $today->copy()->endOfWeek(Carbon::SUNDAY)]);
         if ($sessionLoadMetricsThisWeek->isEmpty()) {
             $missingAlerts[] = [
                 'type'    => 'info',
