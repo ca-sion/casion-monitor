@@ -54,7 +54,7 @@ class MetricReadinessService
 
     /**
      * Calcule le score global de readiness de l'athlète en prenant en compte divers facteurs.
-     * Retourne le score final et un tableau détaillé des pénalités appliquées.
+     * Retourne le score final et un tableau détaillé des piliers.
      *
      * @param  Athlete  $athlete  L'athlète pour lequel calculer le score.
      * @param  Collection  $allMetrics  Toutes les métriques disponibles pour l'athlète.
@@ -62,113 +62,176 @@ class MetricReadinessService
      */
     public function calculateOverallReadinessScore(Athlete $athlete, Collection $allMetrics): array
     {
-        $readinessScore = 100;
         $this->readinessDetails = [];
         $today = now()->startOfDay();
 
-        // 1. Impact du SBM (Subjective Well-being Metrics) - Read from calculated metrics
+        $pillars = [
+            'physio' => [
+                'label'  => 'Physiologique (VFC)',
+                'weight' => 0.25,
+                'type'   => MetricType::MORNING_HRV,
+                'value'  => $this->getPhysioScore($allMetrics, $today),
+            ],
+            'subjective' => [
+                'label'  => 'Subjectif (SBM)',
+                'weight' => 0.35,
+                'type'   => CalculatedMetricType::SBM,
+                'value'  => $this->getSubjectiveScore($athlete, $today),
+            ],
+            'immediate' => [
+                'label'  => 'Immédiat (Énergie/Jambes)',
+                'weight' => 0.40,
+                'type'   => MetricType::PRE_SESSION_ENERGY_LEVEL, // On utilise l'énergie comme proxy pour le pilier
+                'value'  => $this->getImmediateScore($allMetrics, $today),
+            ],
+        ];
+
+        // 1. Redistribution dynamique des poids si données manquantes
+        $totalWeightAvailable = 0;
+        foreach ($pillars as $pillar) {
+            if ($pillar['value'] !== null) {
+                $totalWeightAvailable += $pillar['weight'];
+            }
+        }
+
+        if ($totalWeightAvailable === 0) {
+            return [
+                'readiness_score'   => null,
+                'readiness_details' => [],
+                'confidence_index'  => 0,
+            ];
+        }
+
+        $finalScore = 0;
+        foreach ($pillars as $key => $pillar) {
+            if ($pillar['value'] !== null) {
+                $adjustedWeight = $pillar['weight'] / $totalWeightAvailable;
+                $contribution = $pillar['value'] * $adjustedWeight;
+                $finalScore += $contribution;
+
+                $this->addReadinessDetail(
+                    $pillar['type'],
+                    $contribution,
+                    (int) round($finalScore),
+                    $pillar['value'],
+                    ['label' => $pillar['label'], 'weight' => $pillar['weight'], 'adjusted_weight' => $adjustedWeight]
+                );
+            }
+        }
+
+        // 2. Application du Safety Cap (Veto) - Douleur, Ratio de charge, etc.
+        $finalScore = $this->applySafetyCaps($finalScore, $athlete, $allMetrics, $today);
+
+        return [
+            'readiness_score'   => (int) round($finalScore),
+            'readiness_details' => $this->readinessDetails,
+            'confidence_index'  => (int) round($totalWeightAvailable * 100),
+        ];
+    }
+
+    /**
+     * Calcule le score physiologique basé sur la VFC (HRV).
+     * Compare la valeur du jour à la moyenne des 7 derniers jours.
+     */
+    protected function getPhysioScore(Collection $allMetrics, Carbon $today): ?float
+    {
+        $hrvMetrics = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->sortByDesc('date');
+        $todayHrv = $hrvMetrics->where('date', $today)->first()?->value;
+
+        if ($todayHrv === null) {
+            return null;
+        }
+
+        $hrv7DayAvg = $hrvMetrics->where('date', '>=', $today->copy()->subDays(7))
+            ->where('date', '<', $today)
+            ->avg('value');
+
+        if (! $hrv7DayAvg || $hrv7DayAvg <= 0) {
+            return 100; // Pas de base de comparaison, on assume 100%
+        }
+
+        $changePercent = (($todayHrv - $hrv7DayAvg) / $hrv7DayAvg) * 100;
+
+        // Scoring : 0% changement = 100pts. -20% changement = 0pts.
+        // On pénalise les baisses plus que les hausses.
+        if ($changePercent >= 0) {
+            return 100; // Une hausse est généralement signe de bonne récup
+        }
+
+        return max(0, min(100, 100 + ($changePercent * 5))); // -20% * 5 = -100pts
+    }
+
+    /**
+     * Calcule le score subjectif basé sur le SBM (Sommeil, Fatigue, Humeur, Douleur).
+     */
+    protected function getSubjectiveScore(Athlete $athlete, Carbon $today): ?float
+    {
         $dailySbm = CalculatedMetric::where('athlete_id', $athlete->id)
             ->where('date', $today)
             ->where('type', CalculatedMetricType::SBM)
             ->value('value');
 
-        $sbmPenalty = 0;
-        if ($dailySbm !== null) {
-            $sbmPenalty = (10 - $dailySbm) * self::ALERT_THRESHOLDS['READINESS_SCORE']['sbm_penalty_factor'];
+        if ($dailySbm === null) {
+            return null;
         }
-        $readinessScore -= $sbmPenalty;
-        $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(CalculatedMetricType::SBM, $sbmPenalty, $readinessScore, $dailySbm);
 
-        // 2. Impact de la VFC (Variabilité de la Fréquence Cardiaque - HRV)
-        $hrvMetrics = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->sortByDesc('date');
-        $lastHrv = $hrvMetrics->first()?->value;
-        $hrvPenalty = 0;
-        $changePercent = 0;
+        // SBM est sur 10, on normalise sur 100.
+        return $dailySbm * 10;
+    }
 
-        if ($lastHrv !== null) {
-            $hrv7DayAvg = $hrvMetrics->where('date', '>=', now()->subDays(7)->startOfDay())
-                ->where('date', '<', now()->startOfDay())
-                ->avg('value');
+    /**
+     * Calcule le score d'état immédiat (énergie et sensations de jambes avant session).
+     */
+    protected function getImmediateScore(Collection $allMetrics, Carbon $today): ?float
+    {
+        $energy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
+            ->where('date', $today)
+            ->first()?->value;
 
-            if ($hrv7DayAvg && $hrv7DayAvg > 0) {
-                $changePercent = (($lastHrv - $hrv7DayAvg) / $hrv7DayAvg) * 100;
+        $legs = $allMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL->value)
+            ->where('date', $today)
+            ->first()?->value;
 
-                if ($changePercent < self::ALERT_THRESHOLDS['READINESS_SCORE']['hrv_drop_severe_percent']) {
-                    $hrvPenalty = 20;
-                } elseif ($changePercent < self::ALERT_THRESHOLDS['READINESS_SCORE']['hrv_drop_moderate_percent']) {
-                    $hrvPenalty = 10;
-                }
-            }
+        if ($energy === null && $legs === null) {
+            return null;
         }
-        $readinessScore -= $hrvPenalty;
-        $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(MetricType::MORNING_HRV, $hrvPenalty, $readinessScore, $lastHrv, ['change_percent' => $changePercent]);
 
-        // 3. Impact de la Douleur (MORNING_PAIN)
+        $values = collect([$energy, $legs])->filter(fn ($v) => $v !== null);
+
+        // Moyenne des deux, normalisée sur 100 (les deux sont sur 10).
+        return $values->avg() * 10;
+    }
+
+    /**
+     * Applique des limites de sécurité (Safety Caps) basées sur des alertes critiques.
+     */
+    protected function applySafetyCaps(float $currentScore, Athlete $athlete, Collection $allMetrics, Carbon $today): float
+    {
+        // Cap 1 : Douleur sévère (Veto)
         $morningPain = $allMetrics->where('metric_type', MetricType::MORNING_PAIN->value)
             ->where('date', $today)
             ->first()?->value;
-        $painPenalty = 0;
-        if ($morningPain !== null && $morningPain > 0) {
-            $painPenalty = ($morningPain * self::ALERT_THRESHOLDS['READINESS_SCORE']['pain_penalty_factor']);
-        }
-        $readinessScore -= $painPenalty;
-        $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(MetricType::MORNING_PAIN, $painPenalty, $readinessScore, $morningPain);
 
-        // 4. Impact des métriques pré-session (remplies juste avant la session)
-        $preSessionEnergy = $allMetrics->where('metric_type', MetricType::PRE_SESSION_ENERGY_LEVEL->value)
-            ->where('date', $today)
-            ->first()?->value;
-        $preSessionEnergyPenalty = 0;
-        if ($preSessionEnergy !== null) {
-            if ($preSessionEnergy <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_energy_low']) {
-                $preSessionEnergyPenalty = self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_high'];
-            } elseif ($preSessionEnergy <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_energy_medium']) {
-                $preSessionEnergyPenalty = self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_medium'];
-            }
+        if ($morningPain !== null && $morningPain >= self::ALERT_THRESHOLDS['READINESS_SCORE']['severe_pain_threshold']) {
+            $currentScore = min($currentScore, 40); // Cap à 40 max
+            $this->addReadinessDetail(MetricType::MORNING_PAIN, 0, (int) round($currentScore), $morningPain, ['cap_applied' => true, 'message' => 'Veto Douleur Sévère']);
         }
-        $readinessScore -= $preSessionEnergyPenalty;
-        $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(MetricType::PRE_SESSION_ENERGY_LEVEL, $preSessionEnergyPenalty, $readinessScore, $preSessionEnergy);
 
-        $preSessionLegFeel = $allMetrics->where('metric_type', MetricType::PRE_SESSION_LEG_FEEL->value)
-            ->where('date', $today)
-            ->first()?->value;
-        $preSessionLegFeelPenalty = 0;
-        if ($preSessionLegFeel !== null) {
-            if ($preSessionLegFeel <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_leg_feel_low']) {
-                $preSessionLegFeelPenalty = self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_high'];
-            } elseif ($preSessionLegFeel <= self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_leg_feel_medium']) {
-                $preSessionLegFeelPenalty = self::ALERT_THRESHOLDS['READINESS_SCORE']['pre_session_penalty_medium'];
-            }
-        }
-        $readinessScore -= $preSessionLegFeelPenalty;
-        $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(MetricType::PRE_SESSION_LEG_FEEL, $preSessionLegFeelPenalty, $readinessScore, $preSessionLegFeel);
-
-        // 5. Impact du ratio de charge (CIH/CPH) - Read from calculated metrics
+        // Cap 2 : Surcharge de charge (Ratio CIH/CPH)
         $chargeRatio = CalculatedMetric::where('athlete_id', $athlete->id)
             ->where('date', $today)
             ->where('type', CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH)
             ->value('value');
 
-        $chargeRatioPenalty = 0;
         $overloadThreshold = self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_threshold'];
-
         if ($chargeRatio !== null && $chargeRatio > $overloadThreshold) {
-            $chargeRatioPenalty = self::ALERT_THRESHOLDS['READINESS_SCORE']['charge_overload_penalty_factor'] * ($chargeRatio - $overloadThreshold);
+            // Si ratio > 1.3, on réduit le score drastiquement
+            $penalty = ($chargeRatio - $overloadThreshold) * 50; // ex: 1.5 ratio -> (0.2) * 50 = 10pts de cap
+            $currentScore = max(0, $currentScore - $penalty);
+            $this->addReadinessDetail(CalculatedMetricType::RATIO_CIH_CPH, $penalty, (int) round($currentScore), $chargeRatio, ['cap_applied' => true, 'message' => 'Surcharge Charge']);
         }
 
-        $readinessScore -= $chargeRatioPenalty;
-        $readinessScore = max(0, min(100, (int) round($readinessScore)));
-        $this->addReadinessDetail(CalculatedMetricType::RATIO_CIH_CPH, $chargeRatioPenalty, $readinessScore, $chargeRatio, ['ratio' => $chargeRatio, 'overload_threshold' => $overloadThreshold]);
-
-        return [
-            'readiness_score'   => $readinessScore,
-            'readiness_details' => $this->readinessDetails,
-        ];
+        return $currentScore;
     }
 
     /**
@@ -211,22 +274,30 @@ class MetricReadinessService
             $readinessResult = $this->calculateOverallReadinessScore($athlete, $allMetrics);
             $readinessScore = $readinessResult['readiness_score'];
             $readinessDetails = $readinessResult['readiness_details'];
+            $confidenceIndex = $readinessResult['confidence_index'];
 
             $status['readiness_score'] = $readinessScore;
+            $status['confidence_index'] = $confidenceIndex;
 
-            // Définition des règles pour les niveaux de readiness basées sur le score
-            if ($readinessScore < $readinessThresholds['level_red_threshold']) {
-                $status['level'] = 'red';
-                $status['message'] = 'Faible readiness. Risque accru de fatigue ou blessure.';
-                $status['recommendation'] = 'Repos complet, récupération active très légère, ou réévaluation du plan. Ne pas forcer un entraînement intense.';
-            } elseif ($readinessScore < $readinessThresholds['level_orange_threshold']) {
-                $status['level'] = 'orange';
-                $status['message'] = 'Readiness modérée. Signes de fatigue ou de stress.';
-                $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité ou privilégier la récupération.";
-            } elseif ($readinessScore < $readinessThresholds['level_yellow_threshold']) {
-                $status['level'] = 'yellow';
-                $status['message'] = 'Bonne readiness, quelques points à surveiller.';
-                $status['recommendation'] = 'Entraînement normal, mais rester attentif aux sensations et adapter si nécessaire.';
+            if ($readinessScore === null) {
+                $status['level'] = 'neutral';
+                $status['message'] = 'Données insuffisantes.';
+                $status['recommendation'] = "Veuillez remplir les métriques quotidiennes pour calculer votre état de forme.";
+            } else {
+                // Définition des règles pour les niveaux de readiness basées sur le score
+                if ($readinessScore < $readinessThresholds['level_red_threshold']) {
+                    $status['level'] = 'red';
+                    $status['message'] = 'Faible readiness. Risque accru de fatigue ou blessure.';
+                    $status['recommendation'] = 'Repos complet, récupération active très légère, ou réévaluation du plan. Ne pas forcer un entraînement intense.';
+                } elseif ($readinessScore < $readinessThresholds['level_orange_threshold']) {
+                    $status['level'] = 'orange';
+                    $status['message'] = 'Readiness modérée. Signes de fatigue ou de stress.';
+                    $status['recommendation'] = "Adapter l'entraînement : réduire le volume/l'intensité ou privilégier la récupération.";
+                } elseif ($readinessScore < $readinessThresholds['level_yellow_threshold']) {
+                    $status['level'] = 'yellow';
+                    $status['message'] = 'Bonne readiness, quelques points à surveiller.';
+                    $status['recommendation'] = 'Entraînement normal, mais rester attentif aux sensations et adapter si nécessaire.';
+                }
             }
 
             // Règle d'exception pour la douleur sévère, qui peut surclasser le score

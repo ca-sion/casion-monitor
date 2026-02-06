@@ -1,12 +1,11 @@
 <?php
 
-use App\Enums\MetricType;
 use App\Models\Metric;
+use App\Enums\MetricType;
 use App\Services\MetricCalculationService;
-use Illuminate\Support\Collection;
 
 beforeEach(function () {
-    $this->service = new MetricCalculationService();
+    $this->service = new MetricCalculationService;
 });
 
 it('calculates SBM correctly without sleep duration (weighted average)', function () {
@@ -16,7 +15,7 @@ it('calculates SBM correctly without sleep duration (weighted average)', functio
         new Metric(['metric_type' => MetricType::MORNING_PAIN, 'value' => 0]),            // (10-0)=10 * 1.0 = 10
         new Metric(['metric_type' => MetricType::MORNING_MOOD_WELLBEING, 'value' => 9]),  // 9 * 1.5 = 13.5
     ]);
-    
+
     // Total Weight: 1.5 + 1.0 + 1.0 + 1.5 = 5.0
     // Weighted Sum: 12 + 8 + 10 + 13.5 = 43.5
     // SBM: 43.5 / 5.0 = 8.7
@@ -50,7 +49,7 @@ it('calculates SBM correctly with lower sleep duration (weighted average + penal
     // Pain: 0 -> 10 (w=1.0) -> 10
     // Mood: 10 (w=1.5) -> 15
     // Total Weight: 6.0
-    
+
     $metrics = collect([
         new Metric(['metric_type' => MetricType::MORNING_SLEEP_QUALITY, 'value' => 10]),
         new Metric(['metric_type' => MetricType::MORNING_SLEEP_DURATION, 'value' => $hours]),
@@ -63,7 +62,7 @@ it('calculates SBM correctly with lower sleep duration (weighted average + penal
 
     expect($sbm)->toBe($expectedSbm);
 })->with([
-    '7h sleep (-0.5 penalty)' => [7.0, 9.1], 
+    '7h sleep (-0.5 penalty)' => [7.0, 9.1],
     // Duration Score: (7-4)*2.5 = 7.5
     // Sum: 15 + 7.5 + 10 + 10 + 15 = 57.5
     // Base SBM: 57.5 / 6 = 9.5833

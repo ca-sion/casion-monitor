@@ -30,7 +30,12 @@
 
     <div class="mb-6 flex flex-col gap-2" id="readiness">
         <div class="{{ $readinessBorderColor }} {{ $readinessBgColor }} rounded-md border p-6 shadow-lg">
-            <flux:text class="text-sm font-semibold">Readiness: <span class="font-bold">{{ $readinessStatus['readiness_score'] }}</span></flux:text>
+            <div class="flex items-center justify-between">
+                <flux:text class="text-sm font-semibold">Readiness: <span class="font-bold">{{ $readinessStatus['readiness_score'] }}</span></flux:text>
+                @if (isset($readinessStatus['confidence_index']))
+                    <flux:text class="text-xs font-medium text-zinc-500">Confiance: {{ $readinessStatus['confidence_index'] }}%</flux:text>
+                @endif
+            </div>
             <flux:badge class="whitespace-normal! mt-1"
                 size="sm"
                 inset="top bottom"

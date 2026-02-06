@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Athlete;
+use Carbon\Carbon;
 use App\Models\Metric;
+use App\Models\Athlete;
 use App\Enums\MetricType;
 use App\Services\MetricAlertsService;
-use Carbon\Carbon;
 
 it('generates alerts for low sleep duration', function () {
     $athlete = Athlete::factory()->create();
@@ -12,17 +12,17 @@ it('generates alerts for low sleep duration', function () {
 
     // 1. Case: Critical low sleep duration (< 6h)
     $metric = Metric::create([
-        'athlete_id' => $athlete->id,
+        'athlete_id'  => $athlete->id,
         'metric_type' => MetricType::MORNING_SLEEP_DURATION,
-        'value' => 5.5,
-        'date' => Carbon::today(),
+        'value'       => 5.5,
+        'date'        => Carbon::today(),
     ]);
 
     $metrics = collect([$metric]);
 
     $alerts = $service->checkAllAlerts($athlete, $metrics);
-    
-    $sleepAlert = collect($alerts)->firstWhere(fn($a) => str_contains($a['message'], 'Durée de sommeil très faible'));
+
+    $sleepAlert = collect($alerts)->firstWhere(fn ($a) => str_contains($a['message'], 'Durée de sommeil très faible'));
     expect($sleepAlert)->not->toBeNull();
     expect($sleepAlert['type'])->toBe('danger');
 
@@ -30,15 +30,15 @@ it('generates alerts for low sleep duration', function () {
     $metrics = collect();
     for ($i = 0; $i < 7; $i++) {
         $metrics->push(Metric::create([
-            'athlete_id' => $athlete->id,
+            'athlete_id'  => $athlete->id,
             'metric_type' => MetricType::MORNING_SLEEP_DURATION,
-            'value' => 6.5,
-            'date' => Carbon::today()->subDays($i),
+            'value'       => 6.5,
+            'date'        => Carbon::today()->subDays($i),
         ]));
     }
 
     $alerts = $service->checkAllAlerts($athlete, $metrics);
-    $avgSleepAlert = collect($alerts)->firstWhere(fn($a) => str_contains($a['message'], 'Moyenne de sommeil faible'));
+    $avgSleepAlert = collect($alerts)->firstWhere(fn ($a) => str_contains($a['message'], 'Moyenne de sommeil faible'));
     expect($avgSleepAlert)->not->toBeNull();
     expect($avgSleepAlert['type'])->toBe('warning');
 });

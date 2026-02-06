@@ -160,7 +160,12 @@
                                     };
                                 @endphp
                                 <div class="{{ $readinessBorderColor }} {{ $readinessBgColor }} rounded-md border p-2">
-                                    <flux:text class="text-sm font-semibold">Readiness: <span class="font-bold">{{ $readiness['readiness_score'] }}</span></flux:text>
+                                    <div class="flex items-center justify-between">
+                                        <flux:text class="text-sm font-semibold">Readiness: <span class="font-bold">{{ $readiness['readiness_score'] }}</span></flux:text>
+                                        @if (isset($readiness['confidence_index']))
+                                            <flux:text class="text-[10px] font-medium text-zinc-500" title="Indice de confiance basé sur les données remplies">Conf: {{ $readiness['confidence_index'] }}%</flux:text>
+                                        @endif
+                                    </div>
                                     <flux:badge class="whitespace-normal! mt-1"
                                         size="sm"
                                         inset="top bottom"

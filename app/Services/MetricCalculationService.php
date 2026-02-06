@@ -58,8 +58,9 @@ class MetricCalculationService
         $readinessService = resolve(MetricReadinessService::class);
         // We use $metricsForCalculations which now contains 28 days of data, which is better for readiness.
         $readinessResult = $readinessService->calculateOverallReadinessScore($athlete, $metricsForCalculations);
-        $readinessScore = $readinessResult['readiness_score'] ?? null;
-        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::READINESS_SCORE, $readinessScore);
+
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::READINESS_SCORE, $readinessResult['readiness_score'] ?? null);
+        $this->storeCalculatedMetric($athlete, $date, CalculatedMetricType::READINESS_CONFIDENCE, $readinessResult['confidence_index'] ?? null);
     }
 
     /**
@@ -67,8 +68,8 @@ class MetricCalculationService
      */
     private function storeCalculatedMetric(Athlete $athlete, Carbon $date, CalculatedMetricType $type, ?float $value): void
     {
-        if ($value === null || $value == 0 || ($type == CalculatedMetricType::READINESS_SCORE && $value == 100)) {
-            // If value is null, we might want to delete the existing record for that day.
+        if ($value === null) {
+            // If value is null, we delete the existing record for that day.
             CalculatedMetric::where('athlete_id', $athlete->id)
                 ->where('date', $date)
                 ->where('type', $type)
@@ -99,11 +100,11 @@ class MetricCalculationService
 
         // Définition des poids
         $weights = [
-            MetricType::MORNING_SLEEP_QUALITY->value    => 1.5,
-            MetricType::MORNING_MOOD_WELLBEING->value   => 1.5,
-            MetricType::MORNING_GENERAL_FATIGUE->value  => 1.0,
-            MetricType::MORNING_PAIN->value             => 1.0,
-            MetricType::MORNING_SLEEP_DURATION->value   => 1.0,
+            MetricType::MORNING_SLEEP_QUALITY->value   => 1.5,
+            MetricType::MORNING_MOOD_WELLBEING->value  => 1.5,
+            MetricType::MORNING_GENERAL_FATIGUE->value => 1.0,
+            MetricType::MORNING_PAIN->value            => 1.0,
+            MetricType::MORNING_SLEEP_DURATION->value  => 1.0,
         ];
 
         // 1. Qualité du sommeil (0-10)
