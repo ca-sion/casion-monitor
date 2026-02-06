@@ -89,51 +89,75 @@ class MetricCalculationService
 
     /**
      * Calcule le Score de Bien-être Matinal (SBM) pour un seul jour à partir d'une collection de métriques.
+     * Le calcul est une moyenne pondérée des métriques disponibles.
      */
     public function calculateSbmForCollection(Collection $dailyMetrics): ?float
     {
-        $sbmSum = 0;
-        $maxPossibleSbm = 0;
+        $weightedSum = 0;
+        $totalWeight = 0;
         $sleepDuration = null;
 
-        $sleepQuality = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY)?->value;
-        if ($sleepQuality !== null) {
-            $sbmSum += $sleepQuality;
-            $maxPossibleSbm += 10;
+        // Définition des poids
+        $weights = [
+            MetricType::MORNING_SLEEP_QUALITY->value    => 1.5,
+            MetricType::MORNING_MOOD_WELLBEING->value   => 1.5,
+            MetricType::MORNING_GENERAL_FATIGUE->value  => 1.0,
+            MetricType::MORNING_PAIN->value             => 1.0,
+            MetricType::MORNING_SLEEP_DURATION->value   => 1.0,
+        ];
+
+        // 1. Qualité du sommeil (0-10)
+        $sleepQuality = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY);
+        if ($sleepQuality && $sleepQuality->value !== null) {
+            $val = (float) $sleepQuality->value;
+            $weight = $weights[MetricType::MORNING_SLEEP_QUALITY->value];
+            $weightedSum += ($val * $weight);
+            $totalWeight += $weight;
         }
 
+        // 2. Durée du sommeil (convertie en score 0-10)
         $durationMetric = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_DURATION);
-        if ($durationMetric !== null && $durationMetric->value !== null) {
+        if ($durationMetric && $durationMetric->value !== null) {
             $sleepDuration = (float) $durationMetric->value;
             // Normalisation : 8h = 10 pts, 4h = 0 pts.
-            $sleepScore = max(0, min(10, ($sleepDuration - 4) * 2.5));
-            $sbmSum += $sleepScore;
-            $maxPossibleSbm += 10;
+            $val = max(0, min(10, ($sleepDuration - 4) * 2.5));
+            $weight = $weights[MetricType::MORNING_SLEEP_DURATION->value];
+            $weightedSum += ($val * $weight);
+            $totalWeight += $weight;
         }
 
-        $generalFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE)?->value;
-        if ($generalFatigue !== null) {
-            $sbmSum += (10 - $generalFatigue);
-            $maxPossibleSbm += 10;
+        // 3. Fatigue générale (inversée : 10 = reposé)
+        $generalFatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE);
+        if ($generalFatigue && $generalFatigue->value !== null) {
+            $val = 10 - (float) $generalFatigue->value;
+            $weight = $weights[MetricType::MORNING_GENERAL_FATIGUE->value];
+            $weightedSum += ($val * $weight);
+            $totalWeight += $weight;
         }
 
-        $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN)?->value;
-        if ($pain !== null) {
-            $sbmSum += (10 - $pain);
-            $maxPossibleSbm += 10;
+        // 4. Douleur (inversée : 10 = sans douleur)
+        $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN);
+        if ($pain && $pain->value !== null) {
+            $val = 10 - (float) $pain->value;
+            $weight = $weights[MetricType::MORNING_PAIN->value];
+            $weightedSum += ($val * $weight);
+            $totalWeight += $weight;
         }
 
-        $moodWellbeing = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING)?->value;
-        if ($moodWellbeing !== null) {
-            $sbmSum += $moodWellbeing;
-            $maxPossibleSbm += 10;
+        // 5. Humeur / Bien-être (0-10)
+        $moodWellbeing = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_MOOD_WELLBEING);
+        if ($moodWellbeing && $moodWellbeing->value !== null) {
+            $val = (float) $moodWellbeing->value;
+            $weight = $weights[MetricType::MORNING_MOOD_WELLBEING->value];
+            $weightedSum += ($val * $weight);
+            $totalWeight += $weight;
         }
 
-        if ($maxPossibleSbm === 0) {
+        if ($totalWeight === 0) {
             return null;
         }
 
-        $sbm = (($sbmSum / $maxPossibleSbm) * 10);
+        $sbm = $weightedSum / $totalWeight;
 
         // Application d'une réduction si le sommeil est insuffisant (< 8h)
         if ($sleepDuration !== null) {
@@ -202,67 +226,22 @@ class MetricCalculationService
 
     /**
      * Calcule le Score de Bien-être Matinal (SBM) pour un jour donné et un athlète.
-     * SBM est calculé comme suit : MORNING_SLEEP_QUALITY + (10 - MORNING_GENERAL_FATIGUE) + (10 - MORNING_PAIN) + MORNING_MOOD_WELLBEING.
+     * Récupère les métriques en une seule requête et délègue le calcul à calculateSbmForCollection.
      */
     public function calculateSbm(Athlete $athlete, Carbon $date): ?float
     {
-        $sbmSum = 0;
-        $maxPossibleSbm = 0;
-        $sleepDuration = null;
+        $dailyMetrics = $athlete->metrics()
+            ->whereDate('date', $date)
+            ->whereIn('metric_type', [
+                MetricType::MORNING_SLEEP_QUALITY,
+                MetricType::MORNING_SLEEP_DURATION,
+                MetricType::MORNING_GENERAL_FATIGUE,
+                MetricType::MORNING_PAIN,
+                MetricType::MORNING_MOOD_WELLBEING,
+            ])
+            ->get();
 
-        $sleepQuality = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)->first()?->value;
-        if ($sleepQuality !== null) {
-            $sbmSum += $sleepQuality;
-            $maxPossibleSbm += 10;
-        }
-
-        $durationMetric = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_SLEEP_DURATION->value)->first();
-        if ($durationMetric !== null && $durationMetric->value !== null) {
-            $sleepDuration = (float) $durationMetric->value;
-            // Normalisation : 8h = 10 pts, 4h = 0 pts.
-            $sleepScore = max(0, min(10, ($sleepDuration - 4) * 2.5));
-            $sbmSum += $sleepScore;
-            $maxPossibleSbm += 10;
-        }
-
-        $generalFatigue = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_GENERAL_FATIGUE->value)->first()?->value;
-        if ($generalFatigue !== null) {
-            $sbmSum += (10 - $generalFatigue);
-            $maxPossibleSbm += 10;
-        }
-
-        $pain = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_PAIN->value)->first()?->value;
-        if ($pain !== null) {
-            $sbmSum += (10 - $pain);
-            $maxPossibleSbm += 10;
-        }
-
-        $moodWellbeing = $athlete->metrics()->where('date', $date->toDateString())->where('metric_type', MetricType::MORNING_MOOD_WELLBEING->value)->first()?->value;
-        if ($moodWellbeing !== null) {
-            $sbmSum += $moodWellbeing;
-            $maxPossibleSbm += 10;
-        }
-
-        if ($maxPossibleSbm === 0) {
-            return null;
-        }
-
-        $sbm = (($sbmSum / $maxPossibleSbm) * 10);
-
-        // Application d'une réduction si le sommeil est insuffisant (< 8h)
-        if ($sleepDuration !== null) {
-            if ($sleepDuration < 5) {
-                $sbm -= 4;
-            } elseif ($sleepDuration < 6) {
-                $sbm -= 2;
-            } elseif ($sleepDuration < 7) {
-                $sbm -= 1;
-            } elseif ($sleepDuration < 8) {
-                $sbm -= 0.5;
-            }
-        }
-
-        return (float) number_format($sbm, 1);
+        return $this->calculateSbmForCollection($dailyMetrics);
     }
 
     /**
