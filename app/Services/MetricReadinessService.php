@@ -54,6 +54,17 @@ class MetricReadinessService
         MetricType::MORNING_PAIN,
     ];
 
+    public const ALL_READINESS_METRICS = [
+        MetricType::MORNING_HRV,
+        MetricType::MORNING_SLEEP_QUALITY,
+        MetricType::MORNING_SLEEP_DURATION,
+        MetricType::MORNING_GENERAL_FATIGUE,
+        MetricType::MORNING_PAIN,
+        MetricType::MORNING_MOOD_WELLBEING,
+        MetricType::PRE_SESSION_ENERGY_LEVEL,
+        MetricType::PRE_SESSION_LEG_FEEL,
+    ];
+
     /**
      * Calcule le score global de readiness de l'athlète en prenant en compte divers facteurs.
      * Retourne le score final et un tableau détaillé des piliers.
@@ -67,6 +78,15 @@ class MetricReadinessService
     {
         $this->readinessDetails = [];
         $today = $targetDate ? $targetDate->copy()->startOfDay() : now()->startOfDay();
+
+        // Calcul de l'indice de confiance basé sur le nombre de métriques remplies (sur 8 possibles)
+        $metricsCount = 0;
+        foreach (self::ALL_READINESS_METRICS as $metricType) {
+            if ($allMetrics->where('metric_type', $metricType->value)->where('date', $today)->isNotEmpty()) {
+                $metricsCount++;
+            }
+        }
+        $confidenceIndex = (int) round(($metricsCount / count(self::ALL_READINESS_METRICS)) * 100);
 
         $pillars = [
             'physio' => [
@@ -128,7 +148,7 @@ class MetricReadinessService
         return [
             'readiness_score'   => (int) round($finalScore),
             'readiness_details' => $this->readinessDetails,
-            'confidence_index'  => (int) round($totalWeightAvailable * 100),
+            'confidence_index'  => $confidenceIndex,
         ];
     }
 
