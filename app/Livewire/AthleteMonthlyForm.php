@@ -34,23 +34,31 @@ class AthleteMonthlyForm extends Component implements HasSchemas
         $this->date = Carbon::now()->startOfMonth();
         $this->currentMonth = $this->date->locale('fr_CH')->isoFormat('MMMM YYYY');
 
-        $existingEntry = Metric::where('athlete_id', $this->athlete->id)
-            ->where('metric_type', MetricType::MORNING_BODY_WEIGHT_KG->value)
+        $data = collect();
+        $data->put('current_month', $this->currentMonth);
+
+        $monthlyMetricTypes = [
+            MetricType::MORNING_BODY_WEIGHT_KG,
+            MetricType::MONTHLY_MENTAL_LOAD,
+            MetricType::MONTHLY_MOTIVATION,
+        ];
+
+        $existingEntries = Metric::where('athlete_id', $this->athlete->id)
+            ->whereIn('metric_type', collect($monthlyMetricTypes)->pluck('value'))
             ->whereMonth('date', $this->date->month)
             ->whereYear('date', $this->date->year)
-            ->first();
+            ->get();
 
-        $data = collect();
-
-        if ($existingEntry) {
-            $data->put(MetricType::MORNING_BODY_WEIGHT_KG->value, $existingEntry->value);
+        if ($existingEntries->isNotEmpty()) {
+            foreach ($existingEntries as $entry) {
+                $data->put($entry->metric_type->value, $entry->value);
+            }
 
             Notification::make()
-                ->title('Vous avez déjà soumis votre poids pour ce mois.')
-                ->warning()
+                ->title('Vous avez déjà des entrées pour ce mois. Vous pouvez les mettre à jour.')
+                ->info()
                 ->send();
         }
-        $data->put('current_month', $this->currentMonth);
 
         $this->form->fill($data->all());
     }
@@ -62,18 +70,34 @@ class AthleteMonthlyForm extends Component implements HasSchemas
                 TextEntry::make('current_month')
                     ->label('Mois en cours')
                     ->state($this->currentMonth),
+
                 TextInput::make(MetricType::MORNING_BODY_WEIGHT_KG->value)
                     ->label(MetricType::MORNING_BODY_WEIGHT_KG->getLabel())
+                    ->helperText(MetricType::MORNING_BODY_WEIGHT_KG->getHint())
                     ->numeric()
                     ->suffix('kg')
                     ->required()
                     ->step(0.01)
                     ->maxValue(250)
                     ->visible(fn () => $this->athlete->getPreference('track_monthly_weight', true)),
-                TextEntry::make('no_metrics')
-                    ->label('')
-                    ->state('Aucune métrique mensuelle à saisir pour le moment.')
-                    ->visible(fn () => ! $this->athlete->getPreference('track_monthly_weight', true)),
+
+                TextInput::make(MetricType::MONTHLY_MENTAL_LOAD->value)
+                    ->label(MetricType::MONTHLY_MENTAL_LOAD->getLabel())
+                    ->helperText(MetricType::MONTHLY_MENTAL_LOAD->getHint())
+                    ->numeric()
+                    ->required()
+                    ->minValue(1)
+                    ->maxValue(10)
+                    ->hint(MetricType::MONTHLY_MENTAL_LOAD->getScaleHint()),
+
+                TextInput::make(MetricType::MONTHLY_MOTIVATION->value)
+                    ->label(MetricType::MONTHLY_MOTIVATION->getLabel())
+                    ->helperText(MetricType::MONTHLY_MOTIVATION->getHint())
+                    ->numeric()
+                    ->required()
+                    ->minValue(1)
+                    ->maxValue(10)
+                    ->hint(MetricType::MONTHLY_MOTIVATION->getScaleHint()),
             ])
             ->statePath('data');
     }
@@ -82,17 +106,32 @@ class AthleteMonthlyForm extends Component implements HasSchemas
     {
         $data = $this->form->getState();
 
-        Metric::updateOrCreate([
-            'athlete_id'  => $this->athlete->id,
-            'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
-            'date'        => $this->date,
-        ],
-            [
-                'value' => data_get($data, MetricType::MORNING_BODY_WEIGHT_KG->value),
-            ]);
+        $metricsToSave = [
+            MetricType::MONTHLY_MENTAL_LOAD,
+            MetricType::MONTHLY_MOTIVATION,
+        ];
+
+        if ($this->athlete->getPreference('track_monthly_weight', true)) {
+            $metricsToSave[] = MetricType::MORNING_BODY_WEIGHT_KG;
+        }
+
+        foreach ($metricsToSave as $metricType) {
+            $value = data_get($data, $metricType->value);
+
+            if ($value !== null) {
+                Metric::updateOrCreate([
+                    'athlete_id'  => $this->athlete->id,
+                    'metric_type' => $metricType->value,
+                    'date'        => $this->date,
+                ],
+                    [
+                        'value' => $value,
+                    ]);
+            }
+        }
 
         Notification::make()
-            ->title('Votre poids a été enregistré')
+            ->title('Vos données mensuelles ont été enregistrées')
             ->success()
             ->send();
     }

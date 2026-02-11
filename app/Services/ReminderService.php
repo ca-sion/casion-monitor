@@ -14,48 +14,50 @@ class ReminderService
     ) {}
 
     /**
-     * Vérifie si l'athlète a rempli sa métrique mensuelle pour le mois donné.
-     * La métrique de référence est le poids corporel (MORNING_BODY_WEIGHT_KG).
+     * Vérifie si l'athlète a rempli ses métriques mensuelles pour le mois donné.
+     * Inclut par défaut la charge mentale et la motivation, et le poids si activé.
      */
     public function hasFilledMonthlyMetric(Athlete $athlete, ?Carbon $date = null): bool
     {
         $date = $date ?? now();
 
-        return Metric::query()
+        $requiredMetricTypes = [
+            MetricType::MONTHLY_MENTAL_LOAD->value,
+            MetricType::MONTHLY_MOTIVATION->value,
+        ];
+
+        if ($athlete->getPreference('track_monthly_weight', true)) {
+            $requiredMetricTypes[] = MetricType::MORNING_BODY_WEIGHT_KG->value;
+        }
+
+        $filledCount = Metric::query()
             ->where('athlete_id', $athlete->id)
-            ->where('metric_type', MetricType::MORNING_BODY_WEIGHT_KG->value)
+            ->whereIn('metric_type', $requiredMetricTypes)
             ->whereMonth('date', $date->month)
             ->whereYear('date', $date->year)
-            ->exists();
+            ->count();
+
+        return $filledCount >= count($requiredMetricTypes);
     }
 
     /**
      * Détermine si on doit afficher le rappel pour la métrique mensuelle.
-     * Affiche le rappel tout le mois tant que ce n'est pas fait.
+     * Affiche le rappel tout le mois tant que tout n'est pas rempli.
      */
     public function shouldShowMonthlyMetricAlert(Athlete $athlete): bool
     {
-        if (! $athlete->getPreference('track_monthly_weight', true)) {
-            return false;
-        }
-
         return ! $this->hasFilledMonthlyMetric($athlete);
     }
 
     /**
-     * Récupère tous les athlètes qui n'ont pas encore rempli leur métrique mensuelle.
+     * Récupère tous les athlètes qui n'ont pas encore rempli toutes leurs métriques mensuelles.
      */
     public function getAthletesNeedingMonthlyReminder(?Carbon $date = null): \Illuminate\Support\Collection
     {
         $date = $date ?? now();
 
-        return Athlete::all()->filter(function ($athlete) use ($date) {
-            if (! $athlete->getPreference('track_monthly_weight', true)) {
-                return false;
-            }
-
-            return ! $this->hasFilledMonthlyMetric($athlete, $date);
-        });
+        // On récupère tous les athlètes et on filtre en PHP car la liste des métriques requises dépend des préférences de chacun
+        return Athlete::all()->filter(fn ($athlete) => ! $this->hasFilledMonthlyMetric($athlete, $date));
     }
 
     /**

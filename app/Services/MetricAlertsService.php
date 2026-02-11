@@ -90,6 +90,14 @@ class MetricAlertsService
             'z_score_high'      => 1.8,
             'z_score_low'       => -2.0,
         ],
+        MetricType::MONTHLY_MENTAL_LOAD->value => [
+            'critical_high' => 9,
+            'z_score_high'  => 1.8,
+        ],
+        MetricType::MONTHLY_MOTIVATION->value => [
+            'critical_low' => 3,
+            'z_score_low'  => -1.8,
+        ],
         CalculatedMetricType::RATIO_CIH_NORMALIZED_CPH->value => [
             'ratio_underload_threshold' => 0.8,
             'ratio_overload_threshold'  => 1.3,
@@ -160,6 +168,8 @@ class MetricAlertsService
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
+            MetricType::MONTHLY_MENTAL_LOAD,
+            MetricType::MONTHLY_MOTIVATION,
         ];
 
         foreach ($generalWellbeingMetricsForZScore as $metricType) {
@@ -173,6 +183,7 @@ class MetricAlertsService
         $this->checkSleepDurationAlerts($athlete, $metrics, $alerts);
         $this->checkFatigueAlerts($athlete, $metrics, $alerts);
         $this->checkPainAlerts($athlete, $metrics, $alerts);
+        $this->checkMonthlyPsychologicalAlerts($athlete, $metrics, $alerts);
 
         // Gérer les cas où aucune alerte spécifique n'a été détectée.
         // On vérifie d'abord s'il y a suffisamment de données pour une analyse.
@@ -181,6 +192,20 @@ class MetricAlertsService
         }
 
         return $alerts;
+    }
+
+    protected function checkMonthlyPsychologicalAlerts(Athlete $athlete, Collection $metrics, array &$alerts): void
+    {
+        $mentalLoad = $metrics->where('metric_type', MetricType::MONTHLY_MENTAL_LOAD)->sortByDesc('date')->first();
+        $motivation = $metrics->where('metric_type', MetricType::MONTHLY_MOTIVATION)->sortByDesc('date')->first();
+
+        if ($mentalLoad && $mentalLoad->value >= self::ALERT_THRESHOLDS[MetricType::MONTHLY_MENTAL_LOAD->value]['critical_high']) {
+            $this->addAlert($alerts, 'warning', 'Charge mentale hors-sport très élevée ('.$mentalLoad->value.'/10). Risque de saturation du système nerveux et de blessure de fatigue.');
+        }
+
+        if ($motivation && $motivation->value <= self::ALERT_THRESHOLDS[MetricType::MONTHLY_MOTIVATION->value]['critical_low']) {
+            $this->addAlert($alerts, 'danger', 'Niveau de motivation très faible ('.$motivation->value.'/10). Signe potentiel d\'épuisement psychologique ou de surentraînement.');
+        }
     }
 
     protected function getChargeAlerts(Athlete $athlete, Collection $athleteMetrics, Collection $athletePlanWeeks, Collection $calculatedMetrics): array

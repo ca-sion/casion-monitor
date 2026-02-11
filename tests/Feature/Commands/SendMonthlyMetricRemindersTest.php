@@ -15,12 +15,24 @@ it('sends monthly reminders to athletes who havent filled metrics', function () 
     $athleteWithMetric = Athlete::factory()->create();
     $athleteWithoutMetric = Athlete::factory()->create(['telegram_chat_id' => '123456789']);
 
-    // Fill metric for one athlete
+    // Fill ALL required metrics for one athlete
     Metric::create([
         'athlete_id'  => $athleteWithMetric->id,
         'metric_type' => MetricType::MORNING_BODY_WEIGHT_KG->value,
         'date'        => now()->startOfMonth(),
         'value'       => 70.0,
+    ]);
+    Metric::create([
+        'athlete_id'  => $athleteWithMetric->id,
+        'metric_type' => MetricType::MONTHLY_MENTAL_LOAD->value,
+        'date'        => now()->startOfMonth(),
+        'value'       => 5,
+    ]);
+    Metric::create([
+        'athlete_id'  => $athleteWithMetric->id,
+        'metric_type' => MetricType::MONTHLY_MOTIVATION->value,
+        'date'        => now()->startOfMonth(),
+        'value'       => 8,
     ]);
 
     $this->artisan('reminders:monthly')

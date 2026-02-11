@@ -6,10 +6,10 @@
     @if ($showMonthlyMetricAlert ?? false)
         <div class="mb-4">
             <flux:callout color="amber" icon="exclamation-triangle" inline>
-                <flux:callout.heading>Rappel mensuel : <span class="font-normal">N'oublie pas de saisir ton poids pour ce mois-ci.</span></flux:callout.heading>
+                <flux:callout.heading>Rappel mensuel : <span class="font-normal">N'oublie pas de compléter ton bilan mensuel.</span></flux:callout.heading>
                 <x-slot name="actions">
                     <flux:button href="{{ route('athletes.metrics.monthly.form', ['hash' => $athlete->hash]) }}">
-                        Saisir maintenant
+                        Compléter maintenant
                     </flux:button>
                 </x-slot>
             </flux:callout>

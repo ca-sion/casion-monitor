@@ -27,6 +27,10 @@ enum MetricType: string implements HasLabel
     case POST_SESSION_SUBJECTIVE_FATIGUE = 'post_session_subjective_fatigue';
     case POST_SESSION_PAIN = 'post_session_pain';
 
+    // Métriques Mensuelles / Bilans
+    case MONTHLY_MENTAL_LOAD = 'monthly_mental_load';
+    case MONTHLY_MOTIVATION = 'monthly_motivation';
+
     public function getLabel(): ?string
     {
         return match ($this) {
@@ -47,6 +51,9 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_PERFORMANCE_FEEL   => 'Évaluation de la performance',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'Evaluation de la fatigue',
             self::POST_SESSION_PAIN               => 'Douleurs après séance',
+
+            self::MONTHLY_MENTAL_LOAD => 'Charge mentale hors-sport',
+            self::MONTHLY_MOTIVATION  => 'Niveau de motivation globale',
         };
     }
 
@@ -70,6 +77,9 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_PERFORMANCE_FEEL   => 'Éval. perf.',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'Eval. fatigue post',
             self::POST_SESSION_PAIN               => 'Douleurs post',
+
+            self::MONTHLY_MENTAL_LOAD => 'Charge mentale',
+            self::MONTHLY_MOTIVATION  => 'Motivation',
         };
     }
 
@@ -93,6 +103,9 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_PERFORMANCE_FEEL   => 'Évaluation subjective du ressenti de la performance après la session.',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'Évaluation subjective de la fatigue après la session.',
             self::POST_SESSION_PAIN               => 'Évaluation de l\'intensité des douleurs ressenties après la session.',
+
+            self::MONTHLY_MENTAL_LOAD => 'Évalue le niveau de stress et de sollicitation mentale hors du cadre sportif (vie professionnelle, familiale, sociale). Un score élevé indique une fatigue cognitive pouvant affecter la récupération physique (RESTQ-Sport).',
+            self::MONTHLY_MOTIVATION  => 'Mesure le désir global de s\'entraîner et d\'atteindre ses objectifs. Une baisse persistante est l\'un des marqueurs les plus fiables de l\'overreaching non fonctionnel ou du burnout sportif (Meeusen et al., 2013).',
         };
     }
 
@@ -114,7 +127,9 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_SESSION_LOAD,
             self::POST_SESSION_PERFORMANCE_FEEL,
             self::POST_SESSION_SUBJECTIVE_FATIGUE,
-            self::POST_SESSION_PAIN => 10,
+            self::POST_SESSION_PAIN,
+            self::MONTHLY_MENTAL_LOAD,
+            self::MONTHLY_MOTIVATION => 10,
         };
     }
 
@@ -167,7 +182,10 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_PERFORMANCE_FEEL   => 'mauvais ➝ excellent',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'aucune ➝ extrême',
             self::POST_SESSION_PAIN               => 'aucune ➝ très fortes',
-            default                               => null,
+
+            self::MONTHLY_MENTAL_LOAD => 'très calme ➝ saturation totale',
+            self::MONTHLY_MOTIVATION  => 'nulle ➝ maximale',
+            default                   => null,
         };
     }
 
@@ -221,6 +239,9 @@ enum MetricType: string implements HasLabel
                 5 = Fatigue modérée, tu sens que tu as travaillé.
                 10 = Fatigue extrême, tu es vidé(e), tu as besoin de repos immédiat.',
             self::POST_SESSION_PAIN => "As-tu des douleurs musculaires ou articulaires après cette séance ? Évalue l'intensité de tes douleurs sur une échelle de 1 à 10. 1 = Aucune douleur. 5 = Douleur légère mais présente, tu la sens un peu. 10 = Douleur très forte, ça t'empêche de bouger normalement ou de te sentir bien.",
+
+            self::MONTHLY_MENTAL_LOAD => 'Comment évalues-tu ta charge mentale globale ce mois-ci, en dehors du sport ? Prends en compte le stress lié au travail, aux études ou à la vie de famille. Une charge mentale élevée peut saturer ton système nerveux et freiner ta progression athlétique.',
+            self::MONTHLY_MOTIVATION  => 'Quel a été ton niveau moyen de motivation pour t\'entraîner et suivre tes objectifs durant le mois écoulé ? Une baisse marquée peut être le signe d\'une fatigue psychologique profonde ou d\'un début de lassitude.',
         };
     }
 
@@ -239,13 +260,15 @@ enum MetricType: string implements HasLabel
             self::MORNING_MOOD_WELLBEING,
             self::PRE_SESSION_ENERGY_LEVEL,
             self::PRE_SESSION_LEG_FEEL,
-            self::POST_SESSION_PERFORMANCE_FEEL => 'good',
+            self::POST_SESSION_PERFORMANCE_FEEL,
+            self::MONTHLY_MOTIVATION => 'good',
 
             self::MORNING_GENERAL_FATIGUE,
             self::MORNING_PAIN,
             self::POST_SESSION_SUBJECTIVE_FATIGUE,
             self::POST_SESSION_SESSION_LOAD,
-            self::POST_SESSION_PAIN => 'bad',
+            self::POST_SESSION_PAIN,
+            self::MONTHLY_MENTAL_LOAD => 'bad',
 
             self::MORNING_BODY_WEIGHT_KG,
             self::MORNING_PAIN_LOCATION,
@@ -276,6 +299,9 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_PERFORMANCE_FEEL   => 'icon-[material-symbols-light--sprint]',
             self::POST_SESSION_SUBJECTIVE_FATIGUE => 'icon-[material-symbols-light--contrast-square]',
             self::POST_SESSION_PAIN               => 'icon-[material-symbols-light--sick]',
+
+            self::MONTHLY_MENTAL_LOAD => 'icon-[material-symbols-light--mindfulness-outline]',
+            self::MONTHLY_MOTIVATION  => 'icon-[material-symbols-light--auto-awesome-outline]',
         };
     }
 
@@ -303,6 +329,9 @@ enum MetricType: string implements HasLabel
             self::POST_SESSION_PERFORMANCE_FEEL,
             self::POST_SESSION_SUBJECTIVE_FATIGUE,
             self::POST_SESSION_PAIN => 'blue',
+
+            self::MONTHLY_MENTAL_LOAD,
+            self::MONTHLY_MOTIVATION => 'emerald',
 
             default => 'zinc',
         };

@@ -51,6 +51,8 @@ class AthleteController extends Controller
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::MONTHLY_MENTAL_LOAD,
+            MetricType::MONTHLY_MOTIVATION,
         ];
 
         if ($athlete->getPreference('track_monthly_weight', true)) {
@@ -304,6 +306,8 @@ class AthleteController extends Controller
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
+            MetricType::MONTHLY_MENTAL_LOAD,
+            MetricType::MONTHLY_MOTIVATION,
         ];
 
         if ($athlete->getPreference('track_monthly_weight', true)) {

@@ -44,14 +44,14 @@ class SendMonthlyMetricReminder extends Notification
 
     private function getTitle(Athlete $athlete): string
     {
-        return 'Mise à jour mensuelle ⚖️';
+        return 'Bilan mensuel 📊';
     }
 
     private function getBody(Athlete $athlete): string
     {
         $name = $athlete->first_name;
 
-        return "Salut {$name}, n'oublie pas de saisir ton poids pour ce mois-ci afin de suivre ton évolution sur le long terme.";
+        return "Bonjour {$name}, n'oublie pas de compléter ton bilan mensuel ce mois-ci afin de suivre ton évolution sur le long terme.";
     }
 
     private function getUrl(Athlete $athlete): string
@@ -72,7 +72,7 @@ class SendMonthlyMetricReminder extends Notification
                 'urgency' => 'normal',
                 'icon'    => '/favicon-96x96.png',
             ])
-            ->action('Saisir mon poids', 'open_url')
+            ->action('Compléter mon bilan', 'open_url')
             ->data(['url' => $this->getUrl($notifiable)]);
     }
 
@@ -84,6 +84,6 @@ class SendMonthlyMetricReminder extends Notification
         return TelegramMessage::create()
             ->to($notifiable->routeNotificationFor('telegram'))
             ->content('*'.$this->getTitle($notifiable)."*\n".$this->getBody($notifiable))
-            ->button('Saisir mon poids', $this->getUrl($notifiable));
+            ->button('Compléter mon bilan', $this->getUrl($notifiable));
     }
 }
