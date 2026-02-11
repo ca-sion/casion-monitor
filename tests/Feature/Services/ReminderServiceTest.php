@@ -67,3 +67,20 @@ it('gets athletes needing monthly reminder', function () {
     expect($needing)->toHaveCount(1);
     expect($needing->first()->id)->toBe($athlete2->id);
 });
+
+it('does not show monthly metric alert if weight tracking is disabled', function () {
+    $athlete = Athlete::factory()->create([
+        'preferences' => ['track_monthly_weight' => false],
+    ]);
+
+    expect($this->reminderService->shouldShowMonthlyMetricAlert($athlete))->toBeFalse();
+});
+
+it('excludes athletes from monthly reminders if weight tracking is disabled', function () {
+    $athlete = Athlete::factory()->create([
+        'preferences' => ['track_monthly_weight' => false],
+    ]);
+
+    $needing = $this->reminderService->getAthletesNeedingMonthlyReminder(now());
+    expect($needing->contains($athlete))->toBeFalse();
+});

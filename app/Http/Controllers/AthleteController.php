@@ -51,8 +51,11 @@ class AthleteController extends Controller
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
+
+        if ($athlete->getPreference('track_monthly_weight', true)) {
+            $dashboardMetricTypes[] = MetricType::MORNING_BODY_WEIGHT_KG;
+        }
 
         // Définir les types de métriques à afficher dans le tableau des données quotidiennes
         $displayTableMetricTypes = [
@@ -68,8 +71,11 @@ class AthleteController extends Controller
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
             MetricType::PRE_SESSION_ENERGY_LEVEL,
             MetricType::PRE_SESSION_LEG_FEEL,
-            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
+
+        if ($athlete->getPreference('track_monthly_weight', true)) {
+            $displayTableMetricTypes[] = MetricType::MORNING_BODY_WEIGHT_KG;
+        }
 
         // Définir les types de métriques "calculées" à afficher
         $calculatedMetricTypes = [
@@ -298,8 +304,11 @@ class AthleteController extends Controller
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
+
+        if ($athlete->getPreference('track_monthly_weight', true)) {
+            $dashboardMetricTypes[] = MetricType::MORNING_BODY_WEIGHT_KG;
+        }
 
         // Définir les types de métriques à afficher dans le tableau des données quotidiennes
         $displayTableMetricTypes = [
@@ -315,8 +324,11 @@ class AthleteController extends Controller
             MetricType::POST_SESSION_SESSION_LOAD,
             MetricType::POST_SESSION_SUBJECTIVE_FATIGUE,
             MetricType::POST_SESSION_PERFORMANCE_FEEL,
-            MetricType::MORNING_BODY_WEIGHT_KG,
         ];
+
+        if ($athlete->getPreference('track_monthly_weight', true)) {
+            $displayTableMetricTypes[] = MetricType::MORNING_BODY_WEIGHT_KG;
+        }
 
         // Définir les types de métriques "calculées" à afficher
         $calculatedMetricTypes = [

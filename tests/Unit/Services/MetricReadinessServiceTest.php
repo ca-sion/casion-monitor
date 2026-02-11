@@ -33,15 +33,13 @@ it('calculates score based on a single pillar (SBM) with redistribution', functi
 
         'athlete_id' => $this->athlete->id,
 
-        'date'       => now()->startOfDay(),
+        'date' => now()->startOfDay(),
 
-        'type'       => CalculatedMetricType::SBM,
+        'type' => CalculatedMetricType::SBM,
 
-        'value'      => 8,
+        'value' => 8,
 
     ]);
-
-
 
     // Create one raw metric to simulate SBM source (e.g. Sleep Quality)
 
@@ -57,23 +55,17 @@ it('calculates score based on a single pillar (SBM) with redistribution', functi
 
     ]);
 
-
-
     $allMetrics = Metric::where('athlete_id', $this->athlete->id)->get();
 
     $result = $this->service->calculateOverallReadinessScore($this->athlete, $allMetrics);
-
-
 
     expect($result['readiness_score'])->toBe(80);
 
     // Confidence: 1 raw metric out of 8 = 12.5% -> 13%
 
-    expect($result['confidence_index'])->toBe(13); 
+    expect($result['confidence_index'])->toBe(13);
 
 });
-
-
 
 it('calculates score with multiple pillars', function () {
 
@@ -87,8 +79,6 @@ it('calculates score with multiple pillars', function () {
 
     // Score: (80 * 0.466) + (100 * 0.533) = 37.33 + 53.33 = 90.66 -> 91
 
-    
-
     CalculatedMetric::create([
 
         'athlete_id' => $this->athlete->id,
@@ -100,8 +90,6 @@ it('calculates score with multiple pillars', function () {
         'value' => 8,
 
     ]);
-
-    
 
     // Raw metrics for Immediate pillar
 
@@ -117,8 +105,6 @@ it('calculates score with multiple pillars', function () {
 
     ]);
 
-
-
     Metric::create([
 
         'athlete_id' => $this->athlete->id,
@@ -130,8 +116,6 @@ it('calculates score with multiple pillars', function () {
         'date' => now()->startOfDay(),
 
     ]);
-
-
 
     // Raw metric for SBM pillar (to simulate partial completion)
 
@@ -147,13 +131,9 @@ it('calculates score with multiple pillars', function () {
 
     ]);
 
-    
-
     $allMetrics = Metric::where('athlete_id', $this->athlete->id)->get();
 
     $result = $this->service->calculateOverallReadinessScore($this->athlete, $allMetrics);
-
-    
 
     expect($result['readiness_score'])->toBe(91);
 
@@ -162,8 +142,6 @@ it('calculates score with multiple pillars', function () {
     expect($result['confidence_index'])->toBe(38);
 
 });
-
-
 
 it('applies the safety cap (veto) for severe pain', function () {
     // Perfect scores everywhere

@@ -163,6 +163,9 @@ class MetricAlertsService
         ];
 
         foreach ($generalWellbeingMetricsForZScore as $metricType) {
+            if ($metricType === MetricType::MORNING_BODY_WEIGHT_KG && ! $athlete->getPreference('track_monthly_weight', true)) {
+                continue;
+            }
             $this->checkZScoreAlerts($athlete, $metrics, $metricType, $alerts);
         }
 

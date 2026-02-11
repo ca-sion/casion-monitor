@@ -35,6 +35,10 @@ class ReminderService
      */
     public function shouldShowMonthlyMetricAlert(Athlete $athlete): bool
     {
+        if (! $athlete->getPreference('track_monthly_weight', true)) {
+            return false;
+        }
+
         return ! $this->hasFilledMonthlyMetric($athlete);
     }
 
@@ -45,11 +49,13 @@ class ReminderService
     {
         $date = $date ?? now();
 
-        return Athlete::whereDoesntHave('metrics', function ($query) use ($date) {
-            $query->where('metric_type', MetricType::MORNING_BODY_WEIGHT_KG->value)
-                ->whereMonth('date', $date->month)
-                ->whereYear('date', $date->year);
-        })->get();
+        return Athlete::all()->filter(function ($athlete) use ($date) {
+            if (! $athlete->getPreference('track_monthly_weight', true)) {
+                return false;
+            }
+
+            return ! $this->hasFilledMonthlyMetric($athlete, $date);
+        });
     }
 
     /**

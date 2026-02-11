@@ -92,6 +92,9 @@ class AthleteSettings extends Component implements HasActions, HasSchemas, HasTa
                         Toggle::make('show_morning_sleep_duration')
                             ->label('Afficher le champ Durée du sommeil')
                             ->helperText('Masque ou affiche le champ de Durée du sommeil dans le formulaire quotidien.'),
+                        Toggle::make('track_monthly_weight')
+                            ->label('Suivre le poids mensuel')
+                            ->helperText('Active ou désactive le rappel et le champ pour saisir votre poids chaque mois.'),
                     ]),
             ]);
     }

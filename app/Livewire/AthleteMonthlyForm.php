@@ -68,7 +68,12 @@ class AthleteMonthlyForm extends Component implements HasSchemas
                     ->suffix('kg')
                     ->required()
                     ->step(0.01)
-                    ->maxValue(250),
+                    ->maxValue(250)
+                    ->visible(fn () => $this->athlete->getPreference('track_monthly_weight', true)),
+                TextEntry::make('no_metrics')
+                    ->label('')
+                    ->state('Aucune métrique mensuelle à saisir pour le moment.')
+                    ->visible(fn () => ! $this->athlete->getPreference('track_monthly_weight', true)),
             ])
             ->statePath('data');
     }
