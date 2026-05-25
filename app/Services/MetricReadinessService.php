@@ -94,16 +94,16 @@ class MetricReadinessService
         $hrv7DayAvg = $hrvMetrics->where('date', '>=', $today->copy()->subDays(7))->where('date', '<', $today)->avg('value');
         $hrvChangePercent = ($todayHrv && $hrv7DayAvg > 0) ? (($todayHrv - $hrv7DayAvg) / $hrv7DayAvg) * 100 : 0;
 
-        $dailyMetrics = $allMetrics->where('date', $today);
+        $dailyMetrics = $allMetrics->filter(fn ($m) => $m->date->isSameDay($today));
         $sbmDrivers = [];
         if ($dailyMetrics->isNotEmpty()) {
             $fatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE->value)?->value;
             $sleep = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)?->value;
             $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN->value)?->value;
             
-            if ($fatigue >= 6) $sbmDrivers[] = 'Fatigue';
-            if ($sleep <= 4) $sbmDrivers[] = 'Sommeil';
-            if ($pain >= 5) $sbmDrivers[] = 'Douleur';
+            if ($fatigue !== null && $fatigue >= 6) $sbmDrivers[] = 'Fatigue';
+            if ($sleep !== null && $sleep <= 4) $sbmDrivers[] = 'Sommeil';
+            if ($pain !== null && $pain >= 5) $sbmDrivers[] = 'Douleur';
         }
 
         $pillars = [
