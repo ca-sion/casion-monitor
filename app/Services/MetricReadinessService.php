@@ -88,24 +88,45 @@ class MetricReadinessService
         }
         $confidenceIndex = (int) round(($metricsCount / count(self::ALL_READINESS_METRICS)) * 100);
 
+        // 0. Récupération des données brutes pour les détails enrichis
+        $hrvMetrics = $allMetrics->where('metric_type', MetricType::MORNING_HRV->value)->sortByDesc('date');
+        $todayHrv = $hrvMetrics->where('date', $today)->first()?->value;
+        $hrv7DayAvg = $hrvMetrics->where('date', '>=', $today->copy()->subDays(7))->where('date', '<', $today)->avg('value');
+        $hrvChangePercent = ($todayHrv && $hrv7DayAvg > 0) ? (($todayHrv - $hrv7DayAvg) / $hrv7DayAvg) * 100 : 0;
+
+        $dailyMetrics = $allMetrics->where('date', $today);
+        $sbmDrivers = [];
+        if ($dailyMetrics->isNotEmpty()) {
+            $fatigue = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_GENERAL_FATIGUE->value)?->value;
+            $sleep = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_SLEEP_QUALITY->value)?->value;
+            $pain = $dailyMetrics->firstWhere('metric_type', MetricType::MORNING_PAIN->value)?->value;
+            
+            if ($fatigue >= 6) $sbmDrivers[] = 'Fatigue';
+            if ($sleep <= 4) $sbmDrivers[] = 'Sommeil';
+            if ($pain >= 5) $sbmDrivers[] = 'Douleur';
+        }
+
         $pillars = [
             'physio' => [
-                'label'  => 'Physiologique (VFC)',
+                'label'  => 'VFC',
                 'weight' => 0.25,
                 'type'   => MetricType::MORNING_HRV,
                 'value'  => $this->getPhysioScore($allMetrics, $today),
+                'info'   => $todayHrv ? round($hrvChangePercent) . '%' : null,
             ],
             'subjective' => [
-                'label'  => 'Subjectif (SBM)',
+                'label'  => 'SBM',
                 'weight' => 0.35,
                 'type'   => CalculatedMetricType::SBM,
                 'value'  => $this->getSubjectiveScore($athlete, $today),
+                'info'   => !empty($sbmDrivers) ? implode(', ', $sbmDrivers) : null,
             ],
             'immediate' => [
-                'label'  => 'Immédiat (Énergie/Jambes)',
+                'label'  => 'Sensat.',
                 'weight' => 0.40,
-                'type'   => MetricType::PRE_SESSION_ENERGY_LEVEL, // On utilise l'énergie comme proxy pour le pilier
+                'type'   => MetricType::PRE_SESSION_ENERGY_LEVEL,
                 'value'  => $this->getImmediateScore($allMetrics, $today),
+                'info'   => null,
             ],
         ];
 
@@ -137,7 +158,12 @@ class MetricReadinessService
                     $contribution,
                     (int) round($finalScore),
                     $pillar['value'],
-                    ['label' => $pillar['label'], 'weight' => $pillar['weight'], 'adjusted_weight' => $adjustedWeight]
+                    [
+                        'label' => $pillar['label'], 
+                        'weight' => $pillar['weight'], 
+                        'info' => $pillar['info'],
+                        'is_pillar' => true
+                    ]
                 );
             }
         }
@@ -237,7 +263,7 @@ class MetricReadinessService
 
         if ($morningPain !== null && $morningPain >= self::ALERT_THRESHOLDS['READINESS_SCORE']['severe_pain_threshold']) {
             $currentScore = min($currentScore, 40); // Cap à 40 max
-            $this->addReadinessDetail(MetricType::MORNING_PAIN, 0, (int) round($currentScore), $morningPain, ['cap_applied' => true, 'message' => 'Veto Douleur Sévère']);
+            $this->addReadinessDetail(MetricType::MORNING_PAIN, 0, (int) round($currentScore), $morningPain, ['cap_applied' => true, 'message' => 'Veto Douleur']);
         }
 
         // Cap 2 : Surcharge de charge (Ratio CIH/CPH)
@@ -251,7 +277,7 @@ class MetricReadinessService
             // Si ratio > 1.3, on réduit le score drastiquement
             $penalty = ($chargeRatio - $overloadThreshold) * 50; // ex: 1.5 ratio -> (0.2) * 50 = 10pts de cap
             $currentScore = max(0, $currentScore - $penalty);
-            $this->addReadinessDetail(CalculatedMetricType::RATIO_CIH_CPH, $penalty, (int) round($currentScore), $chargeRatio, ['cap_applied' => true, 'message' => 'Surcharge Charge']);
+            $this->addReadinessDetail(CalculatedMetricType::RATIO_CIH_CPH, $penalty, (int) round($currentScore), $chargeRatio, ['cap_applied' => true, 'message' => 'Surcharge']);
         }
 
         return $currentScore;
@@ -425,8 +451,22 @@ class MetricReadinessService
     {
         $formattedDetails = [];
         foreach ($details as $detail) {
-            $sign = $detail['penalty'] > 0 ? '-' : '+';
-            $formattedDetails[] = "{$detail['metric_short_label']} : ".number_format($detail['metric_value'], 1)."/{$detail['metric']->getScale()} ➝ {$sign}".number_format($detail['penalty'], 1).'. ';
+            $isPillar = $detail['data']['is_pillar'] ?? false;
+            $info = $detail['data']['info'] ?? null;
+            $label = $detail['data']['label'] ?? $detail['metric_short_label'];
+            
+            if ($isPillar) {
+                $sign = '+';
+                $text = "{$label}: {$sign}" . number_format($detail['penalty'], 1);
+                if ($info) {
+                    $text .= " ({$info})";
+                }
+                $formattedDetails[] = $text;
+            } else {
+                $sign = '-';
+                $message = $detail['data']['message'] ?? 'Pénalité';
+                $formattedDetails[] = "⚠️ {$message}: {$sign}" . number_format($detail['penalty'], 1);
+            }
         }
 
         return implode("\n", $formattedDetails);

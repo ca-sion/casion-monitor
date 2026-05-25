@@ -38,7 +38,7 @@ class TrainerController extends Controller
 
         // Définir les types de métriques "brutes" à afficher
         $metricTypes = [
-            // MetricType::MORNING_HRV,
+            MetricType::MORNING_HRV,
             MetricType::MORNING_GENERAL_FATIGUE,
             MetricType::MORNING_SLEEP_QUALITY,
             MetricType::MORNING_SLEEP_DURATION,
